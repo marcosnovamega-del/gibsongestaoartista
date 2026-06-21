@@ -1,0 +1,261 @@
+/* ========================================
+   GIBSON MANAGER PRO - CENTRAL DE TURNÊ
+   Visual Operacional Premium
+   ======================================== */
+
+:root {
+    --gold-primary: #D4AF37;
+    --gold-dark: #AA8439;
+    --gold-light: #F1D592;
+    --op-bg: #0D0D0D;
+    --op-card: #151515;
+    --op-border: rgba(212, 175, 55, 0.2);
+    --status-active: #E10600;
+}
+
+/* Container Principal */
+.turnes-container {
+    padding: 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.turnes-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+}
+
+.turnes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 24px;
+}
+
+/* Card de Turnê */
+.turne-card {
+    background: var(--op-card);
+    border: 1px solid var(--op-border);
+    border-radius: 16px;
+    padding: 20px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.turne-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--gold-primary);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.turne-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--gold-primary);
+}
+
+.turne-status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    background: rgba(212, 175, 55, 0.1);
+    color: var(--gold-primary);
+    margin-bottom: 12px;
+}
+
+.turne-card.active .turne-status-badge {
+    background: rgba(225, 6, 0, 0.1);
+    color: var(--status-active);
+}
+
+.turne-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: #fff;
+}
+
+.turne-info {
+    font-size: 13px;
+    color: var(--text-muted);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.turne-info i {
+    width: 20px;
+    color: var(--gold-primary);
+}
+
+/* Detalhes da Turnê */
+.turne-details-header {
+    background: linear-gradient(135deg, #111, #000);
+    border: 1px solid var(--op-border);
+    border-radius: 20px;
+    padding: 30px;
+    margin-bottom: 24px;
+    display: flex;
+    gap: 30px;
+    align-items: center;
+}
+
+.turne-main-status {
+    text-align: center;
+    padding: 20px;
+    border-left: 1px solid var(--op-border);
+}
+
+/* Tabs Operacionais */
+.turne-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+}
+
+.turne-tab {
+    padding: 12px 24px;
+    background: var(--op-card);
+    border: 1px solid var(--op-border);
+    border-radius: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+.turne-tab.active {
+    background: var(--gold-primary);
+    color: #000;
+    border-color: var(--gold-primary);
+}
+
+/* Seções Internas */
+.turne-section {
+    background: var(--op-card);
+    border: 1px solid var(--op-border);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.section-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--gold-primary);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Checklist */
+.checklist-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    cursor: pointer;
+}
+
+.checklist-checkbox {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--gold-primary);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.checklist-item.done .checklist-checkbox {
+    background: var(--gold-primary);
+    color: #000;
+}
+
+.checklist-item.done span {
+    text-decoration: line-through;
+    color: var(--text-muted);
+}
+
+/* Equipe Grid */
+.equipe-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.membro-card {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+}
+
+.membro-foto {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    margin-bottom: 12px;
+    border: 2px solid var(--gold-primary);
+}
+
+/* Chat */
+.chat-container {
+    height: 400px;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.message {
+    max-width: 80%;
+    padding: 12px;
+    border-radius: 12px;
+    font-size: 13px;
+}
+
+.message.received {
+    background: rgba(255,255,255,0.05);
+    align-self: flex-start;
+}
+
+.message.sent {
+    background: var(--gold-primary);
+    color: #000;
+    align-self: flex-end;
+}
+
+/* Responsividade Mobile */
+@media (max-width: 768px) {
+    .turnes-container { padding: 12px; }
+    .turnes-grid { grid-template-columns: 1fr; }
+    .turne-details-header { flex-direction: column; text-align: center; }
+    .turne-main-status { border-left: none; border-top: 1px solid var(--op-border); width: 100%; }
+}

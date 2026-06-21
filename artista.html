@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Gibson">
+  <meta name="theme-color" content="#8B5CF6">
+  <meta name="description" content="Sua agenda de shows — Gibson">
+  <title>Gibson — Minha Agenda</title>
+
+  <link rel="manifest" href="manifest-artista.json">
+  <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=K&background=8B5CF6&color=fff&size=512&bold=true">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/artista-app.css">
+</head>
+<body>
+
+<!-- ═══ LOADING ═══ -->
+<div id="loadingScreen" class="loading-screen" style="display:flex;">
+  <div class="loading-logo">GIBSON</div>
+  <div class="spinner"></div>
+</div>
+
+<!-- ═══ TOAST ═══ -->
+<div id="toast" class="toast"></div>
+
+<!-- ════════════════════════════════════
+     LOGIN NORMAL
+     ════════════════════════════════════ -->
+<div id="loginScreen" class="auth-screen" style="display:none;">
+  <div class="auth-brand">
+    <div class="auth-icon">K</div>
+    <h1>Gibson</h1>
+    <p>Agenda do Artista</p>
+  </div>
+
+  <form class="auth-form" id="loginForm" novalidate>
+    <div id="loginError" class="auth-error"></div>
+
+    <div class="field">
+      <label for="loginUsername">Usuário</label>
+      <input type="text" id="loginUsername" placeholder="Seu usuário"
+             autocomplete="username" autocapitalize="none">
+    </div>
+
+    <div class="field">
+      <label for="loginPassword">Senha</label>
+      <input type="password" id="loginPassword" placeholder="Sua senha"
+             autocomplete="current-password">
+    </div>
+
+    <button type="submit" class="btn-login">Entrar</button>
+
+    <button type="button" class="btn-install install-btn" onclick="triggerInstall()">
+      <i class="fas fa-download"></i> Instalar App na Tela Inicial
+    </button>
+
+    <div class="ios-hint">
+      <strong>iPhone:</strong> Toque em Compartilhar <i class="fas fa-share-from-square"></i>
+      → <strong>Adicionar à Tela de Início</strong>
+    </div>
+  </form>
+</div>
+
+<!-- ════════════════════════════════════
+     PRIMEIRO ACESSO (via QR Code)
+     ════════════════════════════════════ -->
+<div id="firstAccessScreen" class="auth-screen" style="display:none;">
+  <div class="fa-avatar-wrap">
+    <img id="faAvatar" src="" alt="">
+    <h1 id="faName">Olá!</h1>
+    <p id="faSubtitle">Crie sua senha de acesso.</p>
+  </div>
+
+  <form class="auth-form" id="faForm" novalidate>
+    <div id="faError" class="auth-error"></div>
+
+    <div class="field">
+      <label for="faPassword" id="faPasswordLabel">Criar senha</label>
+      <input type="password" id="faPassword" placeholder="Mínimo 4 caracteres"
+             autocomplete="new-password">
+    </div>
+
+    <div class="field" id="faConfirmRow">
+      <label for="faConfirm">Confirmar senha</label>
+      <input type="password" id="faConfirm" placeholder="Repita a senha"
+             autocomplete="new-password">
+    </div>
+
+    <button type="submit" class="btn-login" id="faSubmitBtn">Criar e entrar</button>
+
+    <button type="button" class="btn-install install-btn" onclick="triggerInstall()">
+      <i class="fas fa-download"></i> Instalar App na Tela Inicial
+    </button>
+
+    <div class="ios-hint">
+      <strong>iPhone:</strong> Toque em Compartilhar <i class="fas fa-share-from-square"></i>
+      → <strong>Adicionar à Tela de Início</strong>
+    </div>
+  </form>
+</div>
+
+<!-- ════════════════════════════════════
+     APP — HOME
+     ════════════════════════════════════ -->
+<div id="app" style="display:none;">
+
+  <header class="app-header">
+    <div class="header-top">
+      <span class="header-logo-text">GIBSON</span>
+      <img id="userAvatar" src="" alt="Avatar" class="user-avatar">
+    </div>
+    <div class="greeting-name" id="headerName">Carregando...</div>
+    <div class="greeting-sub"  id="headerSub"></div>
+  </header>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon-box"><i class="fas fa-calendar-check"></i></div>
+      <div class="stat-number" id="statProximos">0</div>
+      <div class="stat-label">Próximos Shows</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon-box"><i class="fas fa-microphone-lines"></i></div>
+      <div class="stat-number" id="statTotal">0</div>
+      <div class="stat-label">Total na Agenda</div>
+    </div>
+  </div>
+
+  <!-- Próximo show -->
+  <div id="proximoSection" class="section-wrap">
+    <div class="section-label">Próxima Parada</div>
+    <div id="proximoCard" class="next-show-card"></div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="filter-row">
+    <button class="filter-chip active" data-f="proximos" onclick="setFilter('proximos')">Próximos</button>
+    <button class="filter-chip" data-f="historico" onclick="setFilter('historico')">Histórico</button>
+  </div>
+
+  <!-- Lista -->
+  <div id="showList" class="show-list"></div>
+
+  <!-- Nav -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active">
+      <i class="fas fa-calendar-alt"></i>
+      <span>Agenda</span>
+    </button>
+    <button class="nav-btn install-btn install-nav" style="display:none;" onclick="triggerInstall()">
+      <i class="fas fa-download"></i>
+      <span>Instalar</span>
+    </button>
+    <button class="nav-btn" onclick="doLogout()">
+      <i class="fas fa-sign-out-alt"></i>
+      <span>Sair</span>
+    </button>
+  </nav>
+</div>
+
+<!-- ════════════════════════════════════
+     DETALHE DO SHOW
+     ════════════════════════════════════ -->
+<div id="detail" style="display:none;">
+  <div class="detail-header">
+    <button class="btn-back" onclick="goBack()">
+      <i class="fas fa-arrow-left"></i> Voltar
+    </button>
+    <div class="detail-city-text"></div>
+    <div class="detail-venue-text"></div>
+  </div>
+
+  <div id="detailBody" class="detail-body"></div>
+  <div id="actionRow" class="action-row"></div>
+
+  <nav class="bottom-nav">
+    <button class="nav-btn" onclick="goBack()">
+      <i class="fas fa-arrow-left"></i>
+      <span>Voltar</span>
+    </button>
+    <button class="nav-btn" onclick="doLogout()">
+      <i class="fas fa-sign-out-alt"></i>
+      <span>Sair</span>
+    </button>
+  </nav>
+</div>
+
+<script src="js/artista-app.js"></script>
+</body>
+</html>

@@ -1,0 +1,121 @@
+/* ============================================================
+   GIBSON MANAGER PRO - UPLOAD DE IMAGENS
+   Estilos para o componente de upload (Supabase Storage)
+   ============================================================ */
+
+.upload-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.upload-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: 0.5px;
+}
+
+.upload-area {
+    position: relative;
+    width: 100%;
+    height: 180px;
+    border: 2px dashed var(--border-color);
+    border-radius: 12px;
+    cursor: pointer;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    background: var(--bg-secondary);
+}
+
+.upload-area:hover {
+    border-color: var(--red-primary);
+    box-shadow: 0 0 20px var(--red-glow);
+}
+
+.upload-preview {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.upload-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--text-muted);
+    pointer-events: none;
+    text-align: center;
+    padding: 20px;
+}
+
+.upload-placeholder i {
+    font-size: 36px;
+    color: var(--red-primary);
+    opacity: 0.7;
+}
+
+.upload-placeholder span {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.upload-placeholder small {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.upload-progress {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: var(--text-primary);
+    font-size: 14px;
+    z-index: 10;
+}
+
+.upload-progress i {
+    font-size: 28px;
+    color: var(--red-primary);
+}
+
+.upload-area.drag-over {
+    border-color: var(--red-primary);
+    background: rgba(225, 6, 0, 0.06);
+    box-shadow: 0 0 30px var(--red-glow);
+}
+
+/* Avatar pequeno (perfil do artista nas listas) */
+.artista-avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--border-color);
+    transition: border-color 0.3s;
+}
+
+.artista-avatar:hover {
+    border-color: var(--red-primary);
+}
+
+/* Logo da empresa nas configurações */
+.company-logo-preview {
+    width: 120px;
+    height: 120px;
+    border-radius: 12px;
+    object-fit: cover;
+    border: 2px solid var(--border-color);
+    margin: 0 auto 16px;
+    display: block;
+}

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gibson Manager - Gestão Artística Profissional</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/upload.css">
+    <link rel="stylesheet" href="css/route.css">
+    <link rel="stylesheet" href="css/vendas.css">
+    <link rel="stylesheet" href="css/usuarios.css">
+    <link rel="stylesheet" href="css/balanco.css">
+    <link rel="stylesheet" href="css/bordero.css">
+    <link rel="stylesheet" href="css/turnes.css?v=4.2">
+    <link rel="stylesheet" href="css/portal.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#8B5CF6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=K&background=8B5CF6&color=fff&size=192&bold=true">
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-screen">
+        <div class="login-container">
+            <div class="login-header">
+                <h1><i class="fas fa-calendar-check"></i> GIBSON MANAGER</h1>
+                <p>Gestão Artística Profissional</p>
+            </div>
+            <form id="loginForm" class="login-form">
+                <div class="form-group">
+                    <label><i class="fas fa-user"></i> Usuário</label>
+                    <input type="text" id="loginUsername" placeholder="Digite seu usuário" required>
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-lock"></i> Senha</label>
+                    <input type="password" id="loginPassword" placeholder="Digite sua senha" required>
+                </div>
+                <button type="submit" class="btn-primary btn-block">
+                    <i class="fas fa-sign-in-alt"></i> Entrar
+                </button>
+            </form>
+            
+            <div id="pwaInstallBtn" style="display: none; margin-top: 20px; flex-direction: column; align-items: center;">
+                <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 10px;">Para melhor experiência, instale o app:</p>
+                <button class="btn-secondary" onclick="installPWA()" style="background: rgba(139, 92, 246, 0.1); border-color: var(--brand-primary); width: 100%;">
+                    <i class="fas fa-mobile-alt"></i> Instalar App Gibson
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp" class="main-app" style="display: none;">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2 style="margin-bottom: 0;">GIBSON</h2>
+                <p>Manager</p>
+            </div>
+            <div id="artistaSelectorContainer"></div>
+            
+            <nav class="sidebar-nav" id="sidebarNav">
+                <a href="#" class="nav-item active" data-page="dashboard">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-item" data-page="artistas">
+                    <i class="fas fa-microphone"></i>
+                    <span>Artistas</span>
+                </a>
+                <a href="#" class="nav-item" data-page="eventos">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>Eventos</span>
+                </a>
+                <a href="#" class="nav-item" data-page="contratos">
+                    <i class="fas fa-file-contract"></i>
+                    <span>Contratos</span>
+                </a>
+                <a href="#" class="nav-item" data-page="vendas">
+                    <i class="fas fa-handshake"></i>
+                    <span>Vendas</span>
+                </a>
+                <a href="#" class="nav-item" data-page="turnes">
+                    <i class="fas fa-route"></i>
+                    <span>Central de Turnê</span>
+                </a>
+                <a href="#" class="nav-item" data-page="borderos">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    <span>Borderôs</span>
+                </a>
+                <a href="#" class="nav-item" data-page="financeiro">
+                    <i class="fas fa-money-bill-wave"></i>
+                    <span>Financeiro</span>
+                </a>
+                <a href="#" class="nav-item" data-page="equipe">
+                    <i class="fas fa-users"></i>
+                    <span>Equipe</span>
+                </a>
+                <a href="#" class="nav-item" data-page="alertas">
+                    <i class="fas fa-bell"></i>
+                    <span>Alertas</span>
+                    <span class="badge" id="alertasBadge">0</span>
+                </a>
+                <a href="#" class="nav-item" data-page="usuarios">
+                    <i class="fas fa-user-shield"></i>
+                    <span>Usuários</span>
+                </a>
+                <a href="#" class="nav-item" data-page="configuracoes">
+                    <i class="fas fa-cog"></i>
+                    <span>Configurações</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <i class="fas fa-user-circle"></i>
+                    <div>
+                        <strong id="currentUserName">Admin</strong>
+                        <small id="currentUserRole">Master</small>
+                    </div>
+                </div>
+                <button id="logoutBtn" class="btn-logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Bar -->
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <button class="mobile-menu-toggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <div class="search-container">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="globalSearch" placeholder="Pesquisar...">
+                    </div>
+                    <h1 id="pageTitle">Dashboard</h1>
+                </div>
+                <div class="top-bar-right">
+                    <button class="notification-btn" id="notificationBtn">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-badge" id="notificationBadge">0</span>
+                    </button>
+                    <div class="user-menu">
+                        <img src="https://ui-avatars.com/api/?name=Admin&background=8B5CF6&color=fff" alt="User" class="user-avatar">
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page Content Container -->
+            <div class="page-content" id="pageContent">
+                <!-- Dynamic content will be loaded here -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Container -->
+    <div id="modalContainer"></div>
+
+    <!-- Scripts - VERSÃO OTIMIZADA -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Core otimizado -->
+    <script src="js/config.js?v=4.1"></script>
+    <script src="js/database-optimized.js?v=4.1"></script>
+    <script src="js/storage.js?v=4.1"></script>
+    <script src="js/route-suggestions.js?v=4.1"></script>
+    <script src="js/auth.js?v=4.1"></script>
+    <script src="js/utils.js?v=4.1"></script>
+    
+    <!-- Pages otimizado -->
+    <script src="js/pages-optimized.js?v=4.2"></script>
+    <script src="js/pages-eventos-fixed.js?v=4.2"></script>
+    <script src="js/pages-financeiro.js?v=4.2"></script>
+    <script src="js/pages-borderos.js?v=4.2"></script>
+    <script src="js/pages-turnes.js?v=4.2"></script>
+    <script src="js/pages-multi-artista.js?v=4.2"></script>
+    <script src="js/pages-produtor.js?v=4.2"></script>
+    <script src="js/pages-usuarios.js"></script>
+    <script src="js/pages-portal.js"></script>
+    <script src="js/pages-vendas.js?v=4.2"></script>
+    
+    <script>
+        // Lógica de Instalação PWA
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            // Mostrar botões de instalação se disponíveis
+            const installBtn = document.getElementById('pwaInstallBtn');
+            const portalBtn = document.getElementById('pwaPortalBtn');
+            if (installBtn) installBtn.style.display = 'flex';
+            if (portalBtn) portalBtn.style.display = 'inline-block';
+        });
+
+        async function installPWA() {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                console.log('User accepted the install prompt');
+            }
+            deferredPrompt = null;
+            const installBtn = document.getElementById('pwaInstallBtn');
+            const portalBtn = document.getElementById('pwaPortalBtn');
+            if (installBtn) installBtn.style.display = 'none';
+            if (portalBtn) portalBtn.style.display = 'none';
+        }
+
+        // Registro do Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('🚀 Service Worker registrado!', reg))
+                    .catch(err => console.warn('❌ Falha ao registrar SW', err));
+            });
+        }
+    </script>
+    
+    <!-- Modals -->
+    <script src="js/modals.js?v=4.2"></script>
+    <script src="js/modals-evento-multistep.js?v=4.2"></script>
+    <script src="js/modals-extra.js?v=4.2"></script>
+    <script src="js/modals-proposta.js?v=4.2"></script>
+    <script src="js/modals-usuarios.js?v=4.2"></script>
+    
+    <!-- Pages extras -->
+    <script src="js/pages-usuarios-controle.js?v=4.2"></script>
+    <script src="js/pages-balanco.js?v=4.2"></script>
+    <script src="js/pages-recebimentos.js?v=4.2"></script>
+    <script src="js/pages-gestao-financeira.js?v=4.2"></script>
+    <script src="js/modals-financeiro.js?v=4.2"></script>
+    
+    <!-- Init -->
+    <script src="js/init-data.js?v=4.2"></script>
+    
+    <!-- Main otimizado -->
+    <script src="js/main-optimized.js?v=4.2"></script>
+</body>
+</html>

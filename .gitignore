@@ -1,0 +1,36 @@
+# Node
+node_modules/
+.npm
+.pnp
+.pnp.js
+
+# Vercel
+.vercel/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Logs
+*.log
+npm-debug.log*
+
+# Temp scripts
+fix-encoding.ps1
+
+# Environment (nunca subir credenciais!)
+.env
+.env.local
+.env.production
+
+.vercel

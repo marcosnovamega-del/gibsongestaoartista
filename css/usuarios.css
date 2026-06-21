@@ -1,0 +1,196 @@
+/* ============================================================
+   GIBSON MANAGER PRO - CONTROLE DE USUÁRIOS
+   ============================================================ */
+
+/* Tabela de usuários */
+.usuarios-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.usuario-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    gap: 16px;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+.usuario-row:hover {
+    border-color: var(--brand-primary);
+    box-shadow: 0 4px 16px rgba(139,92,246,0.08);
+}
+.usuario-row-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex: 1;
+}
+.usuario-avatar-sm {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--border-color);
+    flex-shrink: 0;
+}
+.usuario-info-nome  { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+.usuario-info-sub   { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.usuario-info-meta  { font-size: 11px; color: var(--text-muted); margin-top: 3px; display: flex; gap: 10px; }
+.usuario-row-right  { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+.nivel-badge {
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+.nivel-admin   { background: rgba(139,92,246,0.12);   color: var(--brand-primary); }
+.nivel-manager { background: rgba(59,130,246,0.12); color: #3B82F6; }
+.nivel-fin     { background: rgba(16,185,129,0.12); color: #10B981; }
+.nivel-prod    { background: rgba(245,158,11,0.12); color: #F59E0B; }
+
+.usuario-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.dot-ativo   { background: #10B981; box-shadow: 0 0 6px rgba(16,185,129,0.5); }
+.dot-inativo { background: #6B7280; }
+
+/* ---- Matriz de Permissões ---- */
+.perm-matrix {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+.perm-matrix th {
+    padding: 8px 12px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border-color);
+}
+.perm-matrix th:first-child { text-align: left; }
+.perm-matrix td {
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    text-align: center;
+}
+.perm-matrix td:first-child {
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.perm-matrix tr:last-child td { border-bottom: none; }
+.perm-matrix tr:hover td { background: rgba(255,255,255,0.02); }
+
+.perm-checkbox {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--brand-primary);
+}
+.perm-module-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    background: rgba(139,92,246,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: var(--brand-primary);
+    flex-shrink: 0;
+}
+
+/* ---- Audit Log ---- */
+.audit-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+}
+.audit-timeline::before {
+    content: '';
+    position: absolute;
+    left: 20px;
+    top: 0; bottom: 0;
+    width: 2px;
+    background: var(--border-color);
+}
+.audit-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 10px 0;
+    position: relative;
+}
+.audit-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+    border: 2px solid var(--bg-primary);
+}
+.audit-icon-login   { background: rgba(16,185,129,0.2);  color: #10B981; }
+.audit-icon-criar   { background: rgba(59,130,246,0.2);  color: #3B82F6; }
+.audit-icon-editar  { background: rgba(245,158,11,0.2);  color: #F59E0B; }
+.audit-icon-excluir { background: rgba(239,68,68,0.2);   color: #EF4444; }
+.audit-icon-assinar { background: rgba(139,92,246,0.2);     color: var(--brand-primary); }
+.audit-icon-default { background: rgba(107,114,128,0.2); color: #9CA3AF; }
+
+.audit-content { flex: 1; min-width: 0; }
+.audit-acao {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+.audit-descricao {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+.audit-time {
+    font-size: 11px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    text-align: right;
+}
+
+/* Filtros de audit */
+.audit-filtros {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+.audit-filtros select,
+.audit-filtros input {
+    padding: 6px 10px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 12px;
+    min-width: 120px;
+}
