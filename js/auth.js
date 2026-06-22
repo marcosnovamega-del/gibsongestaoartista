@@ -320,7 +320,7 @@ const Auth = {
         if (!this.currentUser) return [];
 
         if (this.isAdmin()) {
-            return ['Dashboard', 'Artistas', 'Eventos', 'Contratos', 'Vendas', 'Central de Turnê', 'Financeiro', 'Equipe', 'Alertas', 'Usuarios', 'Configuracoes'];
+            return ['Dashboard', 'Artistas', 'Eventos', 'Contratos', 'Vendas', 'Central de Turnê', 'Financeiro', 'Prestacao de Contas', 'Equipe', 'Alertas', 'Usuarios', 'Configuracoes'];
         }
 
         const permissions = this.currentUser.permissoes || [];
@@ -328,8 +328,8 @@ const Auth = {
         if (permissions.length === 0) {
             // Usar lógica antiga
             const defaultPermissions = {
-                'Manager':           ['Dashboard', 'Artistas', 'Eventos', 'Vendas', 'Central de Turnê', 'Equipe', 'Contratos', 'Alertas'],
-                'Financeiro':        ['Dashboard', 'Financeiro', 'Eventos', 'Contratos', 'Alertas'],
+                'Manager':           ['Dashboard', 'Artistas', 'Eventos', 'Vendas', 'Central de Turnê', 'Equipe', 'Contratos', 'Prestacao de Contas', 'Alertas'],
+                'Financeiro':        ['Dashboard', 'Financeiro', 'Prestacao de Contas', 'Eventos', 'Contratos', 'Alertas'],
                 'Produção/Técnico':  ['Dashboard', 'Eventos', 'Central de Turnê', 'Equipe', 'Alertas'],
                 'Artista':           ['Dashboard', 'Eventos', 'Contratos', 'Central de Turnê', 'Alertas']
             };
