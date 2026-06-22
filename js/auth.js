@@ -26,17 +26,28 @@ const Auth = {
     async login(username, password) {
         try {
             const usuario = await UsuariosDB.buscarPorUsername(username);
-            
+
             if (!usuario) {
                 throw new Error('Usuário não encontrado');
             }
 
-            if (usuario.password !== password) {
+            if (!usuario.ativo) {
+                throw new Error('Usuário inativo');
+            }
+
+            // Verificar senha: tenta hash SHA-256 primeiro, depois plaintext (migração)
+            const hashedInput = await Utils.hashPassword(password);
+            const senhaCorreta = (usuario.password === hashedInput) || (usuario.password === password);
+
+            if (!senhaCorreta) {
                 throw new Error('Senha incorreta');
             }
 
-            if (!usuario.ativo) {
-                throw new Error('Usuário inativo');
+            // Migração automática: se senha estava em plaintext, salva como hash agora
+            if (usuario.password === password) {
+                console.log('🔒 Atualizando senha para formato seguro...');
+                await UsuariosDB.atualizar(usuario.id, { password: hashedInput });
+                usuario.password = hashedInput;
             }
 
             this.currentUser = usuario;
@@ -52,7 +63,12 @@ const Auth = {
                 }
             }, 500);
 
-            return { success: true, user: usuario };
+            // Alertar se senha for padrão/fraca
+            const result = { success: true, user: usuario };
+            if (Utils.isDefaultPassword(password)) {
+                result.senhaFraca = true;
+            }
+            return result;
         } catch (error) {
             return { success: false, error: error.message };
         }
@@ -80,10 +96,14 @@ const Auth = {
 
             // Definir artista selecionado inicialmente
             const lastSelected = localStorage.getItem('gibson_selected_artista');
-            if (lastSelected && this.artistasPermitidos.some(a => a.id === lastSelected)) {
+            if (lastSelected === 'todos') {
+                // Preservar seleção "Todos" (só admin ou multi-artista)
+                this.selectedArtistaId = 'todos';
+            } else if (lastSelected && this.artistasPermitidos.some(a => a.id === lastSelected)) {
                 this.selectedArtistaId = lastSelected;
             } else if (this.artistasPermitidos.length > 0) {
-                this.selectedArtistaId = this.artistasPermitidos[0].id;
+                // Admin começa em "Todos" por padrão; outros no primeiro artista
+                this.selectedArtistaId = this.isAdmin() ? 'todos' : this.artistasPermitidos[0].id;
                 localStorage.setItem('gibson_selected_artista', this.selectedArtistaId);
             }
         } catch (e) {
@@ -102,15 +122,33 @@ const Auth = {
     },
 
     async setSelectedArtista(id) {
-        if (this.artistasPermitidos.some(a => a.id === id)) {
-            this.selectedArtistaId = id;
-            localStorage.setItem('gibson_selected_artista', id);
-            // Recarregar a página ou invalidar caches para refletir mudança
-            if (window.DB) DB.clearAllCache();
-            if (window.Pages) await Pages.changePage(Pages.currentPage || 'dashboard');
-            return true;
+        const isTodos = id === 'todos';
+        const lista = this.artistasPermitidos || [];
+        const isValido = isTodos || lista.some(a => String(a.id) === String(id));
+        if (!isValido) {
+            console.warn('[Auth] setSelectedArtista: id inválido:', id);
+            return false;
         }
-        return false;
+
+        this.selectedArtistaId = id;
+        localStorage.setItem('gibson_selected_artista', id);
+
+        // Fechar dropdown e atualizar seletor imediatamente
+        document.getElementById('artistaDropdown')?.classList.remove('show');
+        if (window.MultiArtista) MultiArtista.renderSelector();
+
+        // Limpar cache e recarregar página
+        if (window.DB) DB.clearAllCache();
+        if (window.Pages) {
+            Pages.isChanging = false; // reset guard
+            await Pages.changePage(Pages.currentPage || 'dashboard');
+        }
+
+        // Toast de confirmação
+        const nome = isTodos ? 'Todos os Artistas' : (lista.find(a => String(a.id) === String(id))?.nome || id);
+        if (window.Utils) Utils.showToast(`Artista: ${nome}`, 'success');
+
+        return true;
     },
 
     // Logout
@@ -178,10 +216,19 @@ const Auth = {
         return this.selectedArtistaId || this.currentUser.artista_vinculado || null;
     },
 
-    // Filtrar dados baseado em permissões
+    // Filtrar dados baseado em permissões e artista selecionado
     async filterByPermissions(data, dataType) {
         if (this.isAdmin()) {
-            return data; // Admin vê tudo
+            // Se admin selecionou um artista específico (não 'todos'), filtrar por ele
+            const selectedId = this.getSelectedArtistaId();
+            if (selectedId && selectedId !== 'todos') {
+                return data.filter(item => {
+                    if (dataType === 'artistas') return item.id === selectedId;
+                    if (item.artista_id) return item.artista_id === selectedId;
+                    return true;
+                });
+            }
+            return data; // 'todos' = vê tudo
         }
 
         if (this.isManager() || this.isProdutor() || this.currentUser.nivel === 'Artista') {

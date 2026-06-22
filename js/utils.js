@@ -4,6 +4,29 @@
 ======================================== */
 
 const Utils = {
+    // Hash de senha usando SHA-256 (Web Crypto API nativa)
+    async hashPassword(password) {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(password);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    },
+
+    // Verificar se senha é fraca/padrão
+    isDefaultPassword(password) {
+        const senhasPadrao = ['admin123', 'manager123', 'financeiro123', '123456', 'senha123', 'password'];
+        return senhasPadrao.includes(password.toLowerCase());
+    },
+
+    // Validar força de senha
+    validatePassword(password, username = '') {
+        if (!password || password.length < 8) return { ok: false, msg: 'A senha deve ter no mínimo 8 caracteres.' };
+        if (username && password.toLowerCase() === username.toLowerCase()) return { ok: false, msg: 'A senha não pode ser igual ao nome de usuário.' };
+        if (this.isDefaultPassword(password)) return { ok: false, msg: 'Essa senha é muito comum. Escolha uma mais segura.' };
+        return { ok: true };
+    },
+
     // Gerar ID único
     generateId() {
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {

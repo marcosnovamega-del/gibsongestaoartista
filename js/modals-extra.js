@@ -417,7 +417,18 @@ Modals.submitUsuarioForm = async function(event, usuarioId) {
 
     const password = formData.get('password');
     if (password || !usuarioId) {
-        data.password = password;
+        if (!password && !usuarioId) {
+            Utils.showToast('A senha é obrigatória para novos usuários.', 'error');
+            return;
+        }
+        if (password) {
+            const validacao = Utils.validatePassword(password, data.username);
+            if (!validacao.ok) {
+                Utils.showToast(validacao.msg, 'error');
+                return;
+            }
+            data.password = password; // será hasheada em UsuariosDB.criar/atualizar()
+        }
     }
 
     Utils.showLoading();

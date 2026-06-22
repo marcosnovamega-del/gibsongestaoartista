@@ -174,6 +174,14 @@ const Pages = {
             }
         }
 
+        // Se "Todos os Artistas" selecionado → Dashboard Consolidado
+        const selectedArtistaId = Auth.getSelectedArtistaId();
+        if (selectedArtistaId === 'todos') {
+            if (typeof Pages.renderEscritorioDashboard === 'function') {
+                return Pages.renderEscritorioDashboard();
+            }
+        }
+
         const hoje = new Date();
         const mes = hoje.getMonth();
         const ano = hoje.getFullYear();
@@ -181,11 +189,13 @@ const Pages = {
         // Mostrar skeleton primeiro
         document.getElementById('pageContent').innerHTML = this.getDashboardSkeleton();
 
-        // Verificar se é Manager com artista vinculado
+        // Determinar artista de contexto (Manager fixo no vínculo; Admin usa seleção)
         const isManager = Auth.isManager();
-        const artistaVinculadoId = Auth.getArtistaVinculado();
+        const artistaVinculadoId = isManager
+            ? Auth.getArtistaVinculado()
+            : (selectedArtistaId !== 'todos' ? selectedArtistaId : null);
         let artistaVinculado = null;
-        if (isManager && artistaVinculadoId) {
+        if (artistaVinculadoId) {
             artistaVinculado = await ArtistasDB.buscarPorId(artistaVinculadoId);
         }
 
@@ -196,8 +206,8 @@ const Pages = {
             DespesasDB.listar()
         ]);
 
-        // Filtrar por artista vinculado (Manager vê só o próprio artista)
-        const eventos = isManager && artistaVinculadoId
+        // Filtrar por artista selecionado
+        const eventos = artistaVinculadoId
             ? todosEventos.filter(e => e.artista_id === artistaVinculadoId)
             : todosEventos;
 
@@ -221,14 +231,12 @@ const Pages = {
         const lucro = receita - despesas;
         const margem = receita > 0 ? ((lucro / receita) * 100).toFixed(1) : 0;
 
-        // Parcelas atrasadas — em memória, sem queries extras
-        const todosEventosIds = isManager && artistaVinculadoId
-            ? new Set(eventos.map(e => e.id))
-            : null;
+        // Parcelas atrasadas — filtrar pelo mesmo conjunto de eventos
+        const eventosIds = artistaVinculadoId ? new Set(eventos.map(e => e.id)) : null;
         const parcelasAtrasadas = parcelas.filter(p => {
             if (p.status === 'Pago') return false;
             if (new Date(p.data_vencimento) >= hoje) return false;
-            if (todosEventosIds && !todosEventosIds.has(p.evento_id)) return false;
+            if (eventosIds && !eventosIds.has(p.evento_id)) return false;
             return true;
         });
 
@@ -239,13 +247,14 @@ const Pages = {
             .slice(0, 5);
         const proximosEventos = await Promise.all(
             proximos5.map(async e => {
-                const artista = !isManager ? await ArtistasDB.buscarPorId(e.artista_id) : artistaVinculado;
+                // Se filtrando por artista, já temos; senão buscar
+                const artista = artistaVinculado || await ArtistasDB.buscarPorId(e.artista_id);
                 return { ...e, _artistaNome: artista?.nome || '' };
             })
         );
 
-        // Banner do artista vinculado (só para Manager)
-        const bannerArtista = isManager && artistaVinculado ? `
+        // Banner do artista selecionado (Manager ou Admin com artista específico)
+        const bannerArtista = artistaVinculado ? `
             <div style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(139, 92, 246, 0.05));
                         border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 12px;
                         padding: 14px 20px; margin-bottom: 20px;
@@ -378,7 +387,7 @@ const Pages = {
         document.getElementById('pageContent').innerHTML = html;
         
         // Renderizar gráfico após DOM estar pronto — passa dados já carregados para evitar re-fetch
-        setTimeout(() => this.renderRevenueChart(mes, ano, isManager ? artistaVinculadoId : null, todosEventos, todasDespesas), 50);
+        setTimeout(() => this.renderRevenueChart(mes, ano, artistaVinculadoId, todosEventos, todasDespesas), 50);
     },
 
     getDashboardSkeleton() {

@@ -18,13 +18,21 @@ const MultiArtista = {
             return;
         }
 
+        const isTodos = selectedId === 'todos';
+
+        // Cabeçalho do seletor: ícone de grupo se "Todos", foto do artista se específico
+        const thumbHTML = isTodos
+            ? `<div class="artista-thumb todos-thumb"><i class="fas fa-layer-group"></i></div>`
+            : `<img src="${selectedArtista?.foto || 'https://ui-avatars.com/api/?name=Artista&background=D4AF37&color=000'}" class="artista-thumb">`;
+        const nomeAtual = isTodos ? 'Todos os Artistas' : (selectedArtista?.nome || 'Selecionar Artista');
+
         container.style.display = 'block';
         container.innerHTML = `
             <div class="artista-selector-wrapper">
                 <div class="artista-selected" onclick="MultiArtista.toggleDropdown()">
-                    <img src="${selectedArtista?.foto || 'https://ui-avatars.com/api/?name=Artista&background=D4AF37&color=000'}" class="artista-thumb">
+                    ${thumbHTML}
                     <div class="artista-name-info">
-                        <span class="selected-name">${selectedArtista?.nome || 'Selecionar Artista'}</span>
+                        <span class="selected-name">${nomeAtual}</span>
                         <i class="fas fa-chevron-down"></i>
                     </div>
                 </div>
@@ -33,9 +41,16 @@ const MultiArtista = {
                         <input type="text" placeholder="Filtrar artista..." oninput="MultiArtista.filterArtistas(this.value)">
                     </div>
                     <div class="artistas-list" id="artistasList">
+                        <!-- Opção "Todos os Artistas" (Dashboard consolidado) -->
+                        <div class="artista-option artista-option-todos ${isTodos ? 'active' : ''}" onclick="Auth.setSelectedArtista('todos')">
+                            <div class="artista-thumb-sm todos-thumb-sm"><i class="fas fa-layer-group"></i></div>
+                            <span>Todos os Artistas</span>
+                            ${isTodos ? '<i class="fas fa-check"></i>' : ''}
+                        </div>
+                        <div class="dropdown-divider"></div>
                         ${artistas.map(a => `
                             <div class="artista-option ${a.id === selectedId ? 'active' : ''}" onclick="Auth.setSelectedArtista('${a.id}')">
-                                <img src="${a.foto || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(a.nome)}" class="artista-thumb-sm">
+                                <img src="${a.foto || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(a.nome)}" class="artista-thumb-sm" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(a.nome)}&background=E10600&color=fff'">
                                 <span>${a.nome}</span>
                                 ${a.id === selectedId ? '<i class="fas fa-check"></i>' : ''}
                             </div>
@@ -164,6 +179,44 @@ const multiArtistaStyles = `
         height: 24px;
         border-radius: 4px;
         object-fit: cover;
+    }
+    .artista-option-todos {
+        background: rgba(212, 175, 55, 0.05);
+        border-bottom: none;
+    }
+    .artista-option-todos:hover {
+        background: rgba(212, 175, 55, 0.12);
+    }
+    .artista-option-todos.active {
+        background: rgba(212, 175, 55, 0.15);
+    }
+    .todos-thumb {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #D4AF37, #b8942e);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #D4AF37;
+        flex-shrink: 0;
+    }
+    .todos-thumb i { color: #000; font-size: 14px; margin-left: 0 !important; }
+    .todos-thumb-sm {
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+        background: linear-gradient(135deg, #D4AF37, #b8942e);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .todos-thumb-sm i { color: #000; font-size: 11px; margin-left: 0 !important; }
+    .dropdown-divider {
+        height: 1px;
+        background: rgba(255,255,255,0.07);
+        margin: 4px 0;
     }
     .artista-option i {
         margin-left: auto;

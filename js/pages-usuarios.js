@@ -376,7 +376,13 @@ Pages.updateMinhaConta = async function(event) {
 
     const password = formData.get('password');
     if (password) {
-        data.password = password;
+        // Validar força da senha
+        const validacao = Utils.validatePassword(password, Auth.currentUser.username);
+        if (!validacao.ok) {
+            Utils.showToast(validacao.msg, 'error');
+            return;
+        }
+        data.password = password; // será hasheada em UsuariosDB.atualizar()
     }
 
     Utils.showLoading();

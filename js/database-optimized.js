@@ -27,10 +27,21 @@ const DB = {
         return window.Auth?.currentUser?.escritorio_id || null;
     },
 
-    // GET otimizado com Supabase + Cache (Isolado por Escritório)
+    // Auxiliar para obter artista selecionado (null = todos)
+    getArtistaFiltroId() {
+        const selectedId = window.Auth?.getSelectedArtistaId?.();
+        return (!selectedId || selectedId === 'todos') ? null : selectedId;
+    },
+
+    // Tabelas que possuem artista_id direto — filtradas automaticamente
+    TABELAS_COM_ARTISTA: ['eventos', 'contratos', 'equipe', 'propostas', 'turnes', 'borderos'],
+
+    // GET otimizado com Supabase + Cache (Isolado por Escritório e Artista)
     async getAll(tableName, forceRefresh = false) {
         const escritorioId = this.getEscritorioId();
-        const cacheKey = `${tableName}_all_${escritorioId || 'global'}`;
+        const artistaId    = this.getArtistaFiltroId();
+        // Cache separado por artista selecionado
+        const cacheKey = `${tableName}_all_${escritorioId || 'global'}_${artistaId || 'todos'}`;
         const now = Date.now();
 
         if (!forceRefresh && this.cache[cacheKey]) {
@@ -47,10 +58,15 @@ const DB = {
         try {
             const requestPromise = (async () => {
                 let query = sbClient.from(tableName).select('*');
-                
-                // Aplicar filtro de escritório se não for tabela global
+
+                // Filtro de escritório
                 if (escritorioId && tableName !== 'escritorios') {
                     query = query.eq('escritorio_id', escritorioId);
+                }
+
+                // Filtro de artista (apenas para tabelas com artista_id direto)
+                if (artistaId && this.TABELAS_COM_ARTISTA.includes(tableName)) {
+                    query = query.eq('artista_id', artistaId);
                 }
 
                 const { data, error } = await query;
@@ -455,7 +471,14 @@ const EquipeDB = {
 // ============================================================
 const DespesasDB = {
     async listar(forceRefresh = false) {
-        return await DB.getAll('despesas', forceRefresh);
+        const despesas = await DB.getAll('despesas', forceRefresh);
+        // Despesas não têm artista_id direto — filtrar via eventos
+        const artistaId = DB.getArtistaFiltroId();
+        if (!artistaId) return despesas;
+        const eventos = await DB.getAll('eventos');
+        const eventosIds = new Set(eventos.map(e => e.id)); // eventos já filtrados pelo artista
+        // Despesas sem evento_id são despesas fixas do escritório — incluir somente se for "todos"
+        return despesas.filter(d => d.evento_id && eventosIds.has(d.evento_id));
     },
 
     async listarPorMes(mes, ano) {
@@ -614,7 +637,13 @@ const ContratosDB = {
 // ============================================================
 const ParcelasDB = {
     async listar(forceRefresh = false) {
-        return await DB.getAll('parcelas', forceRefresh);
+        const parcelas = await DB.getAll('parcelas', forceRefresh);
+        // Parcelas não têm artista_id direto — filtrar via eventos
+        const artistaId = DB.getArtistaFiltroId();
+        if (!artistaId) return parcelas;
+        const eventos = await DB.getAll('eventos');
+        const eventosIds = new Set(eventos.map(e => e.id)); // eventos já vêm filtrados pelo artista
+        return parcelas.filter(p => !p.evento_id || eventosIds.has(p.evento_id));
     },
 
     async buscarPorEvento(eventoId) {
@@ -667,6 +696,10 @@ const UsuariosDB = {
 
     async criar(usuario) {
         const { id: _id, ...usuarioData } = usuario;
+        // Hash da senha antes de gravar
+        if (usuarioData.password && typeof Utils !== 'undefined') {
+            usuarioData.password = await Utils.hashPassword(usuarioData.password);
+        }
         return await DB.create('usuarios', {
             ...usuarioData,
             ativo: true
@@ -674,7 +707,16 @@ const UsuariosDB = {
     },
 
     async atualizar(id, usuario) {
-        return await DB.patch('usuarios', id, usuario);
+        const dadosAtualizados = { ...usuario };
+        // Hash da senha antes de gravar (se estiver sendo alterada)
+        if (dadosAtualizados.password && typeof Utils !== 'undefined') {
+            // Só hasheia se não parecer já ser um hash SHA-256 (64 hex chars)
+            const jaEhHash = /^[a-f0-9]{64}$/.test(dadosAtualizados.password);
+            if (!jaEhHash) {
+                dadosAtualizados.password = await Utils.hashPassword(dadosAtualizados.password);
+            }
+        }
+        return await DB.patch('usuarios', id, dadosAtualizados);
     },
 
     async deletar(id) {

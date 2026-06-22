@@ -43,6 +43,12 @@ function showLoginScreen() {
         if (result.success) {
             Utils.showToast('Login realizado com sucesso!', 'success');
             showMainApp();
+            // Alertar sobre senha padrão/fraca
+            if (result.senhaFraca) {
+                setTimeout(() => {
+                    Utils.showToast('⚠️ Você está usando uma senha padrão. Altere-a em Configurações > Minha Conta.', 'error');
+                }, 2000);
+            }
         } else {
             Utils.showToast(result.error || 'Erro ao fazer login', 'error');
         }
@@ -112,7 +118,8 @@ async function showMainApp() {
         notificationBtn.addEventListener('click', () => Pages.changePage('alertas'));
     }
 
-    // Renderizar dashboard inicial
+    // Renderizar dashboard inicial (definir currentPage para que troca de artista funcione)
+    Pages.currentPage = 'dashboard';
     await Pages.renderDashboard();
 }
 
