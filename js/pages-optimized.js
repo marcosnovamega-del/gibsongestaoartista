@@ -40,6 +40,7 @@ const Pages = {
             borderos:           'Borderôs',
             financeiro:         'Financeiro',
             'gestao-financeira':'Gestão Financeira',
+            prestacao:          'Prestação de Contas',
             equipe:             'Equipe',
             alertas:            'Alertas',
             usuarios:           'Usuários',
@@ -110,6 +111,9 @@ const Pages = {
                     break;
                 case 'financeiro':
                     await this.renderFinanceiro();
+                    break;
+                case 'prestacao':
+                    if (typeof this.renderPrestacao === 'function') await this.renderPrestacao();
                     break;
                 case 'gestao-financeira':
                     await this.renderGestaoFinanceira();
