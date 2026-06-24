@@ -224,7 +224,35 @@ Pages.renderPrestacao = async function(filtroArtistaId) {
                             <i class="fas fa-plus"></i> Novo Fechamento
                         </button>
                     </div>
-                ` : `
+                ` : (() => {
+                    // Extrair anos disponíveis na lista
+                    const anos = [...new Set(lista
+                        .filter(p => p.data_show)
+                        .map(p => new Date(p.data_show + 'T00:00:00').getFullYear())
+                    )].sort((a, b) => b - a);
+
+                    const mesesNomes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                                        'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+                    return `
+                    <!-- Filtros mês/ano -->
+                    <div class="pc-filtros-bar mb-3">
+                        <div class="pc-filtros-inner">
+                            <i class="fas fa-filter" style="color:var(--brand-primary)"></i>
+                            <select id="pcFiltroMes" class="pc-select" onchange="Pages._aplicarFiltroPC()" style="min-width:140px">
+                                <option value="">Todos os meses</option>
+                                ${mesesNomes.map((m, i) => `<option value="${i+1}">${m}</option>`).join('')}
+                            </select>
+                            <select id="pcFiltroAno" class="pc-select" onchange="Pages._aplicarFiltroPC()" style="min-width:100px">
+                                <option value="">Todos os anos</option>
+                                ${anos.map(a => `<option value="${a}">${a}</option>`).join('')}
+                            </select>
+                            <button class="btn-secondary btn-sm" onclick="Pages._limparFiltroPC()">
+                                <i class="fas fa-times"></i> Limpar
+                            </button>
+                        </div>
+                    </div>
+
                     <div class="table-container">
                         <table class="data-table">
                             <thead>
@@ -239,43 +267,18 @@ Pages.renderPrestacao = async function(filtroArtistaId) {
                                     <th>Ações</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                ${lista.map(p => {
-                                    const statusClass = {
-                                        'rascunho': 'badge-warning',
-                                        'fechado':  'badge-info',
-                                        'aprovado': 'badge-success'
-                                    }[p.status] || 'badge-default';
-                                    const statusLabel = {
-                                        'rascunho': 'Rascunho',
-                                        'fechado':  'Fechado',
-                                        'aprovado': 'Aprovado'
-                                    }[p.status] || p.status;
-                                    return `
-                                    <tr>
-                                        <td><strong>${p.evento_nome || '—'}</strong></td>
-                                        <td>${p.cidade || '—'}</td>
-                                        <td>${p.data_show ? Utils.formatDate(p.data_show) : '—'}</td>
-                                        <td>${Utils.formatCurrency(p.cache_artista || 0)}</td>
-                                        <td id="contrato-${p.id}">—</td>
-                                        <td id="liquido-${p.id}">—</td>
-                                        <td><span class="badge ${statusClass}">${statusLabel}</span></td>
-                                        <td>
-                                            <button class="btn-icon" title="Editar" onclick="Pages.renderPrestacaoForm('${p.id}')">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button class="btn-icon btn-danger" title="Excluir" onclick="Pages.confirmarExcluirPrestacao('${p.id}', '${artistaAtivo}')">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </td>
-                                    </tr>`;
-                                }).join('')}
+                            <tbody id="pcListaBody">
+                                ${lista.map(p => Pages._htmlLinhaPrestacao(p, artistaAtivo)).join('')}
                             </tbody>
                         </table>
-                    </div>
-                `}
+                    </div>`;
+                })()}
             </div>
         `;
+
+        // Guardar lista e artistaAtivo para filtro client-side
+        Pages._pcListaCache = lista;
+        Pages._pcArtistaAtivoCache = artistaAtivo;
 
         // Preencher totais assincronamente
         for (const p of lista) {
@@ -291,6 +294,81 @@ Pages.renderPrestacao = async function(filtroArtistaId) {
         console.error('[Prestacao]', err);
         pageContent.innerHTML = `<div class="error-message"><i class="fas fa-exclamation-triangle"></i> Erro ao carregar prestações: ${err.message}</div>`;
     }
+};
+
+// ─── Helper: linha da lista de prestações ────────────────────────────────────
+
+Pages._htmlLinhaPrestacao = function(p, artistaAtivo) {
+    const statusClass = {
+        'rascunho': 'badge-warning',
+        'fechado':  'badge-info',
+        'aprovado': 'badge-success'
+    }[p.status] || 'badge-default';
+    const statusLabel = {
+        'rascunho': 'Rascunho',
+        'fechado':  'Fechado',
+        'aprovado': 'Aprovado'
+    }[p.status] || p.status;
+    return `
+    <tr>
+        <td><strong>${p.evento_nome || '—'}</strong></td>
+        <td>${p.cidade || '—'}</td>
+        <td>${p.data_show ? Utils.formatDate(p.data_show) : '—'}</td>
+        <td>${Utils.formatCurrency(p.cache_artista || 0)}</td>
+        <td id="contrato-${p.id}">—</td>
+        <td id="liquido-${p.id}">—</td>
+        <td><span class="badge ${statusClass}">${statusLabel}</span></td>
+        <td>
+            <button class="btn-icon" title="Editar" onclick="Pages.renderPrestacaoForm('${p.id}')">
+                <i class="fas fa-edit"></i>
+            </button>
+            <button class="btn-icon btn-danger" title="Excluir" onclick="Pages.confirmarExcluirPrestacao('${p.id}', '${artistaAtivo}')">
+                <i class="fas fa-trash"></i>
+            </button>
+        </td>
+    </tr>`;
+};
+
+// ─── Filtro mês/ano client-side ───────────────────────────────────────────────
+
+Pages._aplicarFiltroPC = function() {
+    const mes  = parseInt(document.getElementById('pcFiltroMes')?.value)  || 0;
+    const ano  = parseInt(document.getElementById('pcFiltroAno')?.value)  || 0;
+    const body = document.getElementById('pcListaBody');
+    if (!body) return;
+
+    const lista = Pages._pcListaCache || [];
+    const artistaAtivo = Pages._pcArtistaAtivoCache || '';
+
+    const filtrada = lista.filter(p => {
+        if (!p.data_show) return (!mes && !ano);
+        const d = new Date(p.data_show + 'T00:00:00');
+        if (mes && d.getMonth() + 1 !== mes) return false;
+        if (ano && d.getFullYear() !== ano) return false;
+        return true;
+    });
+
+    body.innerHTML = filtrada.length
+        ? filtrada.map(p => Pages._htmlLinhaPrestacao(p, artistaAtivo)).join('')
+        : `<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted)">Nenhum fechamento encontrado para o período.</td></tr>`;
+
+    // Recarregar totais para as linhas visíveis
+    filtrada.forEach(p => {
+        Pages._calcularTotaisPrestacao(p.id).then(totais => {
+            const elC = document.getElementById(`contrato-${p.id}`);
+            const elL = document.getElementById(`liquido-${p.id}`);
+            if (elC) elC.textContent = Utils.formatCurrency(totais.valorContrato);
+            if (elL) elL.textContent = Utils.formatCurrency(totais.valorLiquido);
+        }).catch(() => {});
+    });
+};
+
+Pages._limparFiltroPC = function() {
+    const mes = document.getElementById('pcFiltroMes');
+    const ano = document.getElementById('pcFiltroAno');
+    if (mes) mes.value = '';
+    if (ano) ano.value = '';
+    Pages._aplicarFiltroPC();
 };
 
 // Calcula totais buscando as despesas no banco
