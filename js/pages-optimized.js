@@ -221,12 +221,13 @@ const Pages = {
             return d.getMonth() === mes && d.getFullYear() === ano;
         });
 
-        // Calcular totais do mês — tudo em memória, sem queries extras
+        // Calcular totais do mês — apenas eventos com contrato assinado
+        const _STATUS_OK = ['Confirmado', 'Realizado', 'Concluído', 'Encerrado', 'Finalizado'];
         const eventosDoMesIds = new Set(eventosDoMes.map(e => e.id));
         let receita = 0;
         let despesas = 0;
         for (const e of eventosDoMes) {
-            receita += e.valor_liquido || 0;
+            if (_STATUS_OK.includes(e.status)) receita += e.valor_liquido || 0;
         }
         for (const d of todasDespesas) {
             if (eventosDoMesIds.has(d.evento_id)) despesas += d.valor || 0;
@@ -450,8 +451,11 @@ const Pages = {
             let receitaMes = 0;
             let despesasMes = 0;
 
+            const _stOk = ['Confirmado','Realizado','Concluído','Encerrado','Finalizado'];
             const eventosMesIds = new Set(eventosMes.map(e => e.id));
-            for (const e of eventosMes) receitaMes += e.valor_liquido || 0;
+            for (const e of eventosMes) {
+                if (_stOk.includes(e.status)) receitaMes += e.valor_liquido || 0;
+            }
             for (const d of todasDespesasAll) {
                 if (eventosMesIds.has(d.evento_id)) despesasMes += d.valor || 0;
             }
@@ -608,9 +612,10 @@ const Pages = {
         const [todasDespesasArtista] = await Promise.all([
             DespesasDB.listar()
         ]);
+        const _stConfirmados = ['Confirmado','Realizado','Concluído','Encerrado','Finalizado'];
         const eventosIds = new Set(eventos.map(e => e.id));
         for (const evento of eventos) {
-            receitaTotal += evento.valor_liquido || 0;
+            if (_stConfirmados.includes(evento.status)) receitaTotal += evento.valor_liquido || 0;
         }
         for (const d of todasDespesasArtista) {
             if (eventosIds.has(d.evento_id)) despesasTotal += d.valor || 0;
