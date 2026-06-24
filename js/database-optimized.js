@@ -1094,7 +1094,14 @@ const ModelosDespesaDB = {
         return await DB.patch('modelos_despesa', id, data);
     },
     async deletar(id) {
-        return await DB.patch('modelos_despesa', id, { ativo: false });
+        try {
+            const { error } = await sbClient.from('modelos_despesa').delete().eq('id', id);
+            if (error) {
+                // fallback: soft delete
+                await sbClient.from('modelos_despesa').update({ ativo: false }).eq('id', id);
+            }
+            return true;
+        } catch(e) { return false; }
     },
     // Gera uma despesa real a partir do modelo para o mês atual
     async gerarDespesaDoMes(modeloId) {
