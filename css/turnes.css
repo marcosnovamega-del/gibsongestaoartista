@@ -13,6 +13,14 @@
     --status-active: #E10600;
 }
 
+/* Tema claro — sobrescreve variáveis de turnes */
+[data-theme="light"] {
+    --op-bg: #F0F2F5;
+    --op-card: #FFFFFF;
+    --op-border: rgba(184, 150, 46, 0.25);
+    --gold-primary: #B8962E;
+}
+
 /* Container Principal */
 .turnes-container {
     padding: 24px;
@@ -38,17 +46,18 @@
     background: var(--op-card);
     border: 1px solid var(--op-border);
     border-radius: 16px;
-    padding: 20px;
+    padding: 24px;
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
     cursor: pointer;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
 }
 
 .turne-card:hover {
-    transform: translateY(-5px);
+    transform: translateY(-4px);
     border-color: var(--gold-primary);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.15);
 }
 
 .turne-card::before {
@@ -58,7 +67,7 @@
     left: 0;
     width: 4px;
     height: 100%;
-    background: var(--gold-primary);
+    background: linear-gradient(180deg, var(--gold-primary), var(--gold-dark));
 }
 
 .turne-status-badge {
@@ -83,7 +92,7 @@
     font-size: 18px;
     font-weight: 700;
     margin-bottom: 8px;
-    color: #fff;
+    color: var(--text-primary, #fff);
 }
 
 .turne-info {
@@ -101,7 +110,7 @@
 
 /* Detalhes da Turnê */
 .turne-details-header {
-    background: linear-gradient(135deg, #111, #000);
+    background: var(--op-card);
     border: 1px solid var(--op-border);
     border-radius: 20px;
     padding: 30px;

@@ -17,7 +17,7 @@ Pages.renderTurnes = async function() {
         <div class="turnes-container fade-in">
             <div class="turnes-header">
                 <div>
-                    <h2 style="font-size: 28px; font-weight: 800; color: #fff; margin-bottom: 4px;">
+                    <h2 style="font-size: 28px; font-weight: 800; color: var(--text-primary); margin-bottom: 4px;">
                         <i class="fas fa-route" style="color: var(--gold-primary);"></i> Central de Turnê
                     </h2>
                     <p style="color: var(--text-muted); font-size: 14px;">Gestão operacional e logística em tempo real</p>
@@ -29,29 +29,54 @@ Pages.renderTurnes = async function() {
                     const evento = eventos.find(e => e.id === t.evento_id);
                     const artista = evento ? artistas.find(a => a.id === evento.artista_id) : null;
                     const isActive = t.status !== 'TURNÊ FINALIZADA' && t.status !== 'RETORNO';
-                    
+                    const progresso = Pages._getProgressoTurne(t.status);
+
                     return `
                         <div class="turne-card ${isActive ? 'active' : ''}" onclick="Pages.renderTurneDetalhes('${t.id}')">
                             <div class="turne-status-badge">${t.status}</div>
-                            <h3 class="turne-title">${evento ? evento.cidade : 'Sem Local'} - ${artista ? artista.nome : 'Sem Artista'}</h3>
+                            <h3 class="turne-title">${artista ? artista.nome : 'Sem Artista'}</h3>
                             <div class="turne-info">
+                                <span><i class="fas fa-map-marker-alt"></i> ${evento ? evento.cidade : '—'} ${evento?.local ? '· ' + evento.local : ''}</span>
                                 <span><i class="fas fa-calendar-day"></i> Show: ${evento ? Utils.formatDate(evento.data) : '—'}</span>
-                                <span><i class="fas fa-map-marker-alt"></i> Local: ${evento ? evento.local : '—'}</span>
                                 <span><i class="fas fa-clock"></i> Saída: ${t.data_saida ? Utils.formatDate(t.data_saida) : '—'}</span>
                             </div>
-                            
-                            <div style="margin-top: 20px; display: flex; gap: 8px;">
-                                <div style="flex: 1; height: 4px; background: rgba(255,255,255,0.05); border-radius: 2px; overflow: hidden;">
-                                    <div style="width: ${this._getProgressoTurne(t.status)}%; height: 100%; background: var(--gold-primary);"></div>
+                            <div style="margin-top: 16px;">
+                                <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:4px">
+                                    <span>Progresso</span><span>${progresso}%</span>
+                                </div>
+                                <div style="height: 5px; background: var(--border-color); border-radius: 3px; overflow: hidden;">
+                                    <div style="width: ${progresso}%; height: 100%; background: var(--gold-primary); border-radius: 3px; transition: width 0.4s;"></div>
                                 </div>
                             </div>
                         </div>
                     `;
                 }).join('') : `
-                    <div style="grid-column: 1/-1; text-align: center; padding: 60px; background: var(--op-card); border-radius: 16px; border: 1px dashed var(--op-border);">
-                        <i class="fas fa-truck-loading" style="font-size: 48px; color: var(--gold-primary); opacity: 0.3; margin-bottom: 16px;"></i>
-                        <p style="color: var(--text-muted);">Nenhuma turnê operacional ativa no momento.</p>
-                        <p style="font-size: 13px; margin-top: 8px;">As turnês são criadas automaticamente ao assinar um contrato.</p>
+                    <div style="grid-column: 1/-1;">
+                        <div style="
+                            text-align: center;
+                            padding: 64px 40px;
+                            background: var(--op-card);
+                            border-radius: 20px;
+                            border: 2px dashed var(--op-border);
+                        ">
+                            <div style="
+                                width: 80px; height: 80px; border-radius: 50%;
+                                background: rgba(212,175,55,0.08);
+                                display: flex; align-items: center; justify-content: center;
+                                margin: 0 auto 20px;
+                            ">
+                                <i class="fas fa-route" style="font-size: 32px; color: var(--gold-primary);"></i>
+                            </div>
+                            <h3 style="font-size:18px; font-weight:700; color:var(--text-primary); margin-bottom:8px;">
+                                Nenhuma turnê ativa
+                            </h3>
+                            <p style="color: var(--text-muted); font-size:14px; max-width:340px; margin:0 auto 20px;">
+                                As turnês são criadas automaticamente quando um contrato é assinado.
+                            </p>
+                            <button class="btn-secondary" onclick="Pages.changePage('contratos')">
+                                <i class="fas fa-file-contract"></i> Ver Contratos
+                            </button>
+                        </div>
                     </div>
                 `}
             </div>
