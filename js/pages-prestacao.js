@@ -19,6 +19,20 @@ const CATEGORIAS_PADRAO = [
     'Outros'
 ];
 
+// Ícones por categoria de despesa
+const CATEGORIA_ICONS = {
+    'Transporte':   'fa-car',
+    'Diária':       'fa-calendar-day',
+    'Camarim':      'fa-door-open',
+    'Hotel':        'fa-hotel',
+    'Vans':         'fa-shuttle-van',
+    'Passagens':    'fa-plane',
+    'Combustível':  'fa-gas-pump',
+    'Alimentação':  'fa-utensils',
+    'Hospedagem':   'fa-bed',
+    'Outros':       'fa-ellipsis-h'
+};
+
 const CHECKLIST_PADRAO = [
     { nome: 'Carregadores',        resp: 'contratante' },
     { nome: 'Seguranças',          resp: 'contratante' },
@@ -158,12 +172,15 @@ Pages.renderPrestacao = async function(filtroArtistaId) {
 
         const lista = await PrestacaoDB.listar(artistaAtivo);
         const artistaAtualNome = artistaAtivo ? (artMap[artistaAtivo] || 'Artista') : 'Todos';
+        const artAtivo = artistas.find(a => a.id === artistaAtivo);
+        const artAtivoFoto = artAtivo?.foto
+            || `https://ui-avatars.com/api/?name=${encodeURIComponent(artistaAtualNome)}&background=D4AF37&color=000&bold=true&size=80`;
 
         pageContent.innerHTML = `
             <div class="prestacao-container">
                 <div class="page-header flex-between mb-3">
                     <div>
-                        <h2><i class="fas fa-receipt" style="color:var(--primary)"></i> Prestação de Contas</h2>
+                        <h2><i class="fas fa-receipt" style="color:var(--brand-primary)"></i> Prestação de Contas</h2>
                         <p class="text-muted">Fechamento financeiro por show</p>
                     </div>
                     <button class="btn-primary" onclick="Pages.renderPrestacaoForm(null, '${artistaAtivo || ''}')">
@@ -171,22 +188,30 @@ Pages.renderPrestacao = async function(filtroArtistaId) {
                     </button>
                 </div>
 
-                <!-- Seletor de artista — sempre visível para evitar confusão -->
-                <div class="card mb-3" style="padding:1rem">
-                    <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
-                        <div style="display:flex;align-items:center;gap:0.5rem">
-                            <i class="fas fa-microphone" style="color:var(--primary)"></i>
-                            <strong>Artista:</strong>
+                <!-- Card artista refinado -->
+                <div class="pc-artista-card mb-3">
+                    <div class="pc-artista-inner">
+                        <img class="pc-artista-avatar"
+                             src="${artAtivoFoto}"
+                             alt="${artistaAtualNome}"
+                             onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(artistaAtualNome)}&background=D4AF37&color=000&bold=true&size=80'">
+                        <div class="pc-artista-info">
+                            <div class="pc-artista-label"><i class="fas fa-microphone"></i> Artista</div>
+                            <div class="pc-artista-nome">${artistaAtualNome}</div>
+                            <div class="pc-artista-count">
+                                <i class="fas fa-receipt"></i>
+                                ${lista.length} fechamento${lista.length !== 1 ? 's' : ''}
+                            </div>
                         </div>
-                        <select id="prestacaoFiltroArtista" class="form-control" style="max-width:280px"
-                            onchange="Pages.renderPrestacao(this.value)">
-                            ${artistas.map(a =>
-                                `<option value="${a.id}" ${a.id === artistaAtivo ? 'selected' : ''}>${a.nome}</option>`
-                            ).join('')}
-                        </select>
-                        <span class="text-muted" style="font-size:0.85rem">
-                            Mostrando fechamentos de: <strong style="color:var(--primary)">${artistaAtualNome}</strong>
-                        </span>
+                        <div class="pc-artista-select-wrap">
+                            <label class="pc-artista-select-label">Trocar artista</label>
+                            <select id="prestacaoFiltroArtista" class="pc-artista-select"
+                                onchange="Pages.renderPrestacao(this.value)">
+                                ${artistas.map(a =>
+                                    `<option value="${a.id}" ${a.id === artistaAtivo ? 'selected' : ''}>${a.nome}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
                     </div>
                 </div>
 
@@ -516,40 +541,51 @@ Pages.renderPrestacaoForm = async function(id, presetArtistaId) {
 // ─── Helpers de linha ─────────────────────────────────────────────────────────
 
 Pages._htmlLinhaDespesa = function(d, i) {
-    // Usar counter único para ID — evita colisão ao adicionar/remover linhas
     const uid = (i !== undefined && i !== null) ? i : (++Pages._pcRowIdx);
     const isPersonalizado = d.tipo === 'personalizado';
     const lucroLinha = (parseFloat(d.valor_cobrado) || 0) - (parseFloat(d.valor_gasto) || 0);
-    const lucroColor = lucroLinha >= 0 ? 'color:#22c55e' : 'color:#ef4444';
-    // Escapar aspas no nome para não quebrar o atributo HTML
+    const lucroClass = lucroLinha >= 0 ? 'pc-lucro-pos' : 'pc-lucro-neg';
     const nomeEscapado = (d.categoria_nome || '').replace(/"/g, '&quot;');
+    const icone = CATEGORIA_ICONS[d.categoria_nome] || 'fa-tag';
     return `
-        <tr id="desp-row-${uid}" data-tipo="${d.tipo || 'padrao'}">
-            <td>
+        <tr id="desp-row-${uid}" data-tipo="${d.tipo || 'padrao'}" class="pc-desp-row">
+            <td class="pc-desp-cat-cell">
                 ${isPersonalizado
-                    ? `<input type="text" class="form-control form-control-sm desp-nome" value="${nomeEscapado}" placeholder="Nome da despesa">`
-                    : `<span style="font-weight:500">${d.categoria_nome}</span>`
+                    ? `<div class="pc-desp-cat-custom">
+                            <i class="fas fa-tag pc-cat-icon"></i>
+                            <input type="text" class="pc-input desp-nome" value="${nomeEscapado}" placeholder="Nome da despesa">
+                       </div>`
+                    : `<div class="pc-desp-cat-fixed">
+                            <i class="fas ${icone} pc-cat-icon"></i>
+                            <span class="pc-cat-nome">${d.categoria_nome}</span>
+                       </div>`
                 }
             </td>
-            <td>
-                <input type="number" class="form-control form-control-sm desp-cobrado" min="0" step="0.01"
-                    value="${parseFloat(d.valor_cobrado) || 0}" oninput="Pages._atualizarResumo()">
+            <td class="pc-desp-val-cell">
+                <div class="pc-val-wrap">
+                    <span class="pc-val-prefix">R$</span>
+                    <input type="number" class="pc-input pc-val-input desp-cobrado" min="0" step="0.01"
+                        value="${parseFloat(d.valor_cobrado) || 0}" oninput="Pages._atualizarResumo()">
+                </div>
             </td>
-            <td>
-                <input type="number" class="form-control form-control-sm desp-gasto" min="0" step="0.01"
-                    value="${parseFloat(d.valor_gasto) || 0}" oninput="Pages._atualizarResumo()">
+            <td class="pc-desp-val-cell">
+                <div class="pc-val-wrap">
+                    <span class="pc-val-prefix">R$</span>
+                    <input type="number" class="pc-input pc-val-input desp-gasto" min="0" step="0.01"
+                        value="${parseFloat(d.valor_gasto) || 0}" oninput="Pages._atualizarResumo()">
+                </div>
             </td>
-            <td>
-                <span class="desp-lucro" style="${lucroColor};font-weight:600">
+            <td class="pc-desp-lucro-cell">
+                <span class="desp-lucro pc-lucro-badge ${lucroClass}">
                     ${Utils.formatCurrency(lucroLinha)}
                 </span>
             </td>
-            <td>
+            <td class="pc-desp-action-cell">
                 ${isPersonalizado
-                    ? `<button class="btn-icon btn-danger btn-sm" onclick="Pages._removerLinha(this)" title="Remover">
+                    ? `<button class="pc-btn-remove" onclick="Pages._removerLinha(this)" title="Remover">
                             <i class="fas fa-times"></i>
                        </button>`
-                    : ''
+                    : '<span class="pc-desp-lock"><i class="fas fa-lock"></i></span>'
                 }
             </td>
         </tr>`;
@@ -558,27 +594,31 @@ Pages._htmlLinhaDespesa = function(d, i) {
 Pages._htmlLinhaChecklist = function(c, i) {
     const uid = (i !== undefined && i !== null) ? i : (++Pages._pcRowIdx);
     const nomeEscapado = (c.item_nome || '').replace(/"/g, '&quot;');
+    const statusIcon = { 'ok': 'fa-check-circle', 'pendente': 'fa-clock', 'nao_se_aplica': 'fa-minus-circle' };
     return `
-        <tr id="check-row-${uid}">
-            <td>
-                <input type="text" class="form-control form-control-sm check-nome"
-                    value="${nomeEscapado}" placeholder="Nome do item">
+        <tr id="check-row-${uid}" class="pc-check-row">
+            <td class="pc-check-nome-cell">
+                <div class="pc-check-nome-wrap">
+                    <i class="fas fa-clipboard-check pc-check-icon"></i>
+                    <input type="text" class="pc-input check-nome"
+                        value="${nomeEscapado}" placeholder="Nome do item">
+                </div>
             </td>
-            <td>
-                <select class="form-control form-control-sm check-resp">
-                    <option value="contratante" ${c.responsabilidade==='contratante' ? 'selected' : ''}>Contratante</option>
-                    <option value="artista"     ${c.responsabilidade==='artista'     ? 'selected' : ''}>Artista</option>
+            <td class="pc-check-resp-cell">
+                <select class="pc-select check-resp">
+                    <option value="contratante" ${c.responsabilidade==='contratante' ? 'selected' : ''}>🎪 Contratante</option>
+                    <option value="artista"     ${c.responsabilidade==='artista'     ? 'selected' : ''}>🎤 Artista</option>
                 </select>
             </td>
-            <td>
-                <select class="form-control form-control-sm check-status">
-                    <option value="pendente"       ${(c.status||'pendente')==='pendente'       ? 'selected' : ''}>⏳ Pendente</option>
-                    <option value="ok"             ${c.status==='ok'                            ? 'selected' : ''}>✅ OK</option>
-                    <option value="nao_se_aplica"  ${c.status==='nao_se_aplica'                 ? 'selected' : ''}>— N/A</option>
+            <td class="pc-check-status-cell">
+                <select class="pc-select check-status pc-status-select">
+                    <option value="pendente"      ${(c.status||'pendente')==='pendente'      ? 'selected' : ''}>⏳ Pendente</option>
+                    <option value="ok"            ${c.status==='ok'                           ? 'selected' : ''}>✅ Concluído</option>
+                    <option value="nao_se_aplica" ${c.status==='nao_se_aplica'                ? 'selected' : ''}>— Não se aplica</option>
                 </select>
             </td>
-            <td>
-                <button class="btn-icon btn-danger btn-sm" onclick="Pages._removerLinha(this)" title="Remover">
+            <td class="pc-desp-action-cell">
+                <button class="pc-btn-remove" onclick="Pages._removerLinha(this)" title="Remover">
                     <i class="fas fa-times"></i>
                 </button>
             </td>
