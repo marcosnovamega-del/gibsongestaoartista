@@ -490,7 +490,11 @@ Pages.renderPrestacaoForm = async function(id, presetArtistaId) {
                                             <option value="artista">🎤 Artista</option>
                                         </select>
                                     </td>
-                                    <td class="pc-desp-action-cell"></td>
+                                    <td class="pc-desp-action-cell">
+                                        <button class="pc-btn-remove" onclick="Pages._removerLinha(this)" title="Remover">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </td>
                                 </tr>
                                 <!-- Comissão — pass-through: cobrado = gasto, lucro = 0 -->
                                 <tr class="pc-desp-row pc-desp-special" data-tipo="comissao">
@@ -524,7 +528,11 @@ Pages.renderPrestacaoForm = async function(id, presetArtistaId) {
                                             <option value="artista">🎤 Artista</option>
                                         </select>
                                     </td>
-                                    <td class="pc-desp-action-cell"></td>
+                                    <td class="pc-desp-action-cell">
+                                        <button class="pc-btn-remove" onclick="Pages._removerLinha(this)" title="Remover">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -725,13 +733,17 @@ Pages._htmlResumo = function(t) {
 Pages._adicionarLinhaDespesa = function() {
     const tbody = document.getElementById('despesasBody');
     if (!tbody) { console.error('[Prestacao] despesasBody não encontrado'); return; }
-    // Gerar UID único incrementando o contador global
     const uid = ++Pages._pcRowIdx;
     const novaLinha = Pages._htmlLinhaDespesa({
         categoria_nome: '', tipo: 'personalizado', valor_cobrado: 0, valor_gasto: 0
     }, uid);
-    tbody.insertAdjacentHTML('beforeend', novaLinha);
-    // Focar no input do nome da nova linha
+    // Inserir antes da linha NF para manter Outros + extras acima de NF/Comissão
+    const nfRow = tbody.querySelector('tr[data-tipo="nf"]');
+    if (nfRow) {
+        nfRow.insertAdjacentHTML('beforebegin', novaLinha);
+    } else {
+        tbody.insertAdjacentHTML('beforeend', novaLinha);
+    }
     const novaLinhaTr = document.getElementById(`desp-row-${uid}`);
     if (novaLinhaTr) novaLinhaTr.querySelector('.desp-nome')?.focus();
     Pages._atualizarResumo();
