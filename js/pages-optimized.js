@@ -100,6 +100,9 @@ const Pages = {
                 case 'vendas':
                     await this.renderVendas();
                     break;
+                case 'propostas':
+                    if (typeof this.renderPropostas === 'function') await this.renderPropostas();
+                    break;
                 case 'turnes':
                     if (typeof this.renderTurnes === 'function') await this.renderTurnes();
                     break;

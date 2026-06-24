@@ -607,3 +607,295 @@ Pages._confirmarAssinatura = async function(contratoId, btn) {
         btn.innerHTML = '<i class="fas fa-pen-nib"></i> Confirmar Assinatura';
     }
 };
+
+// ============================================================
+// PÁGINA DE PROPOSTAS (aba dedicada)
+// ============================================================
+Pages.renderPropostas = async function() {
+    document.getElementById('pageContent').innerHTML =
+        '<div class="loading-container"><div class="loading-spinner"></div></div>';
+
+    const [propostas, artistas, eventos, contratos] = await Promise.all([
+        PropostasDB.listar(true),
+        ArtistasDB.listar(),
+        EventosDB.listar(),
+        ContratosDB.listar()
+    ]);
+
+    // Enriquecer propostas com artista, evento e contrato vinculado
+    const propostasRicas = propostas.map(p => {
+        const artista = artistas.find(a => a.id === p.artista_id);
+        const eventoGerado = eventos.find(e =>
+            e.artista_id === p.artista_id &&
+            e.data === p.data_evento
+        );
+        const contrato = eventoGerado
+            ? contratos.find(c => c.evento_id === eventoGerado.id)
+            : null;
+        return { ...p, artista, eventoGerado, contrato };
+    }).sort((a, b) => {
+        // Ordenar: mais recentes primeiro
+        const da = new Date(a.data_evento || a.created_at || 0);
+        const db2 = new Date(b.data_evento || b.created_at || 0);
+        return db2 - da;
+    });
+
+    // KPIs
+    const total = propostasRicas.length;
+    const rascunhos  = propostasRicas.filter(p => p.status === 'Rascunho').length;
+    const enviadas   = propostasRicas.filter(p => p.status === 'Enviada').length;
+    const aceitas    = propostasRicas.filter(p => p.status === 'Aceita').length;
+    const recusadas  = propostasRicas.filter(p => p.status === 'Recusada').length;
+
+    const _statusBadge = (s) => {
+        const map = {
+            'Rascunho':  'badge-secondary',
+            'Enviada':   'badge-warning',
+            'Aceita':    'badge-success',
+            'Recusada':  'badge-danger',
+        };
+        return `<span class="badge ${map[s] || 'badge-secondary'}">${s}</span>`;
+    };
+
+    const _renderCronograma = (p) => {
+        let cronograma = [];
+        if (p.condicoes_pagamento) {
+            try {
+                const cond = typeof p.condicoes_pagamento === 'string'
+                    ? JSON.parse(p.condicoes_pagamento)
+                    : p.condicoes_pagamento;
+                cronograma = cond.cronograma || [];
+            } catch(e) {}
+        }
+
+        const cacheBruto = p.cache_bruto || 0;
+        const comissao   = p.comissao || 10;
+        const liquido    = cacheBruto - (cacheBruto * comissao / 100);
+        const dataEvento = p.data_evento ? new Date(p.data_evento + 'T12:00:00') : null;
+
+        if (!cronograma.length) {
+            return `<p class="text-muted" style="font-size:13px;margin:0;">
+                <i class="fas fa-info-circle"></i> Pagamento integral no dia do show
+                (${Utils.formatCurrency(liquido)})
+            </p>`;
+        }
+
+        return `
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                <thead>
+                    <tr style="border-bottom:1px solid var(--border-color);">
+                        <th style="padding:6px 8px;text-align:left;color:var(--text-muted);font-weight:500;">#</th>
+                        <th style="padding:6px 8px;text-align:left;color:var(--text-muted);font-weight:500;">Descrição</th>
+                        <th style="padding:6px 8px;text-align:right;color:var(--text-muted);font-weight:500;">%</th>
+                        <th style="padding:6px 8px;text-align:right;color:var(--text-muted);font-weight:500;">Valor</th>
+                        <th style="padding:6px 8px;text-align:left;color:var(--text-muted);font-weight:500;">Vencimento</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${cronograma.map((item, i) => {
+                        const valor = liquido * (item.pct || 100) / 100;
+                        let vencText = '—';
+                        if (dataEvento && item.dias_antes_show !== undefined) {
+                            const venc = new Date(dataEvento);
+                            venc.setDate(venc.getDate() + (item.dias_antes_show || 0));
+                            vencText = Utils.formatDate(venc.toISOString().split('T')[0]);
+                        }
+                        return `<tr style="border-bottom:1px solid var(--border-color);">
+                            <td style="padding:6px 8px;">${item.numero || (i+1)}</td>
+                            <td style="padding:6px 8px;">${item.descricao || 'Parcela ' + (i+1)}</td>
+                            <td style="padding:6px 8px;text-align:right;">${item.pct || 100}%</td>
+                            <td style="padding:6px 8px;text-align:right;color:var(--success);font-weight:600;">
+                                ${Utils.formatCurrency(valor)}
+                            </td>
+                            <td style="padding:6px 8px;">${vencText}</td>
+                        </tr>`;
+                    }).join('')}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="3" style="padding:8px;text-align:right;font-weight:600;color:var(--text-muted);">Total líquido:</td>
+                        <td style="padding:8px;text-align:right;font-weight:700;color:var(--success);">
+                            ${Utils.formatCurrency(liquido)}
+                        </td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>`;
+    };
+
+    const html = `
+    <div class="fade-in">
+        <!-- Header -->
+        <div class="page-header flex-between mb-3">
+            <div>
+                <h2 style="display:flex;align-items:center;gap:10px;">
+                    <i class="fas fa-file-alt" style="color:var(--brand-primary)"></i> Propostas
+                </h2>
+                <p class="text-muted">Todas as propostas geradas — com cronograma de pagamento</p>
+            </div>
+            <button class="btn-primary" onclick="Modals.showPropostaModal()">
+                <i class="fas fa-plus"></i> Nova Proposta
+            </button>
+        </div>
+
+        <!-- KPIs -->
+        <div class="grid grid-4 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon" style="background:rgba(107,114,128,0.15);">
+                    <i class="fas fa-file-alt" style="color:#9CA3AF"></i>
+                </div>
+                <div class="stat-content"><h3>${total}</h3><p>Total</p></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon yellow"><i class="fas fa-paper-plane"></i></div>
+                <div class="stat-content"><h3>${enviadas}</h3><p>Enviadas</p></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+                <div class="stat-content"><h3>${aceitas}</h3><p>Aceitas</p></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon red"><i class="fas fa-times-circle"></i></div>
+                <div class="stat-content"><h3>${recusadas}</h3><p>Recusadas</p></div>
+            </div>
+        </div>
+
+        <!-- Lista de Propostas -->
+        ${propostasRicas.length === 0 ? `
+            <div class="card">
+                <div class="card-body" style="text-align:center;padding:3rem;">
+                    <i class="fas fa-file-alt" style="font-size:3rem;color:var(--text-muted);margin-bottom:1rem;display:block;"></i>
+                    <h3>Nenhuma proposta encontrada</h3>
+                    <p class="text-muted">Crie a primeira proposta em Vendas.</p>
+                    <button class="btn-primary mt-2" onclick="Modals.showPropostaModal()">
+                        <i class="fas fa-plus"></i> Nova Proposta
+                    </button>
+                </div>
+            </div>
+        ` : propostasRicas.map(p => `
+            <div class="card mb-2">
+                <div class="card-body" style="padding:0;">
+                    <!-- Cabeçalho da proposta -->
+                    <div style="display:flex;align-items:center;gap:12px;padding:16px;flex-wrap:wrap;cursor:pointer;"
+                         onclick="Pages._toggleCronograma('crono-${p.id}')">
+                        <div style="width:44px;height:44px;border-radius:50%;background:rgba(139,92,246,0.12);
+                                    display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i class="fas fa-file-alt" style="color:var(--brand-primary);font-size:18px;"></i>
+                        </div>
+                        <div style="flex:1;min-width:0;">
+                            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                                <strong style="font-size:15px;">${p.artista?.nome || '—'}</strong>
+                                ${_statusBadge(p.status)}
+                                ${p.contrato?.status === 'Assinado' ? '<span class="badge badge-success"><i class="fas fa-signature"></i> Contrato Assinado</span>' : ''}
+                            </div>
+                            <div style="display:flex;gap:16px;margin-top:4px;flex-wrap:wrap;">
+                                <span style="font-size:13px;color:var(--text-muted);">
+                                    <i class="fas fa-calendar"></i>
+                                    ${p.data_evento ? Utils.formatDate(p.data_evento) : '—'}
+                                    ${p.horario ? 'às ' + p.horario : ''}
+                                </span>
+                                <span style="font-size:13px;color:var(--text-muted);">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    ${p.local_evento || '—'}${p.cidade_evento ? ', ' + p.cidade_evento : ''}
+                                </span>
+                                <span style="font-size:13px;color:var(--text-muted);">
+                                    <i class="fas fa-user"></i>
+                                    ${p.responsavel || p.nome_contratante || '—'}
+                                </span>
+                            </div>
+                        </div>
+                        <div style="text-align:right;flex-shrink:0;">
+                            <div style="font-size:18px;font-weight:700;color:var(--brand-primary);">
+                                ${Utils.formatCurrency(p.cache_bruto || 0)}
+                            </div>
+                            <div style="font-size:12px;color:var(--text-muted);">cachê bruto</div>
+                        </div>
+                        <i class="fas fa-chevron-down" id="chevron-${p.id}"
+                           style="color:var(--text-muted);transition:transform 0.2s;"></i>
+                    </div>
+
+                    <!-- Cronograma (colapsável) -->
+                    <div id="crono-${p.id}" style="display:none;border-top:1px solid var(--border-color);padding:16px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+                            <h4 style="margin:0;font-size:14px;color:var(--text-secondary);">
+                                <i class="fas fa-calendar-check" style="color:var(--brand-primary);"></i>
+                                Cronograma de Pagamento
+                            </h4>
+                            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                                <button class="btn-secondary btn-sm" onclick="Modals.showPropostaModal('${p.id}')">
+                                    <i class="fas fa-edit"></i> Editar
+                                </button>
+                                <button class="btn-secondary btn-sm" onclick="Pages.enviarPropostaWhatsApp('${p.id}')">
+                                    <i class="fab fa-whatsapp" style="color:#25D366;"></i> WhatsApp
+                                </button>
+                                ${p.status !== 'Aceita' && p.status !== 'Recusada' ? `
+                                    <button class="btn-primary btn-sm" onclick="Pages.aceitarProposta('${p.id}')">
+                                        <i class="fas fa-check"></i> Aceitar
+                                    </button>
+                                    <button class="btn-secondary btn-sm" style="color:var(--danger);" onclick="Pages.recusarProposta('${p.id}')">
+                                        <i class="fas fa-times"></i> Recusar
+                                    </button>
+                                ` : ''}
+                                ${p.status === 'Aceita' && p.contrato && p.contrato.status !== 'Assinado' ? `
+                                    <button class="btn-primary btn-sm" onclick="Pages.assinarContratoModal('${p.eventoGerado?.id || ''}', '${p.id}')">
+                                        <i class="fas fa-signature"></i> Assinar Contrato
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+
+                        <!-- Detalhes da proposta -->
+                        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:12px;">
+                            <div style="background:var(--bg-secondary);border-radius:8px;padding:10px;">
+                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">Tipo de Evento</div>
+                                <div style="font-size:13px;font-weight:600;">${p.tipo_evento || '—'}</div>
+                            </div>
+                            <div style="background:var(--bg-secondary);border-radius:8px;padding:10px;">
+                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">Comissão</div>
+                                <div style="font-size:13px;font-weight:600;">${p.comissao || 10}%
+                                    (${Utils.formatCurrency((p.cache_bruto||0) * (p.comissao||10) / 100)})
+                                </div>
+                            </div>
+                            <div style="background:var(--bg-secondary);border-radius:8px;padding:10px;">
+                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">Valor Líquido</div>
+                                <div style="font-size:13px;font-weight:700;color:var(--success);">
+                                    ${Utils.formatCurrency((p.cache_bruto||0) - (p.cache_bruto||0) * (p.comissao||10) / 100)}
+                                </div>
+                            </div>
+                            <div style="background:var(--bg-secondary);border-radius:8px;padding:10px;">
+                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">Válida até</div>
+                                <div style="font-size:13px;font-weight:600;">
+                                    ${p.validade ? Utils.formatDate(p.validade) : '—'}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tabela de cronograma -->
+                        ${_renderCronograma(p)}
+
+                        ${p.observacoes ? `
+                            <div style="margin-top:12px;padding:10px;background:rgba(139,92,246,0.06);
+                                        border-radius:8px;border-left:3px solid var(--brand-primary);">
+                                <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">Observações</div>
+                                <div style="font-size:13px;">${p.observacoes}</div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        `).join('')}
+    </div>`;
+
+    document.getElementById('pageContent').innerHTML = html;
+    document.getElementById('pageTitle').textContent = 'Propostas';
+};
+
+Pages._toggleCronograma = function(id) {
+    const el = document.getElementById(id);
+    const propostaId = id.replace('crono-', '');
+    const chevron = document.getElementById('chevron-' + propostaId);
+    if (!el) return;
+    const open = el.style.display === 'none';
+    el.style.display = open ? 'block' : 'none';
+    if (chevron) chevron.style.transform = open ? 'rotate(180deg)' : '';
+};
