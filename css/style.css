@@ -1306,10 +1306,17 @@ textarea.form-control {
 }
 
 /* Category cell */
-.pc-desp-cat-cell { width: 38%; }
-.pc-desp-val-cell { width: 22%; }
-.pc-desp-lucro-cell { width: 14%; }
-.pc-desp-action-cell { width: 4%; text-align: center; }
+.pc-desp-cat-cell    { width: 20%; }
+.pc-desp-val-cell    { width: 17%; }
+.pc-desp-lucro-cell  { width: 10%; }
+.pc-desp-resp-cell   { width: 30%; }
+.pc-desp-action-cell { width: 6%; text-align: center; }
+
+.pc-desp-resp-cell .pc-select {
+    min-width: 140px;
+    white-space: nowrap;
+    font-size: 13px;
+}
 
 .pc-desp-cat-fixed,
 .pc-desp-cat-custom {
