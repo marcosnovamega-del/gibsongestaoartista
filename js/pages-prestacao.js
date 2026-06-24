@@ -8,29 +8,27 @@
 
 const CATEGORIAS_PADRAO = [
     'Transporte',
-    'Diária',
+    'Diária de Alimentação',
     'Camarim',
     'Hotel',
     'Vans',
-    'Passagens',
+    'Aéreas',
     'Combustível',
     'Alimentação',
-    'Hospedagem',
     'Outros'
 ];
 
 // Ícones por categoria de despesa
 const CATEGORIA_ICONS = {
-    'Transporte':   'fa-car',
-    'Diária':       'fa-calendar-day',
-    'Camarim':      'fa-door-open',
-    'Hotel':        'fa-hotel',
-    'Vans':         'fa-shuttle-van',
-    'Passagens':    'fa-plane',
-    'Combustível':  'fa-gas-pump',
-    'Alimentação':  'fa-utensils',
-    'Hospedagem':   'fa-bed',
-    'Outros':       'fa-ellipsis-h'
+    'Transporte':           'fa-car',
+    'Diária de Alimentação':'fa-utensils',
+    'Camarim':              'fa-door-open',
+    'Hotel':                'fa-hotel',
+    'Vans':                 'fa-shuttle-van',
+    'Aéreas':               'fa-plane',
+    'Combustível':          'fa-gas-pump',
+    'Alimentação':          'fa-utensils',
+    'Outros':               'fa-ellipsis-h'
 };
 
 const CHECKLIST_PADRAO = [
@@ -450,37 +448,86 @@ Pages.renderPrestacaoForm = async function(id, presetArtistaId) {
                         <table class="data-table" id="tabelaDespesas">
                             <thead>
                                 <tr>
-                                    <th style="width:40%">Categoria</th>
-                                    <th style="width:24%">Valor Cobrado (R$)</th>
-                                    <th style="width:24%">Valor Gasto (R$)</th>
-                                    <th style="width:12%">Lucro</th>
-                                    <th style="width:5%"></th>
+                                    <th style="width:28%">Categoria</th>
+                                    <th style="width:18%">Valor Cobrado (R$)</th>
+                                    <th style="width:18%">Valor Gasto (R$)</th>
+                                    <th style="width:10%">Lucro</th>
+                                    <th style="width:20%">Responsável</th>
+                                    <th style="width:6%"></th>
                                 </tr>
                             </thead>
                             <tbody id="despesasBody">
                                 ${despesas.map((d, i) => Pages._htmlLinhaDespesa(d, i)).join('')}
+                                <!-- NF — pass-through: cobrado = gasto, lucro = 0 -->
+                                <tr class="pc-desp-row pc-desp-special" data-tipo="nf">
+                                    <td class="pc-desp-cat-cell">
+                                        <div class="pc-desp-cat-fixed">
+                                            <i class="fas fa-file-invoice pc-cat-icon" style="color:#3b82f6"></i>
+                                            <span class="pc-cat-nome">NF (Nota Fiscal)</span>
+                                        </div>
+                                    </td>
+                                    <td class="pc-desp-val-cell">
+                                        <div class="pc-val-wrap">
+                                            <span class="pc-val-prefix">R$</span>
+                                            <input type="number" id="pc_nf" class="pc-input pc-val-input" min="0" step="0.01"
+                                                value="${pc?.nf_valor || 0}"
+                                                oninput="document.getElementById('pc_nf_gasto').value=this.value; Pages._atualizarResumo()">
+                                        </div>
+                                    </td>
+                                    <td class="pc-desp-val-cell">
+                                        <div class="pc-val-wrap">
+                                            <span class="pc-val-prefix">R$</span>
+                                            <input type="number" id="pc_nf_gasto" class="pc-input pc-val-input" min="0" step="0.01"
+                                                value="${pc?.nf_valor || 0}" readonly style="opacity:0.55;cursor:not-allowed">
+                                        </div>
+                                    </td>
+                                    <td class="pc-desp-lucro-cell">
+                                        <span class="pc-lucro-badge pc-lucro-pos">R$ 0,00</span>
+                                    </td>
+                                    <td class="pc-desp-resp-cell">
+                                        <select class="pc-select desp-responsavel">
+                                            <option value="contratante" selected>🏢 Contratante</option>
+                                            <option value="artista">🎤 Artista</option>
+                                        </select>
+                                    </td>
+                                    <td class="pc-desp-action-cell"></td>
+                                </tr>
+                                <!-- Comissão — pass-through: cobrado = gasto, lucro = 0 -->
+                                <tr class="pc-desp-row pc-desp-special" data-tipo="comissao">
+                                    <td class="pc-desp-cat-cell">
+                                        <div class="pc-desp-cat-fixed">
+                                            <i class="fas fa-percent pc-cat-icon" style="color:#8b5cf6"></i>
+                                            <span class="pc-cat-nome">Comissão</span>
+                                        </div>
+                                    </td>
+                                    <td class="pc-desp-val-cell">
+                                        <div class="pc-val-wrap">
+                                            <span class="pc-val-prefix">R$</span>
+                                            <input type="number" id="pc_comissao" class="pc-input pc-val-input" min="0" step="0.01"
+                                                value="${pc?.comissao_valor || 0}"
+                                                oninput="document.getElementById('pc_comissao_gasto').value=this.value; Pages._atualizarResumo()">
+                                        </div>
+                                    </td>
+                                    <td class="pc-desp-val-cell">
+                                        <div class="pc-val-wrap">
+                                            <span class="pc-val-prefix">R$</span>
+                                            <input type="number" id="pc_comissao_gasto" class="pc-input pc-val-input" min="0" step="0.01"
+                                                value="${pc?.comissao_valor || 0}" readonly style="opacity:0.55;cursor:not-allowed">
+                                        </div>
+                                    </td>
+                                    <td class="pc-desp-lucro-cell">
+                                        <span class="pc-lucro-badge pc-lucro-pos">R$ 0,00</span>
+                                    </td>
+                                    <td class="pc-desp-resp-cell">
+                                        <select class="pc-select desp-responsavel">
+                                            <option value="contratante" selected>🏢 Contratante</option>
+                                            <option value="artista">🎤 Artista</option>
+                                        </select>
+                                    </td>
+                                    <td class="pc-desp-action-cell"></td>
+                                </tr>
                             </tbody>
                         </table>
-                    </div>
-
-                    <!-- NF e Comissão (pass-through — cobrado = gasto) -->
-                    <div class="card-body" style="border-top:1px solid var(--border-color)">
-                        <div class="grid grid-2" style="gap:1rem">
-                            <div class="form-group">
-                                <label><i class="fas fa-file-invoice" style="color:#3b82f6"></i> NF (Nota Fiscal) — R$</label>
-                                <input type="number" id="pc_nf" class="form-control" min="0" step="0.01"
-                                    value="${pc?.nf_valor || 0}" oninput="Pages._atualizarResumo()"
-                                    placeholder="Cobrado e gasto são iguais">
-                                <small class="text-muted">Entra no Total Cobrado e no Total Gasto com o mesmo valor</small>
-                            </div>
-                            <div class="form-group">
-                                <label><i class="fas fa-percent" style="color:#8b5cf6"></i> Comissão — R$</label>
-                                <input type="number" id="pc_comissao" class="form-control" min="0" step="0.01"
-                                    value="${pc?.comissao_valor || 0}" oninput="Pages._atualizarResumo()"
-                                    placeholder="Cobrado e gasto são iguais">
-                                <small class="text-muted">Entra no Total Cobrado e no Total Gasto com o mesmo valor</small>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
@@ -542,24 +589,18 @@ Pages.renderPrestacaoForm = async function(id, presetArtistaId) {
 
 Pages._htmlLinhaDespesa = function(d, i) {
     const uid = (i !== undefined && i !== null) ? i : (++Pages._pcRowIdx);
-    const isPersonalizado = d.tipo === 'personalizado';
     const lucroLinha = (parseFloat(d.valor_cobrado) || 0) - (parseFloat(d.valor_gasto) || 0);
     const lucroClass = lucroLinha >= 0 ? 'pc-lucro-pos' : 'pc-lucro-neg';
     const nomeEscapado = (d.categoria_nome || '').replace(/"/g, '&quot;');
     const icone = CATEGORIA_ICONS[d.categoria_nome] || 'fa-tag';
+    const resp = d.responsavel || 'contratante';
     return `
         <tr id="desp-row-${uid}" data-tipo="${d.tipo || 'padrao'}" class="pc-desp-row">
             <td class="pc-desp-cat-cell">
-                ${isPersonalizado
-                    ? `<div class="pc-desp-cat-custom">
-                            <i class="fas fa-tag pc-cat-icon"></i>
-                            <input type="text" class="pc-input desp-nome" value="${nomeEscapado}" placeholder="Nome da despesa">
-                       </div>`
-                    : `<div class="pc-desp-cat-fixed">
-                            <i class="fas ${icone} pc-cat-icon"></i>
-                            <span class="pc-cat-nome">${d.categoria_nome}</span>
-                       </div>`
-                }
+                <div class="pc-desp-cat-custom">
+                    <i class="fas ${icone} pc-cat-icon"></i>
+                    <input type="text" class="pc-input desp-nome" value="${nomeEscapado}" placeholder="Nome da despesa">
+                </div>
             </td>
             <td class="pc-desp-val-cell">
                 <div class="pc-val-wrap">
@@ -580,13 +621,16 @@ Pages._htmlLinhaDespesa = function(d, i) {
                     ${Utils.formatCurrency(lucroLinha)}
                 </span>
             </td>
+            <td class="pc-desp-resp-cell">
+                <select class="pc-select desp-responsavel">
+                    <option value="contratante" ${resp === 'contratante' ? 'selected' : ''}>🏢 Contratante</option>
+                    <option value="artista"     ${resp === 'artista'     ? 'selected' : ''}>🎤 Artista</option>
+                </select>
+            </td>
             <td class="pc-desp-action-cell">
-                ${isPersonalizado
-                    ? `<button class="pc-btn-remove" onclick="Pages._removerLinha(this)" title="Remover">
-                            <i class="fas fa-times"></i>
-                       </button>`
-                    : '<span class="pc-desp-lock"><i class="fas fa-lock"></i></span>'
-                }
+                <button class="pc-btn-remove" onclick="Pages._removerLinha(this)" title="Remover">
+                    <i class="fas fa-times"></i>
+                </button>
             </td>
         </tr>`;
 };
@@ -729,15 +773,19 @@ Pages._lerDespesasDoForm = function() {
     const rows = document.querySelectorAll('#despesasBody tr');
     const itens = [];
     rows.forEach(row => {
-        const tipo         = row.dataset.tipo || 'padrao';
-        const nomeEl       = row.querySelector('.desp-nome');
-        const cobradoEl    = row.querySelector('.desp-cobrado');
-        const gastoEl      = row.querySelector('.desp-gasto');
-        const nomeFixoEl   = row.querySelector('span');
-        const nome         = nomeEl ? nomeEl.value.trim() : (nomeFixoEl ? nomeFixoEl.textContent.trim() : '');
-        const cobrado      = parseFloat(cobradoEl?.value) || 0;
-        const gasto        = parseFloat(gastoEl?.value)   || 0;
-        if (nome) itens.push({ categoria_nome: nome, tipo, valor_cobrado: cobrado, valor_gasto: gasto });
+        const tipo = row.dataset.tipo || 'padrao';
+        // Ignorar linhas especiais de NF e Comissão — não são despesas normais
+        if (tipo === 'nf' || tipo === 'comissao') return;
+        const nomeEl     = row.querySelector('.desp-nome');
+        const cobradoEl  = row.querySelector('.desp-cobrado');
+        const gastoEl    = row.querySelector('.desp-gasto');
+        const respEl     = row.querySelector('.desp-responsavel');
+        const nomeFixoEl = row.querySelector('span');
+        const nome       = nomeEl ? nomeEl.value.trim() : (nomeFixoEl ? nomeFixoEl.textContent.trim() : '');
+        const cobrado    = parseFloat(cobradoEl?.value) || 0;
+        const gasto      = parseFloat(gastoEl?.value)   || 0;
+        const responsavel = respEl?.value || 'contratante';
+        if (nome) itens.push({ categoria_nome: nome, tipo, valor_cobrado: cobrado, valor_gasto: gasto, responsavel });
     });
     return itens;
 };
