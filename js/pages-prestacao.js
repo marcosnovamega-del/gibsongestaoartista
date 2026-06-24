@@ -316,6 +316,9 @@ Pages._htmlLinhaPrestacao = function(p, artistaAtivo) {
         <td id="liquido-${p.id}">—</td>
         <td><span class="badge ${statusClass}">${statusLabel}</span></td>
         <td>
+            <button class="btn-icon" title="Ver Resumo" onclick="Pages.renderResumoPrestacao('${p.id}')">
+                <i class="fas fa-file-alt"></i>
+            </button>
             <button class="btn-icon" title="Editar" onclick="Pages.renderPrestacaoForm('${p.id}')">
                 <i class="fas fa-edit"></i>
             </button>
@@ -936,6 +939,152 @@ Pages.salvarPrestacao = async function(id, presetArtistaId) {
 };
 
 // ─── Excluir ──────────────────────────────────────────────────────────────────
+
+// ─── Tela de Resumo ───────────────────────────────────────────────────────────
+
+Pages.renderResumoPrestacao = async function(id) {
+    const pageContent = document.getElementById('pageContent');
+    pageContent.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>';
+
+    try {
+        const pc       = await PrestacaoDB.buscarPorId(id);
+        const despesas = await PrestacaoDB.listarDespesas(id);
+        const artistas = await ArtistasDB.listar();
+        const artista  = artistas.find(a => a.id === pc.artista_id);
+        const nomeArtista = artista?.nome || 'Artista';
+
+        const cache    = parseFloat(pc.cache_artista)  || 0;
+        const nf       = parseFloat(pc.nf_valor)       || 0;
+        const comissao = parseFloat(pc.comissao_valor)  || 0;
+        const fmt = v => 'R$ ' + parseFloat(v||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+        // Separar por responsável
+        const despArtista    = despesas.filter(d => d.responsavel === 'artista');
+        const despContratante = despesas.filter(d => d.responsavel !== 'artista');
+
+        const somarCobrado = arr => arr.reduce((s,d) => s + (parseFloat(d.valor_cobrado)||0), 0);
+        const somarGasto   = arr => arr.reduce((s,d) => s + (parseFloat(d.valor_gasto)||0),   0);
+
+        const totalCobradoContratante = somarCobrado(despContratante);
+        const totalGastoContratante   = somarGasto(despContratante);
+        const lucroContratante        = totalCobradoContratante - totalGastoContratante;
+
+        const totalCobradoArtista = somarCobrado(despArtista);
+        const totalGastoArtista   = somarGasto(despArtista);
+        const lucroArtista        = totalCobradoArtista - totalGastoArtista;
+
+        const totalCobrado = totalCobradoContratante + totalCobradoArtista + nf + comissao;
+        const valorContrato = cache + totalCobrado;
+        const lucroTotal    = lucroContratante + lucroArtista;
+        const valorLiquido  = cache + lucroTotal;
+
+        const dataShow = pc.data_show ? new Date(pc.data_show + 'T00:00:00').toLocaleDateString('pt-BR') : '—';
+
+        const linhaDesp = (d) => {
+            const cobrado = parseFloat(d.valor_cobrado) || 0;
+            const gasto   = parseFloat(d.valor_gasto)   || 0;
+            const lucro   = cobrado - gasto;
+            const temValor = cobrado > 0 || gasto > 0;
+            return `
+            <div class="resumo-desp-linha ${temValor ? 'tem-valor' : ''}">
+                <span class="resumo-desp-nome">- ${(d.categoria_nome || '').toUpperCase()}</span>
+                ${temValor ? `
+                <span class="resumo-desp-valores">
+                    <span>VALOR COBRADO — <strong>${fmt(cobrado)}</strong></span>
+                    <span class="resumo-arrow">——→</span>
+                    <span>VALOR GASTO — <strong class="resumo-gasto">${fmt(gasto)}</strong></span>
+                </span>` : ''}
+            </div>`;
+        };
+
+        pageContent.innerHTML = `
+        <div class="resumo-pc-container">
+
+            <!-- Ações -->
+            <div class="resumo-pc-acoes no-print">
+                <button class="btn-secondary" onclick="Pages.renderPrestacao()">
+                    <i class="fas fa-arrow-left"></i> Voltar
+                </button>
+                <button class="btn-primary" onclick="window.print()">
+                    <i class="fas fa-print"></i> Imprimir / Salvar PDF
+                </button>
+            </div>
+
+            <!-- Documento -->
+            <div class="resumo-pc-doc" id="resumoDoc">
+
+                <!-- Cabeçalho -->
+                <div class="resumo-artista-nome">${nomeArtista.toUpperCase()}</div>
+                <div class="resumo-subtitulo">RESUMO SHOW — ${dataShow}</div>
+                <div class="resumo-cidade">${(pc.cidade || '').toUpperCase()}</div>
+
+                <div class="resumo-linha-sep"></div>
+
+                <!-- Contrato -->
+                <div class="resumo-bloco">
+                    <div class="resumo-contrato-linha">
+                        VALOR TOTAL DO CONTRATO:
+                        <span class="resumo-highlight">${fmt(valorContrato)}</span>
+                    </div>
+                </div>
+
+                <!-- Despesas Artista -->
+                <div class="resumo-bloco">
+                    <div class="resumo-secao-titulo">DESPESAS ${nomeArtista.toUpperCase()}:</div>
+                    ${despArtista.length === 0
+                        ? '<div class="resumo-desp-linha"><span class="resumo-desp-nome resumo-vazio">— Nenhuma despesa do artista —</span></div>'
+                        : despArtista.map(linhaDesp).join('')
+                    }
+                    ${despArtista.length > 0 ? `
+                    <div class="resumo-total-linha">
+                        RECEITA TOTAL ARTISTA: <strong class="resumo-highlight">${fmt(totalCobradoArtista)}</strong>
+                        &nbsp;—→&nbsp; VALOR GASTO: <strong class="resumo-gasto">${fmt(totalGastoArtista)}</strong>
+                        &nbsp;—→&nbsp; LUCRO: <strong class="resumo-lucro ${lucroArtista >= 0 ? 'pos' : 'neg'}">${fmt(lucroArtista)}</strong>
+                    </div>` : ''}
+                </div>
+
+                <!-- Despesas Contratante -->
+                <div class="resumo-bloco">
+                    <div class="resumo-secao-titulo">DESPESAS CONTRATANTE:</div>
+                    ${despContratante.length === 0
+                        ? '<div class="resumo-desp-linha"><span class="resumo-desp-nome resumo-vazio">— Nenhuma despesa do contratante —</span></div>'
+                        : despContratante.map(linhaDesp).join('')
+                    }
+                    ${despContratante.length > 0 ? `
+                    <div class="resumo-total-linha">
+                        RECEITA TOTAL CONTRATANTE: <strong class="resumo-highlight">${fmt(totalCobradoContratante)}</strong>
+                        &nbsp;—→&nbsp; VALOR GASTO: <strong class="resumo-gasto">${fmt(totalGastoContratante)}</strong>
+                        &nbsp;—→&nbsp; LUCRO: <strong class="resumo-lucro ${lucroContratante >= 0 ? 'pos' : 'neg'}">${fmt(lucroContratante)}</strong>
+                    </div>` : ''}
+                </div>
+
+                ${nf > 0 || comissao > 0 ? `
+                <div class="resumo-bloco">
+                    <div class="resumo-secao-titulo">RETENÇÕES:</div>
+                    ${nf > 0 ? `<div class="resumo-desp-linha"><span class="resumo-desp-nome">- NF (NOTA FISCAL)</span><span class="resumo-desp-valores"><span><strong class="resumo-gasto">${fmt(nf)}</strong></span></span></div>` : ''}
+                    ${comissao > 0 ? `<div class="resumo-desp-linha"><span class="resumo-desp-nome">- COMISSÃO</span><span class="resumo-desp-valores"><span><strong class="resumo-gasto">${fmt(comissao)}</strong></span></span></div>` : ''}
+                </div>` : ''}
+
+                <div class="resumo-linha-sep"></div>
+
+                <!-- Valor Líquido Final -->
+                <div class="resumo-bloco resumo-final">
+                    <div class="resumo-liquido-linha">
+                        VALOR LÍQUIDO ${nomeArtista.toUpperCase()}:
+                        <span class="resumo-highlight">${fmt(cache)}</span>
+                        ${lucroTotal !== 0 ? ` + <span class="resumo-lucro ${lucroTotal >= 0 ? 'pos' : 'neg'}">${fmt(lucroTotal)}</span>` : ''}
+                        = <span class="resumo-highlight resumo-total-final">${fmt(valorLiquido)}</span>
+                    </div>
+                </div>
+
+            </div><!-- fim resumo-pc-doc -->
+        </div>`;
+
+    } catch(err) {
+        console.error('[Resumo]', err);
+        pageContent.innerHTML = `<div class="error-message"><i class="fas fa-exclamation-triangle"></i> Erro: ${err.message}</div>`;
+    }
+};
 
 Pages.confirmarExcluirPrestacao = function(id, artistaId) {
     if (!confirm('Excluir este fechamento? Esta ação não pode ser desfeita.')) return;
