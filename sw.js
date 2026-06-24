@@ -11,8 +11,9 @@ const ASSETS = [
   'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap'
 ];
 
-// Instalação: Cacheia os recursos básicos
+// Instalação: Cacheia os recursos básicos e assume controle imediatamente
 self.addEventListener('install', (event) => {
+  self.skipWaiting(); // Não espera — ativa imediatamente
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS);
@@ -20,14 +21,17 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Ativação: Limpa caches antigos
+// Ativação: Limpa caches antigos e assume controle de todos os clientes
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
-      );
-    })
+    Promise.all([
+      caches.keys().then((keys) => {
+        return Promise.all(
+          keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+        );
+      }),
+      self.clients.claim() // Assume controle de todas as abas abertas
+    ])
   );
 });
 
