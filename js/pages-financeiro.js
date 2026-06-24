@@ -31,9 +31,11 @@ Pages.renderFinanceiro = async function() {
         return this.renderFinanceiroSearch(searchResults);
     }
 
-    // Calcular valores a receber
-    const totalAReceber = parcelasPendentes.reduce((sum, p) => sum + (p.valor || 0), 0);
-    const totalAtrasado = parcelasAtrasadas.reduce((sum, p) => sum + (p.valor || 0), 0);
+    // Separar creditado (parcelas pagas) e a receber (pendentes de contratos assinados)
+    const parcelasPagas = parcelas.filter(p => p.status === 'Pago');
+    const totalCreditado = parcelasPagas.reduce((sum, p) => sum + (parseFloat(p.valor) || 0), 0);
+    const totalAReceber = parcelasPendentes.reduce((sum, p) => sum + (parseFloat(p.valor) || 0), 0);
+    const totalAtrasado = parcelasAtrasadas.reduce((sum, p) => sum + (parseFloat(p.valor) || 0), 0);
 
     const html = `
         <div class="financeiro-container">
@@ -62,11 +64,23 @@ Pages.renderFinanceiro = async function() {
             <div class="grid grid-4 mb-3">
                 <div class="stat-card">
                     <div class="stat-icon green">
-                        <i class="fas fa-arrow-up"></i>
+                        <i class="fas fa-check-circle"></i>
                     </div>
                     <div class="stat-content">
-                        <h3>${Utils.formatCurrency(totais.receita)}</h3>
-                        <p>Receita Total</p>
+                        <h3 class="text-success">${Utils.formatCurrency(totalCreditado)}</h3>
+                        <p>Creditado</p>
+                        <small class="text-muted">${parcelasPagas.length} parcela(s) recebida(s)</small>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon blue">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>${Utils.formatCurrency(totalAReceber)}</h3>
+                        <p>A Receber</p>
+                        <small class="text-muted">${parcelasPendentes.length} parcela(s) pendente(s)</small>
                     </div>
                 </div>
 
@@ -81,24 +95,15 @@ Pages.renderFinanceiro = async function() {
                 </div>
 
                 <div class="stat-card">
-                    <div class="stat-icon ${totais.lucro >= 0 ? 'green' : 'red'}">
+                    <div class="stat-icon ${(totalCreditado - totais.despesas) >= 0 ? 'green' : 'red'}">
                         <i class="fas fa-wallet"></i>
                     </div>
                     <div class="stat-content">
-                        <h3 class="${totais.lucro >= 0 ? 'text-success' : 'text-danger'}">
-                            ${Utils.formatCurrency(totais.lucro)}
+                        <h3 class="${(totalCreditado - totais.despesas) >= 0 ? 'text-success' : 'text-danger'}">
+                            ${Utils.formatCurrency(totalCreditado - totais.despesas)}
                         </h3>
-                        <p>Lucro Líquido</p>
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-icon blue">
-                        <i class="fas fa-clock"></i>
-                    </div>
-                    <div class="stat-content">
-                        <h3>${Utils.formatCurrency(totalAReceber)}</h3>
-                        <p>A Receber</p>
+                        <p>Saldo Real</p>
+                        <small class="text-muted">Creditado − Despesas</small>
                     </div>
                 </div>
             </div>

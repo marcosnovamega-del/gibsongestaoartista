@@ -205,12 +205,16 @@ const Utils = {
             DespesasDB.listar(),
             ReceitasDB.listar()
         ]);
-        
+
+        // Apenas eventos com contrato assinado entram no financeiro
+        const STATUS_CONFIRMADOS = ['Confirmado', 'Realizado', 'Concluído', 'Encerrado', 'Finalizado'];
+        const eventosConfirmados = eventos.filter(e => STATUS_CONFIRMADOS.includes(e.status));
+
         let receitaShows = 0;
         let despesasOperacionais = 0;
-        
-        // 1. Receitas e Despesas de Shows
-        for (const evento of eventos) {
+
+        // 1. Receitas e Despesas de Shows — só contratos assinados
+        for (const evento of eventosConfirmados) {
             receitaShows += evento.valor_liquido || 0;
             const despEv = todasDespesas.filter(d => d.evento_id === evento.id);
             despesasOperacionais += despEv.reduce((acc, d) => acc + (parseFloat(d.valor) || 0), 0);
@@ -245,7 +249,8 @@ const Utils = {
             despesasFixas: totalFixas,
             lucro: lucroTotal,
             margem: margem,
-            eventos: eventos.length
+            eventos: eventosConfirmados.length,
+            totalEventos: eventos.length
         };
     },
 
