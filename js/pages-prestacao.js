@@ -211,14 +211,17 @@ Pages.renderPrestacao = async function(filtroArtistaId) {
             return '<option value="' + a.id + '"' + (a.id === artistaAtivo ? ' selected' : '') + '>' + a.nome + '</option>';
         }).join('');
 
-        const conteudo = lista.length === 0
+        const emptyState = lista.length === 0
             ? '<div class="empty-state">'
               + '<i class="fas fa-receipt" style="font-size:3rem;color:var(--text-muted);margin-bottom:1rem"></i>'
               + '<h3>Nenhum fechamento para ' + artistaAtualNome + '</h3>'
               + '<p class="text-muted">Crie o primeiro fechamento financeiro deste artista.</p>'
               + '<button class="btn-primary mt-2" onclick="Pages.renderPrestacaoForm(null, \'' + (artistaAtivo||'') + '\')">'
               + '<i class="fas fa-plus"></i> Novo Fechamento</button></div>'
-            : filtrosHTML + tabelaHTML;
+            : tabelaHTML;
+
+        // Filtro sempre visível, independente de ter dados
+        const conteudo = filtrosHTML + emptyState;
 
         pageContent.innerHTML = '<div class="prestacao-container">'
             + '<div class="page-header flex-between mb-3">'
