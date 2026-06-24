@@ -159,139 +159,103 @@ Pages.renderPrestacao = async function(filtroArtistaId) {
     pageContent.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>';
 
     try {
-        // Artista context: filtroArtistaId (passado explicitamente) > selecionado no dropdown > primeiro da lista
         const artistas = await ArtistasDB.listar();
         const artMap = {};
-        artistas.forEach(a => { artMap[a.id] = a.nome; });
+        artistas.forEach(function(a) { artMap[a.id] = a.nome; });
 
         const selectedGlobal = Auth.getSelectedArtistaId ? Auth.getSelectedArtistaId() : (Auth.selectedArtistaId || 'todos');
-
-        // Determinar artista ativo para este módulo
         let artistaAtivo = filtroArtistaId
             || (selectedGlobal !== 'todos' ? selectedGlobal : null)
             || (artistas.length ? artistas[0].id : null);
 
         const lista = await PrestacaoDB.listar(artistaAtivo);
         const artistaAtualNome = artistaAtivo ? (artMap[artistaAtivo] || 'Artista') : 'Todos';
-        const artAtivo = artistas.find(a => a.id === artistaAtivo);
-        const artAtivoFoto = artAtivo?.foto
-            || `https://ui-avatars.com/api/?name=${encodeURIComponent(artistaAtualNome)}&background=D4AF37&color=000&bold=true&size=80`;
+        const artAtivo = artistas.find(function(a) { return a.id === artistaAtivo; });
+        const artAtivoFoto = (artAtivo && artAtivo.foto)
+            ? artAtivo.foto
+            : 'https://ui-avatars.com/api/?name=' + encodeURIComponent(artistaAtualNome) + '&background=D4AF37&color=000&bold=true&size=80';
 
-        // ── Filtros + tabela (calculado antes do template) ──
-        const _anos = [...new Set(lista
-            .filter(p => p.data_show)
-            .map(p => new Date(p.data_show + 'T00:00:00').getFullYear())
-        )].sort((a, b) => b - a);
-        const _mesesNomes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
-                             'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-        const htmlListaPC = `
-            <div class="pc-filtros-bar mb-3">
-                <div class="pc-filtros-inner">
-                    <i class="fas fa-filter" style="color:var(--brand-primary)"></i>
-                    <select id="pcFiltroMes" class="pc-select" onchange="Pages._aplicarFiltroPC()" style="min-width:140px">
-                        <option value="">Todos os meses</option>
-                        ${_mesesNomes.map((m, i) => `<option value="${i+1}">${m}</option>`).join('')}
-                    </select>
-                    <select id="pcFiltroAno" class="pc-select" onchange="Pages._aplicarFiltroPC()" style="min-width:100px">
-                        <option value="">Todos os anos</option>
-                        ${_anos.map(a => `<option value="${a}">${a}</option>`).join('')}
-                    </select>
-                    <button class="btn-secondary btn-sm" onclick="Pages._limparFiltroPC()">
-                        <i class="fas fa-times"></i> Limpar
-                    </button>
-                </div>
-            </div>
-            <div class="table-container">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Show / Evento</th>
-                            <th>Cidade</th>
-                            <th>Data</th>
-                            <th>Cachê</th>
-                            <th>Valor Contrato</th>
-                            <th>Líquido Artista</th>
-                            <th>Status</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody id="pcListaBody">
-                        ${lista.map(p => Pages._htmlLinhaPrestacao(p, artistaAtivo)).join('')}
-                    </tbody>
-                </table>
-            </div>`;
-
-        pageContent.innerHTML = `
-            <div class="prestacao-container">
-                <div class="page-header flex-between mb-3">
-                    <div>
-                        <h2><i class="fas fa-receipt" style="color:var(--brand-primary)"></i> Prestação de Contas</h2>
-                        <p class="text-muted">Fechamento financeiro por show</p>
-                    </div>
-                    <button class="btn-primary" onclick="Pages.renderPrestacaoForm(null, '${artistaAtivo || ''}')">
-                        <i class="fas fa-plus"></i> Novo Fechamento
-                    </button>
-                </div>
-
-                <!-- Card artista refinado -->
-                <div class="pc-artista-card mb-3">
-                    <div class="pc-artista-inner">
-                        <img class="pc-artista-avatar"
-                             src="${artAtivoFoto}"
-                             alt="${artistaAtualNome}"
-                             onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(artistaAtualNome)}&background=D4AF37&color=000&bold=true&size=80'">
-                        <div class="pc-artista-info">
-                            <div class="pc-artista-label"><i class="fas fa-microphone"></i> Artista</div>
-                            <div class="pc-artista-nome">${artistaAtualNome}</div>
-                            <div class="pc-artista-count">
-                                <i class="fas fa-receipt"></i>
-                                ${lista.length} fechamento${lista.length !== 1 ? 's' : ''}
-                            </div>
-                        </div>
-                        <div class="pc-artista-select-wrap">
-                            <label class="pc-artista-select-label">Trocar artista</label>
-                            <select id="prestacaoFiltroArtista" class="pc-artista-select"
-                                onchange="Pages.renderPrestacao(this.value)">
-                                ${artistas.map(a =>
-                                    `<option value="${a.id}" ${a.id === artistaAtivo ? 'selected' : ''}>${a.nome}</option>`
-                                ).join('')}
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                ${lista.length === 0 ? `
-                    <div class="empty-state">
-                        <i class="fas fa-receipt" style="font-size:3rem;color:var(--text-muted);margin-bottom:1rem"></i>
-                        <h3>Nenhum fechamento para ${artistaAtualNome}</h3>
-                        <p class="text-muted">Crie o primeiro fechamento financeiro deste artista.</p>
-                        <button class="btn-primary mt-2" onclick="Pages.renderPrestacaoForm(null, '${artistaAtivo || ''}')">
-                            <i class="fas fa-plus"></i> Novo Fechamento
-                        </button>
-                    </div>
-                ` : htmlListaPC}
-            </div>
-        `;
-
-        // Guardar lista e artistaAtivo para filtro client-side
         Pages._pcListaCache = lista;
         Pages._pcArtistaAtivoCache = artistaAtivo;
 
+        // Filtros
+        const _anos = [...new Set(lista.filter(function(p){ return p.data_show; }).map(function(p){ return new Date(p.data_show + 'T00:00:00').getFullYear(); }))].sort(function(a,b){ return b-a; });
+        const _mesesNomes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+        const selectMes = '<select id="pcFiltroMes" class="pc-select" onchange="Pages._aplicarFiltroPC()" style="min-width:140px">'
+            + '<option value="">Todos os meses</option>'
+            + _mesesNomes.map(function(m,i){ return '<option value="' + (i+1) + '">' + m + '</option>'; }).join('')
+            + '</select>';
+        const selectAno = '<select id="pcFiltroAno" class="pc-select" onchange="Pages._aplicarFiltroPC()" style="min-width:100px">'
+            + '<option value="">Todos os anos</option>'
+            + _anos.map(function(a){ return '<option value="' + a + '">' + a + '</option>'; }).join('')
+            + '</select>';
+        const filtrosHTML = '<div class="pc-filtros-bar mb-3"><div class="pc-filtros-inner">'
+            + '<i class="fas fa-filter" style="color:var(--brand-primary)"></i>'
+            + selectMes + selectAno
+            + '<button class="btn-secondary btn-sm" onclick="Pages._limparFiltroPC()"><i class="fas fa-times"></i> Limpar</button>'
+            + '</div></div>';
+
+        const tabelaHTML = '<div class="table-container"><table class="data-table">'
+            + '<thead><tr>'
+            + '<th>Show / Evento</th><th>Cidade</th><th>Data</th><th>Cachê</th>'
+            + '<th>Valor Contrato</th><th>Líquido Artista</th><th>Status</th><th>Ações</th>'
+            + '</tr></thead>'
+            + '<tbody id="pcListaBody">'
+            + lista.map(function(p){ return Pages._htmlLinhaPrestacao(p, artistaAtivo); }).join('')
+            + '</tbody></table></div>';
+
+        const selectArtistas = artistas.map(function(a){
+            return '<option value="' + a.id + '"' + (a.id === artistaAtivo ? ' selected' : '') + '>' + a.nome + '</option>';
+        }).join('');
+
+        const conteudo = lista.length === 0
+            ? '<div class="empty-state">'
+              + '<i class="fas fa-receipt" style="font-size:3rem;color:var(--text-muted);margin-bottom:1rem"></i>'
+              + '<h3>Nenhum fechamento para ' + artistaAtualNome + '</h3>'
+              + '<p class="text-muted">Crie o primeiro fechamento financeiro deste artista.</p>'
+              + '<button class="btn-primary mt-2" onclick="Pages.renderPrestacaoForm(null, \'' + (artistaAtivo||'') + '\')">'
+              + '<i class="fas fa-plus"></i> Novo Fechamento</button></div>'
+            : filtrosHTML + tabelaHTML;
+
+        pageContent.innerHTML = '<div class="prestacao-container">'
+            + '<div class="page-header flex-between mb-3">'
+            + '<div><h2><i class="fas fa-receipt" style="color:var(--brand-primary)"></i> Prestação de Contas</h2>'
+            + '<p class="text-muted">Fechamento financeiro por show</p></div>'
+            + '<button class="btn-primary" onclick="Pages.renderPrestacaoForm(null, \'' + (artistaAtivo||'') + '\')">'
+            + '<i class="fas fa-plus"></i> Novo Fechamento</button>'
+            + '</div>'
+            + '<div class="pc-artista-card mb-3"><div class="pc-artista-inner">'
+            + '<img class="pc-artista-avatar" src="' + artAtivoFoto + '" alt="' + artistaAtualNome + '"'
+            + ' onerror="this.src=\'https://ui-avatars.com/api/?name=' + encodeURIComponent(artistaAtualNome) + '&background=D4AF37&color=000&bold=true&size=80\'">'
+            + '<div class="pc-artista-info">'
+            + '<div class="pc-artista-label"><i class="fas fa-microphone"></i> Artista</div>'
+            + '<div class="pc-artista-nome">' + artistaAtualNome + '</div>'
+            + '<div class="pc-artista-count"><i class="fas fa-receipt"></i> ' + lista.length + ' fechamento' + (lista.length !== 1 ? 's' : '') + '</div>'
+            + '</div>'
+            + '<div class="pc-artista-select-wrap">'
+            + '<label class="pc-artista-select-label">Trocar artista</label>'
+            + '<select id="prestacaoFiltroArtista" class="pc-artista-select" onchange="Pages.renderPrestacao(this.value)">'
+            + selectArtistas + '</select></div></div></div>'
+            + conteudo
+            + '</div>';
+
         // Preencher totais assincronamente
-        for (const p of lista) {
-            Pages._calcularTotaisPrestacao(p.id).then(totais => {
-                const elC = document.getElementById(`contrato-${p.id}`);
-                const elL = document.getElementById(`liquido-${p.id}`);
+        lista.forEach(function(p) {
+            Pages._calcularTotaisPrestacao(p.id).then(function(totais) {
+                const elC = document.getElementById('contrato-' + p.id);
+                const elL = document.getElementById('liquido-' + p.id);
                 if (elC) elC.textContent = Utils.formatCurrency(totais.valorContrato);
                 if (elL) elL.textContent = Utils.formatCurrency(totais.valorLiquido);
-            }).catch(() => {});
-        }
+            }).catch(function(){});
+        });
 
     } catch (err) {
         console.error('[Prestacao]', err);
-        pageContent.innerHTML = `<div class="error-message"><i class="fas fa-exclamation-triangle"></i> Erro ao carregar prestações: ${err.message}</div>`;
+        pageContent.innerHTML = '<div class="error-message"><i class="fas fa-exclamation-triangle"></i> Erro ao carregar: ' + err.message + '</div>';
     }
 };
+
 
 // ─── Helper: linha da lista de prestações ────────────────────────────────────
 
@@ -938,320 +902,132 @@ Pages.salvarPrestacao = async function(id, presetArtistaId) {
     }
 };
 
-// ─── Excluir ──────────────────────────────────────────────────────────────────
-
-// ─── Tela de Resumo ───────────────────────────────────────────────────────────
-
 Pages.renderResumoPrestacao = async function(id) {
     const pageContent = document.getElementById('pageContent');
     pageContent.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>';
-
     try {
         const pc       = await PrestacaoDB.buscarPorId(id);
         const despesas = await PrestacaoDB.listarDespesas(id);
         const artistas = await ArtistasDB.listar();
         const artista  = artistas.find(a => a.id === pc.artista_id);
-        const nomeArtista = artista?.nome || 'Artista';
-
+        const nomeArtista = artista ? artista.nome : 'Artista';
         const cache    = parseFloat(pc.cache_artista)  || 0;
         const nf       = parseFloat(pc.nf_valor)       || 0;
         const comissao = parseFloat(pc.comissao_valor)  || 0;
-        const fmt = v => 'R$ ' + parseFloat(v||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
-
-        // Separar por responsável
-        const despArtista    = despesas.filter(d => d.responsavel === 'artista');
-        const despContratante = despesas.filter(d => d.responsavel !== 'artista');
-
-        const somarCobrado = arr => arr.reduce((s,d) => s + (parseFloat(d.valor_cobrado)||0), 0);
-        const somarGasto   = arr => arr.reduce((s,d) => s + (parseFloat(d.valor_gasto)||0),   0);
-
-        const totalCobradoContratante = somarCobrado(despContratante);
-        const totalGastoContratante   = somarGasto(despContratante);
-        const lucroContratante        = totalCobradoContratante - totalGastoContratante;
-
-        const totalCobradoArtista = somarCobrado(despArtista);
-        const totalGastoArtista   = somarGasto(despArtista);
-        const lucroArtista        = totalCobradoArtista - totalGastoArtista;
-
-        const totalCobrado = totalCobradoContratante + totalCobradoArtista + nf + comissao;
-        const valorContrato = cache + totalCobrado;
-        const lucroTotal    = lucroContratante + lucroArtista;
+        const fmt = function(v) { return 'R$ ' + parseFloat(v||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}); };
+        const despArtista     = despesas.filter(function(d){ return d.responsavel === 'artista'; });
+        const despContratante = despesas.filter(function(d){ return d.responsavel !== 'artista'; });
+        const somarCob = function(arr){ return arr.reduce(function(s,d){ return s+(parseFloat(d.valor_cobrado)||0); }, 0); };
+        const somarGas = function(arr){ return arr.reduce(function(s,d){ return s+(parseFloat(d.valor_gasto)||0); },   0); };
+        const totCobCont = somarCob(despContratante), totGasCont = somarGas(despContratante), lucroCont = totCobCont - totGasCont;
+        const totCobArt  = somarCob(despArtista),  totGasArt  = somarGas(despArtista),  lucroArt  = totCobArt  - totGasArt;
+        const valorContrato = cache + totCobCont + totCobArt + nf + comissao;
+        const lucroTotal    = lucroCont + lucroArt;
         const valorLiquido  = cache + lucroTotal;
-
         const dataShow = pc.data_show ? new Date(pc.data_show + 'T00:00:00').toLocaleDateString('pt-BR') : '—';
-
-        const linhaDesp = (d) => {
-            const cobrado = parseFloat(d.valor_cobrado) || 0;
-            const gasto   = parseFloat(d.valor_gasto)   || 0;
-            const lucro   = cobrado - gasto;
-            const temValor = cobrado > 0 || gasto > 0;
-            return `
-            <div class="resumo-desp-linha ${temValor ? 'tem-valor' : ''}">
-                <span class="resumo-desp-nome">- ${(d.categoria_nome || '').toUpperCase()}</span>
-                ${temValor ? `
-                <span class="resumo-desp-valores">
-                    <span>VALOR COBRADO — <strong>${fmt(cobrado)}</strong></span>
-                    <span class="resumo-arrow">——→</span>
-                    <span>VALOR GASTO — <strong class="resumo-gasto">${fmt(gasto)}</strong></span>
-                </span>` : ''}
-            </div>`;
-        };
-
-        pageContent.innerHTML = `
-        <div class="resumo-pc-container">
-
-            <!-- Ações -->
-            <div class="resumo-pc-acoes no-print">
-                <button class="btn-secondary" onclick="Pages.renderPrestacao()">
-                    <i class="fas fa-arrow-left"></i> Voltar
-                </button>
-                <button class="btn-primary" onclick="window.print()">
-                    <i class="fas fa-print"></i> Imprimir / Salvar PDF
-                </button>
-            </div>
-
-            <!-- Documento -->
-            <div class="resumo-pc-doc" id="resumoDoc">
-
-                <!-- Cabeçalho -->
-                <div class="resumo-artista-nome">${nomeArtista.toUpperCase()}</div>
-                <div class="resumo-subtitulo">RESUMO SHOW — ${dataShow}</div>
-                <div class="resumo-cidade">${(pc.cidade || '').toUpperCase()}</div>
-
-                <div class="resumo-linha-sep"></div>
-
-                <!-- Contrato -->
-                <div class="resumo-bloco">
-                    <div class="resumo-contrato-linha">
-                        VALOR TOTAL DO CONTRATO:
-                        <span class="resumo-highlight">${fmt(valorContrato)}</span>
-                    </div>
-                </div>
-
-                <!-- Despesas Artista -->
-                <div class="resumo-bloco">
-                    <div class="resumo-secao-titulo">DESPESAS ${nomeArtista.toUpperCase()}:</div>
-                    ${despArtista.length === 0
-                        ? '<div class="resumo-desp-linha"><span class="resumo-desp-nome resumo-vazio">— Nenhuma despesa do artista —</span></div>'
-                        : despArtista.map(linhaDesp).join('')
-                    }
-                    ${despArtista.length > 0 ? `
-                    <div class="resumo-total-linha">
-                        RECEITA TOTAL ARTISTA: <strong class="resumo-highlight">${fmt(totalCobradoArtista)}</strong>
-                        &nbsp;—→&nbsp; VALOR GASTO: <strong class="resumo-gasto">${fmt(totalGastoArtista)}</strong>
-                        &nbsp;—→&nbsp; LUCRO: <strong class="resumo-lucro ${lucroArtista >= 0 ? 'pos' : 'neg'}">${fmt(lucroArtista)}</strong>
-                    </div>` : ''}
-                </div>
-
-                <!-- Despesas Contratante -->
-                <div class="resumo-bloco">
-                    <div class="resumo-secao-titulo">DESPESAS CONTRATANTE:</div>
-                    ${despContratante.length === 0
-                        ? '<div class="resumo-desp-linha"><span class="resumo-desp-nome resumo-vazio">— Nenhuma despesa do contratante —</span></div>'
-                        : despContratante.map(linhaDesp).join('')
-                    }
-                    ${despContratante.length > 0 ? `
-                    <div class="resumo-total-linha">
-                        RECEITA TOTAL CONTRATANTE: <strong class="resumo-highlight">${fmt(totalCobradoContratante)}</strong>
-                        &nbsp;—→&nbsp; VALOR GASTO: <strong class="resumo-gasto">${fmt(totalGastoContratante)}</strong>
-                        &nbsp;—→&nbsp; LUCRO: <strong class="resumo-lucro ${lucroContratante >= 0 ? 'pos' : 'neg'}">${fmt(lucroContratante)}</strong>
-                    </div>` : ''}
-                </div>
-
-                ${nf > 0 || comissao > 0 ? `
-                <div class="resumo-bloco">
-                    <div class="resumo-secao-titulo">RETENÇÕES:</div>
-                    ${nf > 0 ? `<div class="resumo-desp-linha"><span class="resumo-desp-nome">- NF (NOTA FISCAL)</span><span class="resumo-desp-valores"><span><strong class="resumo-gasto">${fmt(nf)}</strong></span></span></div>` : ''}
-                    ${comissao > 0 ? `<div class="resumo-desp-linha"><span class="resumo-desp-nome">- COMISSÃO</span><span class="resumo-desp-valores"><span><strong class="resumo-gasto">${fmt(comissao)}</strong></span></span></div>` : ''}
-                </div>` : ''}
-
-                <div class="resumo-linha-sep"></div>
-
-                <!-- Valor Líquido Final -->
-                <div class="resumo-bloco resumo-final">
-                    <div class="resumo-liquido-linha">
-                        VALOR LÍQUIDO ${nomeArtista.toUpperCase()}:
-                        <span class="resumo-highlight">${fmt(cache)}</span>
-                        ${lucroTotal !== 0 ? ` + <span class="resumo-lucro ${lucroTotal >= 0 ? 'pos' : 'neg'}">${fmt(lucroTotal)}</span>` : ''}
-                        = <span class="resumo-highlight resumo-total-final">${fmt(valorLiquido)}</span>
-                    </div>
-                </div>
-
-            </div><!-- fim resumo-pc-doc -->
-        </div>`;
-
+        function linhaDesp(d) {
+            var cob = parseFloat(d.valor_cobrado)||0, gas = parseFloat(d.valor_gasto)||0;
+            var tem = cob > 0 || gas > 0;
+            return '<div class="resumo-desp-linha"><span class="resumo-desp-nome">- ' + (d.categoria_nome||'').toUpperCase() + '</span>'
+                + (tem ? '<span class="resumo-desp-valores"><span>VALOR COBRADO — <strong>' + fmt(cob) + '</strong></span><span class="resumo-arrow"> ——→ </span><span>VALOR GASTO — <strong class="resumo-gasto">' + fmt(gas) + '</strong></span></span>' : '')
+                + '</div>';
+        }
+        function blocoDesp(arr, totalCob, totalGas, lucro, label) {
+            if (arr.length === 0) return '<div class="resumo-desp-linha"><span class="resumo-desp-nome resumo-vazio">— Nenhuma despesa —</span></div>';
+            return arr.map(linhaDesp).join('')
+                + '<div class="resumo-total-linha">RECEITA TOTAL ' + label + ': <strong class="resumo-highlight">' + fmt(totalCob) + '</strong> &nbsp;—→&nbsp; VALOR GASTO: <strong class="resumo-gasto">' + fmt(totalGas) + '</strong> &nbsp;—→&nbsp; LUCRO: <strong class="resumo-lucro ' + (lucro>=0?'pos':'neg') + '">' + fmt(lucro) + '</strong></div>';
+        }
+        var ret = (nf > 0 || comissao > 0)
+            ? '<div class="resumo-bloco"><div class="resumo-secao-titulo">RETENÇÕES:</div>'
+              + (nf > 0 ? '<div class="resumo-desp-linha"><span class="resumo-desp-nome">- NF (NOTA FISCAL)</span><span class="resumo-desp-valores"><strong class="resumo-gasto">' + fmt(nf) + '</strong></span></div>' : '')
+              + (comissao > 0 ? '<div class="resumo-desp-linha"><span class="resumo-desp-nome">- COMISSÃO</span><span class="resumo-desp-valores"><strong class="resumo-gasto">' + fmt(comissao) + '</strong></span></div>' : '')
+              + '</div>'
+            : '';
+        var liquidoStr = 'VALOR LÍQUIDO ' + nomeArtista.toUpperCase() + ': <span class="resumo-highlight">' + fmt(cache) + '</span>'
+            + (lucroTotal !== 0 ? ' + <span class="resumo-lucro ' + (lucroTotal>=0?'pos':'neg') + '">' + fmt(lucroTotal) + '</span>' : '')
+            + ' = <span class="resumo-highlight resumo-total-final">' + fmt(valorLiquido) + '</span>';
+        pageContent.innerHTML =
+            '<div class="resumo-pc-container">'
+            + '<div class="resumo-pc-acoes no-print">'
+            + '<button class="btn-secondary" onclick="Pages.renderPrestacao()"><i class="fas fa-arrow-left"></i> Voltar</button>'
+            + '<button class="btn-primary" onclick="window.print()"><i class="fas fa-print"></i> Imprimir / Salvar PDF</button>'
+            + '</div>'
+            + '<div class="resumo-pc-doc">'
+            + '<div class="resumo-artista-nome">' + nomeArtista.toUpperCase() + '</div>'
+            + '<div class="resumo-subtitulo">RESUMO SHOW — ' + dataShow + '</div>'
+            + '<div class="resumo-cidade">' + (pc.cidade||'').toUpperCase() + '</div>'
+            + '<div class="resumo-linha-sep"></div>'
+            + '<div class="resumo-bloco"><div class="resumo-contrato-linha">VALOR TOTAL DO CONTRATO: <span class="resumo-highlight">' + fmt(valorContrato) + '</span></div></div>'
+            + '<div class="resumo-bloco"><div class="resumo-secao-titulo">DESPESAS ' + nomeArtista.toUpperCase() + ':</div>' + blocoDesp(despArtista, totCobArt, totGasArt, lucroArt, nomeArtista.toUpperCase()) + '</div>'
+            + '<div class="resumo-bloco"><div class="resumo-secao-titulo">DESPESAS CONTRATANTE:</div>' + blocoDesp(despContratante, totCobCont, totGasCont, lucroCont, 'CONTRATANTE') + '</div>'
+            + ret
+            + '<div class="resumo-linha-sep"></div>'
+            + '<div class="resumo-bloco resumo-final"><div class="resumo-liquido-linha">' + liquidoStr + '</div></div>'
+            + '</div></div>';
     } catch(err) {
         console.error('[Resumo]', err);
-        pageContent.innerHTML = `<div class="error-message"><i class="fas fa-exclamation-triangle"></i> Erro: ${err.message}</div>`;
+        pageContent.innerHTML = '<div class="error-message"><i class="fas fa-exclamation-triangle"></i> Erro: ' + err.message + '</div>';
     }
 };
 
 Pages.confirmarExcluirPrestacao = function(id, artistaId) {
     if (!confirm('Excluir este fechamento? Esta ação não pode ser desfeita.')) return;
     PrestacaoDB.excluir(id)
-        .then(() => { Utils.showToast('Excluído com sucesso', 'success'); Pages.renderPrestacao(artistaId || null); })
-        .catch(err => Utils.showToast('Erro ao excluir: ' + err.message, 'error'));
+        .then(function(){ Utils.showToast('Excluído com sucesso', 'success'); Pages.renderPrestacao(artistaId || null); })
+        .catch(function(err){ Utils.showToast('Erro ao excluir: ' + err.message, 'error'); });
 };
-
-// ─── PDF ──────────────────────────────────────────────────────────────────────
 
 Pages.gerarPdfPrestacao = async function(id) {
     try {
         const pc       = await PrestacaoDB.buscarPorId(id);
         const despesas = await PrestacaoDB.listarDespesas(id);
-        const checklist= await PrestacaoDB.listarChecklist(id);
         const artistas = await ArtistasDB.listar();
-        const artista  = artistas.find(a => a.id === pc.artista_id);
+        const artista  = artistas.find(function(a){ return a.id === pc.artista_id; });
         const totais   = Pages._calcularTotais(pc, despesas);
-
-        const { jsPDF } = window.jspdf;
+        const jsPDF = window.jspdf.jsPDF;
         const doc = new jsPDF();
-        const fmt = v => 'R$ ' + parseFloat(v||0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-
-        let y = 20;
-        const L = 14; // left margin
-
-        // Cabeçalho
-        doc.setFillColor(79, 70, 229); // indigo
-        doc.rect(0, 0, 210, 14, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'bold');
+        const fmt = function(v){ return 'R$ ' + parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2}); };
+        let y = 20, L = 14;
+        doc.setFillColor(79,70,229); doc.rect(0,0,210,14,'F');
+        doc.setTextColor(255,255,255); doc.setFontSize(11); doc.setFont('helvetica','bold');
         doc.text('GIBSON MANAGER PRO — PRESTAÇÃO DE CONTAS', L, 10);
-        doc.setTextColor(0, 0, 0);
-
-        y = 24;
-        doc.setFontSize(13);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`${artista?.nome || 'Artista'} — ${pc.evento_nome || ''}`, L, y);
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
-        y += 6;
-        doc.text(`Cidade: ${pc.cidade || '—'}    Data: ${pc.data_show ? new Date(pc.data_show + 'T12:00:00').toLocaleDateString('pt-BR') : '—'}    Status: ${pc.status}`, L, y);
-
+        doc.setTextColor(0,0,0); y = 24;
+        doc.setFontSize(13); doc.text((artista ? artista.nome : 'Artista') + ' — ' + (pc.evento_nome||''), L, y);
+        doc.setFontSize(10); doc.setFont('helvetica','normal'); y += 6;
+        doc.text('Cidade: '+(pc.cidade||'—')+'    Data: '+(pc.data_show?new Date(pc.data_show+'T12:00:00').toLocaleDateString('pt-BR'):'—')+'    Status: '+pc.status, L, y);
         y += 10;
-
-        // Despesas
-        doc.setFont('helvetica', 'bold');
-        doc.text('DESPESAS DO SHOW', L, y);
-        y += 6;
-
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        // Cabeçalho tabela
-        doc.setFillColor(240, 240, 250);
-        doc.rect(L, y - 4, 182, 6, 'F');
-        doc.setFont('helvetica', 'bold');
-        doc.text('Categoria',      L,   y);
-        doc.text('Cobrado',       120,   y);
-        doc.text('Gasto',         150,   y);
-        doc.text('Lucro',         175,   y);
-        doc.setFont('helvetica', 'normal');
-        y += 6;
-
-        despesas.forEach(d => {
-            const luc = (d.valor_cobrado || 0) - (d.valor_gasto || 0);
-            if ((d.valor_cobrado || 0) === 0 && (d.valor_gasto || 0) === 0) return;
+        doc.setFont('helvetica','bold'); doc.text('DESPESAS DO SHOW', L, y); y += 6;
+        doc.setFontSize(9); doc.setFont('helvetica','normal');
+        despesas.forEach(function(d){
+            var luc = (d.valor_cobrado||0)-(d.valor_gasto||0);
+            if(!d.valor_cobrado && !d.valor_gasto) return;
             doc.text(d.categoria_nome, L, y);
             doc.text(fmt(d.valor_cobrado), 120, y);
-            doc.text(fmt(d.valor_gasto),   150, y);
-            doc.setTextColor(luc >= 0 ? 34 : 239, luc >= 0 ? 197 : 68, luc >= 0 ? 94 : 68);
-            doc.text(fmt(luc),             175, y);
-            doc.setTextColor(0, 0, 0);
-            y += 6;
-            if (y > 270) { doc.addPage(); y = 20; }
+            doc.text(fmt(d.valor_gasto), 150, y);
+            doc.setTextColor(luc>=0?34:239, luc>=0?197:68, luc>=0?94:68);
+            doc.text(fmt(luc), 175, y);
+            doc.setTextColor(0,0,0); y += 6;
+            if(y>270){ doc.addPage(); y=20; }
         });
-
-        // NF e Comissão
-        y += 4;
-        doc.setFont('helvetica', 'bold');
-        doc.text('NF (Nota Fiscal)',    L,   y);
-        doc.text(fmt(pc.nf_valor),      120, y);
-        doc.text(fmt(pc.nf_valor),      150, y);
-        doc.text(fmt(0),                175, y);
-        y += 6;
-        doc.text('Comissão',            L,   y);
-        doc.text(fmt(pc.comissao_valor), 120, y);
-        doc.text(fmt(pc.comissao_valor), 150, y);
-        doc.text(fmt(0),                 175, y);
-        doc.setFont('helvetica', 'normal');
-        y += 10;
-
-        // Linha divisória
-        doc.setDrawColor(200, 200, 200);
-        doc.line(L, y, 196, y);
-        y += 8;
-
-        // Resumo financeiro
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10);
-        doc.text('RESUMO FINANCEIRO', L, y);
-        y += 7;
-        doc.setFont('helvetica', 'normal');
-
-        const resumoLinhas = [
-            ['Total Cobrado Despesas', fmt(totais.totalCobrado)],
-            ['Total Gasto Real',       fmt(totais.totalGasto)],
-            ['Cachê Artista',          fmt(totais.cache)],
-            ['Valor do Contrato',      fmt(totais.valorContrato)],
-            ['Lucro Operacional',      fmt(totais.lucro)],
-            ['VALOR LÍQUIDO ARTISTA',  fmt(totais.valorLiquido)],
-        ];
-
-        resumoLinhas.forEach(([label, val], i) => {
-            const isLast = i === resumoLinhas.length - 1;
-            if (isLast) {
-                doc.setFillColor(79, 70, 229);
-                doc.rect(L, y - 5, 182, 7, 'F');
-                doc.setTextColor(255, 255, 255);
-                doc.setFont('helvetica', 'bold');
-            }
-            doc.text(label, L + 2, y);
-            doc.text(val,   175, y, { align: 'right' });
-            if (isLast) { doc.setTextColor(0, 0, 0); doc.setFont('helvetica', 'normal'); }
-            y += 8;
+        y += 4; doc.setFont('helvetica','bold');
+        doc.text('NF (Nota Fiscal)', L, y); doc.text(fmt(pc.nf_valor),120,y); doc.text(fmt(pc.nf_valor),150,y); doc.text(fmt(0),175,y); y+=6;
+        doc.text('Comissão', L, y); doc.text(fmt(pc.comissao_valor),120,y); doc.text(fmt(pc.comissao_valor),150,y); doc.text(fmt(0),175,y);
+        doc.setFont('helvetica','normal'); y+=10;
+        doc.setDrawColor(200,200,200); doc.line(L,y,196,y); y+=8;
+        doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.text('RESUMO FINANCEIRO', L, y); y+=7;
+        doc.setFont('helvetica','normal');
+        [['Total Cobrado',fmt(totais.totalCobrado)],['Total Gasto',fmt(totais.totalGasto)],['Cachê Artista',fmt(totais.cache)],['Valor Contrato',fmt(totais.valorContrato)],['Lucro',fmt(totais.lucro)],['VALOR LÍQUIDO',fmt(totais.valorLiquido)]].forEach(function(row,i){
+            if(i===5){ doc.setFillColor(79,70,229); doc.rect(L,y-5,182,7,'F'); doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); }
+            doc.text(row[0], L+2, y); doc.text(row[1], 175, y, {align:'right'});
+            if(i===5){ doc.setTextColor(0,0,0); doc.setFont('helvetica','normal'); }
+            y+=8;
         });
-
-        // Checklist
-        if (checklist.length) {
-            y += 4;
-            if (y > 250) { doc.addPage(); y = 20; }
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(10);
-            doc.text('CHECKLIST DO CONTRATANTE', L, y);
-            y += 7;
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(9);
-            checklist.forEach(c => {
-                const icon = c.status === 'ok' ? '✓' : c.status === 'nao_se_aplica' ? '—' : '○';
-                doc.text(`${icon}  ${c.item_nome}  (${c.responsabilidade})  [${c.status}]`, L, y);
-                y += 6;
-                if (y > 280) { doc.addPage(); y = 20; }
-            });
-        }
-
-        // Observações
-        if (pc.observacoes) {
-            y += 4;
-            doc.setFont('helvetica', 'bold');
-            doc.text('Observações:', L, y);
-            doc.setFont('helvetica', 'normal');
-            y += 6;
-            const lines = doc.splitTextToSize(pc.observacoes, 182);
-            lines.forEach(l => { doc.text(l, L, y); y += 5; });
-        }
-
-        // Rodapé
-        const now = new Date().toLocaleString('pt-BR');
-        doc.setFontSize(8);
-        doc.setTextColor(150, 150, 150);
-        doc.text(`Gerado em ${now} — Gibson Manager Pro`, L, 290);
-
-        doc.save(`prestacao-${(artista?.nome||'artista').replace(/\s+/g,'-')}-${pc.evento_nome||id}.pdf`);
+        doc.setFontSize(8); doc.setTextColor(150,150,150);
+        doc.text('Gerado em '+new Date().toLocaleString('pt-BR')+' — Gibson Manager Pro', L, 290);
+        doc.save('prestacao-'+(artista?artista.nome:'artista').replace(/\s+/g,'-')+'-'+(pc.evento_nome||id)+'.pdf');
         Utils.showToast('PDF gerado com sucesso!', 'success');
-
-    } catch (err) {
-        console.error('[Prestacao PDF]', err);
-        Utils.showToast('Erro ao gerar PDF: ' + err.message, 'error');
+    } catch(err) {
+        console.error('[PDF]', err);
+        Utils.showToast('Erro ao gerar PDF: '+err.message, 'error');
     }
 };
