@@ -27,6 +27,7 @@
    TEMA CLARO (LIGHT MODE)
 ======================================== */
 [data-theme="light"] {
+    /* Cores base */
     --bg-primary: #F0F2F5;
     --bg-secondary: #E8EAED;
     --bg-card: #FFFFFF;
@@ -44,8 +45,79 @@
     --info: #2563EB;
     --shadow-primary: 0 8px 32px rgba(0, 0, 0, 0.12);
     --shadow-brand: 0 4px 20px var(--brand-glow);
+    /* Variáveis do turnes.css */
+    --op-bg: #F0F2F5;
+    --op-card: #FFFFFF;
+    --op-border: rgba(184, 150, 46, 0.25);
+    /* Variáveis extras */
+    --gold-primary: #B8962E;
+    --red-primary: #B8962E;
 }
 
+/* ─── Elementos gerais ─── */
+[data-theme="light"] .card,
+[data-theme="light"] .turne-card,
+[data-theme="light"] .turne-section,
+[data-theme="light"] .stat-card,
+[data-theme="light"] .modal-content,
+[data-theme="light"] .dropdown-menu,
+[data-theme="light"] .table-container,
+[data-theme="light"] .chart-container,
+[data-theme="light"] .widget,
+[data-theme="light"] .panel,
+[data-theme="light"] .section-box,
+[data-theme="light"] [class*="-card"]:not(.pc-artista-card):not(.artista-card):not(.nav-item),
+[data-theme="light"] [class*="-section"]:not(.sidebar):not(.nav-item) {
+    background: #FFFFFF !important;
+    border-color: #D0D3DA !important;
+    color: #1A1A2E !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07) !important;
+}
+
+/* ─── Textos dentro dos cards ─── */
+[data-theme="light"] .card *,
+[data-theme="light"] .turne-section *,
+[data-theme="light"] .turne-card * {
+    border-color: rgba(0,0,0,0.08) !important;
+}
+
+/* ─── Gradientes escuros específicos ─── */
+[data-theme="light"] .pc-artista-card {
+    background: linear-gradient(135deg, #FFFFFF 0%, #F5F5F5 100%) !important;
+    border-color: rgba(184, 150, 46, 0.3) !important;
+}
+
+/* ─── Itens de lista dentro dos cards ─── */
+[data-theme="light"] [style*="rgba(255,255,255"] {
+    border-color: rgba(0,0,0,0.07) !important;
+}
+
+/* ─── Tabelas ─── */
+[data-theme="light"] table tbody tr {
+    background: #FFFFFF;
+    color: #1A1A2E;
+}
+
+[data-theme="light"] table tbody tr:nth-child(even) {
+    background: #F5F7FA;
+}
+
+/* ─── Badge / pill ─── */
+[data-theme="light"] .badge-status,
+[data-theme="light"] .status-badge {
+    color: #1A1A2E;
+}
+
+/* ─── Main content background ─── */
+[data-theme="light"] .main-content {
+    background: #F0F2F5;
+}
+
+[data-theme="light"] .page-content {
+    background: #F0F2F5;
+}
+
+/* ─── Sidebar (mantém escuro por design) ─── */
 [data-theme="light"] .sidebar {
     background: #1A1A2E;
     border-right: 1px solid #2D2D4E;
