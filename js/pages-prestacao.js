@@ -15,6 +15,7 @@ const CATEGORIAS_PADRAO = [
     'Aéreas',
     'Combustível',
     'Alimentação',
+    'Rider Técnico',
     'Outros'
 ];
 
@@ -28,6 +29,7 @@ const CATEGORIA_ICONS = {
     'Aéreas':               'fa-plane',
     'Combustível':          'fa-gas-pump',
     'Alimentação':          'fa-utensils',
+    'Rider Técnico':        'fa-music',
     'Outros':               'fa-ellipsis-h'
 };
 
@@ -545,31 +547,6 @@ Pages.renderPrestacaoForm = async function(id, presetArtistaId) {
                     <div class="card-body" id="resumoBody">
                         ${Pages._htmlResumo({ totalCobrado:0, totalGasto:0, valorContrato:0, lucro:0, valorLiquido:0,
                             cache: parseFloat(pc?.cache_artista||0), nf:parseFloat(pc?.nf_valor||0), comissao:parseFloat(pc?.comissao_valor||0) })}
-                    </div>
-                </div>
-
-                <!-- Checklist Contratante -->
-                <div class="card mb-3">
-                    <div class="card-header flex-between">
-                        <h3><i class="fas fa-clipboard-check"></i> Checklist do Contratante</h3>
-                        <button class="btn-secondary btn-sm" onclick="Pages._adicionarLinhaChecklist()">
-                            <i class="fas fa-plus"></i> Adicionar Item
-                        </button>
-                    </div>
-                    <div class="card-body" style="padding:0">
-                        <table class="data-table" id="tabelaChecklist">
-                            <thead>
-                                <tr>
-                                    <th style="width:50%">Item</th>
-                                    <th style="width:25%">Responsável</th>
-                                    <th style="width:20%">Status</th>
-                                    <th style="width:5%"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="checklistBody">
-                                ${checklist.map((c, i) => Pages._htmlLinhaChecklist(c, i)).join('')}
-                            </tbody>
-                        </table>
                     </div>
                 </div>
 
