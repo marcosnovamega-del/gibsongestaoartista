@@ -276,6 +276,9 @@ Pages.renderEscritorioDashboard = async function() {
             };
         }).sort((a, b) => b.faturamento - a.faturamento);
 
+        // Próximos shows (todos os artistas)
+        const proximosShows = todosEventos.filter(e => new Date(e.data) >= hoje).length;
+
         const html = `
             <div class="dashboard-container fade-in">
                 <div class="page-header mb-4">
@@ -308,10 +311,10 @@ Pages.renderEscritorioDashboard = async function() {
                         </div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-icon green"><i class="fas fa-users"></i></div>
+                        <div class="stat-icon green"><i class="fas fa-calendar-check"></i></div>
                         <div class="stat-content">
-                            <div class="stat-value">${dadosArtistas[0]?.nome || '—'}</div>
-                            <div class="stat-label">Top Artist (Faturamento)</div>
+                            <div class="stat-value">${proximosShows}</div>
+                            <div class="stat-label">Próximos Shows</div>
                         </div>
                     </div>
                 </div>

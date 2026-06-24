@@ -33,8 +33,14 @@ const CHECKLIST_PADRAO = [
 
 // ─── DB helpers ───────────────────────────────────────────────────────────────
 
+// Contador global para IDs únicos de linha (evita colisão ao adicionar/remover)
+Pages._pcRowIdx = 0;
+
 const PrestacaoDB = {
+    // Reusar o sbClient do database-optimized.js em vez de criar novo cliente a cada operação
     _sb() {
+        if (typeof sbClient !== 'undefined' && sbClient) return sbClient;
+        // Fallback se sbClient não estiver disponível
         return window.supabase
             ? window.supabase.createClient(Config.SUPABASE_URL, Config.SUPABASE_KEY)
             : null;
@@ -133,18 +139,25 @@ const PrestacaoDB = {
 
 // ─── Renderização: lista de prestações ────────────────────────────────────────
 
-Pages.renderPrestacao = async function() {
+Pages.renderPrestacao = async function(filtroArtistaId) {
     const pageContent = document.getElementById('pageContent');
     pageContent.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>';
 
     try {
-        const artistaId = Auth.selectedArtistaId || 'todos';
-        const lista = await PrestacaoDB.listar(artistaId !== 'todos' ? artistaId : null);
-
-        // Buscar nomes dos artistas para exibição
+        // Artista context: filtroArtistaId (passado explicitamente) > selecionado no dropdown > primeiro da lista
         const artistas = await ArtistasDB.listar();
         const artMap = {};
         artistas.forEach(a => { artMap[a.id] = a.nome; });
+
+        const selectedGlobal = Auth.getSelectedArtistaId ? Auth.getSelectedArtistaId() : (Auth.selectedArtistaId || 'todos');
+
+        // Determinar artista ativo para este módulo
+        let artistaAtivo = filtroArtistaId
+            || (selectedGlobal !== 'todos' ? selectedGlobal : null)
+            || (artistas.length ? artistas[0].id : null);
+
+        const lista = await PrestacaoDB.listar(artistaAtivo);
+        const artistaAtualNome = artistaAtivo ? (artMap[artistaAtivo] || 'Artista') : 'Todos';
 
         pageContent.innerHTML = `
             <div class="prestacao-container">
@@ -153,17 +166,36 @@ Pages.renderPrestacao = async function() {
                         <h2><i class="fas fa-receipt" style="color:var(--primary)"></i> Prestação de Contas</h2>
                         <p class="text-muted">Fechamento financeiro por show</p>
                     </div>
-                    <button class="btn-primary" onclick="Pages.renderPrestacaoForm()">
+                    <button class="btn-primary" onclick="Pages.renderPrestacaoForm(null, '${artistaAtivo || ''}')">
                         <i class="fas fa-plus"></i> Novo Fechamento
                     </button>
+                </div>
+
+                <!-- Seletor de artista — sempre visível para evitar confusão -->
+                <div class="card mb-3" style="padding:1rem">
+                    <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+                        <div style="display:flex;align-items:center;gap:0.5rem">
+                            <i class="fas fa-microphone" style="color:var(--primary)"></i>
+                            <strong>Artista:</strong>
+                        </div>
+                        <select id="prestacaoFiltroArtista" class="form-control" style="max-width:280px"
+                            onchange="Pages.renderPrestacao(this.value)">
+                            ${artistas.map(a =>
+                                `<option value="${a.id}" ${a.id === artistaAtivo ? 'selected' : ''}>${a.nome}</option>`
+                            ).join('')}
+                        </select>
+                        <span class="text-muted" style="font-size:0.85rem">
+                            Mostrando fechamentos de: <strong style="color:var(--primary)">${artistaAtualNome}</strong>
+                        </span>
+                    </div>
                 </div>
 
                 ${lista.length === 0 ? `
                     <div class="empty-state">
                         <i class="fas fa-receipt" style="font-size:3rem;color:var(--text-muted);margin-bottom:1rem"></i>
-                        <h3>Nenhum fechamento cadastrado</h3>
-                        <p class="text-muted">Crie o primeiro fechamento financeiro de um show.</p>
-                        <button class="btn-primary mt-2" onclick="Pages.renderPrestacaoForm()">
+                        <h3>Nenhum fechamento para ${artistaAtualNome}</h3>
+                        <p class="text-muted">Crie o primeiro fechamento financeiro deste artista.</p>
+                        <button class="btn-primary mt-2" onclick="Pages.renderPrestacaoForm(null, '${artistaAtivo || ''}')">
                             <i class="fas fa-plus"></i> Novo Fechamento
                         </button>
                     </div>
@@ -172,7 +204,6 @@ Pages.renderPrestacao = async function() {
                         <table class="data-table">
                             <thead>
                                 <tr>
-                                    <th>Artista</th>
                                     <th>Show / Evento</th>
                                     <th>Cidade</th>
                                     <th>Data</th>
@@ -185,8 +216,6 @@ Pages.renderPrestacao = async function() {
                             </thead>
                             <tbody>
                                 ${lista.map(p => {
-                                    const totalCob = (p.nf_valor || 0) + (p.comissao_valor || 0);
-                                    // Resumo rápido — valores completos só no form
                                     const statusClass = {
                                         'rascunho': 'badge-warning',
                                         'fechado':  'badge-info',
@@ -199,8 +228,7 @@ Pages.renderPrestacao = async function() {
                                     }[p.status] || p.status;
                                     return `
                                     <tr>
-                                        <td><strong>${artMap[p.artista_id] || '—'}</strong></td>
-                                        <td>${p.evento_nome || '—'}</td>
+                                        <td><strong>${p.evento_nome || '—'}</strong></td>
                                         <td>${p.cidade || '—'}</td>
                                         <td>${p.data_show ? Utils.formatDate(p.data_show) : '—'}</td>
                                         <td>${Utils.formatCurrency(p.cache_artista || 0)}</td>
@@ -211,7 +239,7 @@ Pages.renderPrestacao = async function() {
                                             <button class="btn-icon" title="Editar" onclick="Pages.renderPrestacaoForm('${p.id}')">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <button class="btn-icon btn-danger" title="Excluir" onclick="Pages.confirmarExcluirPrestacao('${p.id}')">
+                                            <button class="btn-icon btn-danger" title="Excluir" onclick="Pages.confirmarExcluirPrestacao('${p.id}', '${artistaAtivo}')">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </td>
@@ -268,11 +296,17 @@ Pages._calcularTotais = function(pc, despesas) {
 
 // ─── Formulário: criar / editar ───────────────────────────────────────────────
 
-Pages.renderPrestacaoForm = async function(id) {
+Pages.renderPrestacaoForm = async function(id, presetArtistaId) {
     const pageContent = document.getElementById('pageContent');
     pageContent.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>';
 
     try {
+        // Reiniciar counter de IDs para esta abertura do formulário
+        Pages._pcRowIdx = 0;
+
+        // Normalizar id: 'null' (string) → null
+        if (id === 'null' || id === '') id = null;
+
         // Dados existentes ou defaults
         let pc = id ? await PrestacaoDB.buscarPorId(id) : null;
         let despesas = id ? await PrestacaoDB.listarDespesas(id) : [];
@@ -280,7 +314,12 @@ Pages.renderPrestacaoForm = async function(id) {
 
         // Artistas disponíveis para seleção (admin vê todos, gestor vê os permitidos)
         const artistas = await ArtistasDB.listar();
-        const artistaId = pc?.artista_id || Auth.selectedArtistaId || '';
+        // Prioridade: artista já salvo > passado como param > selecionado no dropdown > primeiro da lista
+        const selectedGlobal = Auth.getSelectedArtistaId ? Auth.getSelectedArtistaId() : (Auth.selectedArtistaId || 'todos');
+        const artistaId = pc?.artista_id
+            || presetArtistaId
+            || (selectedGlobal !== 'todos' ? selectedGlobal : null)
+            || (artistas.length ? artistas[0].id : '');
 
         // Se não há despesas salvas ainda, pré-carregar categorias padrão (zeradas)
         if (!despesas.length) {
@@ -306,7 +345,7 @@ Pages.renderPrestacaoForm = async function(id) {
                 <!-- Cabeçalho -->
                 <div class="page-header flex-between mb-3">
                     <div>
-                        <button class="btn-secondary btn-sm" onclick="Pages.renderPrestacao()">
+                        <button class="btn-secondary btn-sm" onclick="Pages.renderPrestacao('${artistaId || ''}')">
                             <i class="fas fa-arrow-left"></i> Voltar
                         </button>
                         <h2 style="margin-top:0.5rem">
@@ -314,7 +353,7 @@ Pages.renderPrestacaoForm = async function(id) {
                         </h2>
                     </div>
                     <div style="display:flex;gap:8px">
-                        <button class="btn-secondary" onclick="Pages.salvarPrestacao(${id ? `'${id}'` : 'null'})">
+                        <button class="btn-secondary" onclick="Pages.salvarPrestacao(${id ? `'${id}'` : 'null'}, '${artistaId || ''}')">
                             <i class="fas fa-save"></i> Salvar
                         </button>
                         ${id ? `<button class="btn-secondary" onclick="Pages.gerarPdfPrestacao('${id}')">
@@ -456,8 +495,8 @@ Pages.renderPrestacaoForm = async function(id) {
 
                 <!-- Botões finais -->
                 <div style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:2rem">
-                    <button class="btn-secondary" onclick="Pages.renderPrestacao()">Cancelar</button>
-                    <button class="btn-primary" onclick="Pages.salvarPrestacao(${id ? `'${id}'` : 'null'})">
+                    <button class="btn-secondary" onclick="Pages.renderPrestacao('${artistaId || ''}')">Cancelar</button>
+                    <button class="btn-primary" onclick="Pages.salvarPrestacao(${id ? `'${id}'` : 'null'}, '${artistaId || ''}')">
                         <i class="fas fa-save"></i> Salvar Fechamento
                     </button>
                 </div>
@@ -477,14 +516,18 @@ Pages.renderPrestacaoForm = async function(id) {
 // ─── Helpers de linha ─────────────────────────────────────────────────────────
 
 Pages._htmlLinhaDespesa = function(d, i) {
+    // Usar counter único para ID — evita colisão ao adicionar/remover linhas
+    const uid = (i !== undefined && i !== null) ? i : (++Pages._pcRowIdx);
     const isPersonalizado = d.tipo === 'personalizado';
     const lucroLinha = (parseFloat(d.valor_cobrado) || 0) - (parseFloat(d.valor_gasto) || 0);
     const lucroColor = lucroLinha >= 0 ? 'color:#22c55e' : 'color:#ef4444';
+    // Escapar aspas no nome para não quebrar o atributo HTML
+    const nomeEscapado = (d.categoria_nome || '').replace(/"/g, '&quot;');
     return `
-        <tr id="desp-row-${i}" data-idx="${i}" data-tipo="${d.tipo || 'padrao'}">
+        <tr id="desp-row-${uid}" data-tipo="${d.tipo || 'padrao'}">
             <td>
                 ${isPersonalizado
-                    ? `<input type="text" class="form-control form-control-sm desp-nome" value="${d.categoria_nome}" placeholder="Nome da despesa">`
+                    ? `<input type="text" class="form-control form-control-sm desp-nome" value="${nomeEscapado}" placeholder="Nome da despesa">`
                     : `<span style="font-weight:500">${d.categoria_nome}</span>`
                 }
             </td>
@@ -503,7 +546,7 @@ Pages._htmlLinhaDespesa = function(d, i) {
             </td>
             <td>
                 ${isPersonalizado
-                    ? `<button class="btn-icon btn-danger btn-sm" onclick="Pages._removerLinhaDespesa(${i})" title="Remover">
+                    ? `<button class="btn-icon btn-danger btn-sm" onclick="Pages._removerLinha(this)" title="Remover">
                             <i class="fas fa-times"></i>
                        </button>`
                     : ''
@@ -513,11 +556,13 @@ Pages._htmlLinhaDespesa = function(d, i) {
 };
 
 Pages._htmlLinhaChecklist = function(c, i) {
+    const uid = (i !== undefined && i !== null) ? i : (++Pages._pcRowIdx);
+    const nomeEscapado = (c.item_nome || '').replace(/"/g, '&quot;');
     return `
-        <tr id="check-row-${i}">
+        <tr id="check-row-${uid}">
             <td>
                 <input type="text" class="form-control form-control-sm check-nome"
-                    value="${c.item_nome || ''}" placeholder="Nome do item">
+                    value="${nomeEscapado}" placeholder="Nome do item">
             </td>
             <td>
                 <select class="form-control form-control-sm check-resp">
@@ -533,7 +578,7 @@ Pages._htmlLinhaChecklist = function(c, i) {
                 </select>
             </td>
             <td>
-                <button class="btn-icon btn-danger btn-sm" onclick="Pages._removerLinhaChecklist(${i})" title="Remover">
+                <button class="btn-icon btn-danger btn-sm" onclick="Pages._removerLinha(this)" title="Remover">
                     <i class="fas fa-times"></i>
                 </button>
             </td>
@@ -595,26 +640,46 @@ Pages._htmlResumo = function(t) {
 
 Pages._adicionarLinhaDespesa = function() {
     const tbody = document.getElementById('despesasBody');
-    const idx = tbody.querySelectorAll('tr').length;
+    if (!tbody) { console.error('[Prestacao] despesasBody não encontrado'); return; }
+    // Gerar UID único incrementando o contador global
+    const uid = ++Pages._pcRowIdx;
     const novaLinha = Pages._htmlLinhaDespesa({
         categoria_nome: '', tipo: 'personalizado', valor_cobrado: 0, valor_gasto: 0
-    }, idx);
+    }, uid);
     tbody.insertAdjacentHTML('beforeend', novaLinha);
+    // Focar no input do nome da nova linha
+    const novaLinhaTr = document.getElementById(`desp-row-${uid}`);
+    if (novaLinhaTr) novaLinhaTr.querySelector('.desp-nome')?.focus();
     Pages._atualizarResumo();
-};
-
-Pages._removerLinhaDespesa = function(i) {
-    const row = document.getElementById(`desp-row-${i}`);
-    if (row) { row.remove(); Pages._atualizarResumo(); }
 };
 
 Pages._adicionarLinhaChecklist = function() {
     const tbody = document.getElementById('checklistBody');
-    const idx = tbody.querySelectorAll('tr').length;
-    const novaLinha = Pages._htmlLinhaChecklist({ item_nome: '', responsabilidade: 'contratante', status: 'pendente' }, idx);
+    if (!tbody) { console.error('[Prestacao] checklistBody não encontrado'); return; }
+    // Gerar UID único incrementando o contador global
+    const uid = ++Pages._pcRowIdx;
+    const novaLinha = Pages._htmlLinhaChecklist({ item_nome: '', responsabilidade: 'contratante', status: 'pendente' }, uid);
     tbody.insertAdjacentHTML('beforeend', novaLinha);
+    // Focar no input do novo item
+    const novaLinhaTr = document.getElementById(`check-row-${uid}`);
+    if (novaLinhaTr) novaLinhaTr.querySelector('.check-nome')?.focus();
 };
 
+// Função unificada de remoção — recebe o botão clicado e sobe até o <tr>
+Pages._removerLinha = function(btn) {
+    const row = btn.closest('tr');
+    if (row) {
+        row.remove();
+        // Recalcular resumo se for linha de despesa
+        if (document.getElementById('despesasBody')) Pages._atualizarResumo();
+    }
+};
+
+// Manter compatibilidade com chamadas antigas (por índice) — agora não utilizadas mas não quebram
+Pages._removerLinhaDespesa = function(i) {
+    const row = document.getElementById(`desp-row-${i}`);
+    if (row) { row.remove(); Pages._atualizarResumo(); }
+};
 Pages._removerLinhaChecklist = function(i) {
     const row = document.getElementById(`check-row-${i}`);
     if (row) row.remove();
@@ -677,15 +742,18 @@ Pages._atualizarResumo = function() {
 
 // ─── Salvar ───────────────────────────────────────────────────────────────────
 
-Pages.salvarPrestacao = async function(id) {
+Pages.salvarPrestacao = async function(id, presetArtistaId) {
     try {
-        const artistaId = document.getElementById('pc_artista_id')?.value;
+        const artistaId = document.getElementById('pc_artista_id')?.value || presetArtistaId;
         const eventoNome = document.getElementById('pc_evento_nome')?.value?.trim();
         if (!artistaId) { Utils.showToast('Selecione o artista', 'error'); return; }
         if (!eventoNome) { Utils.showToast('Informe o nome do evento', 'error'); return; }
 
+        // Normalizar id: 'null' (string do onclick) ou falsy → undefined
+        const idLimpo = (id && id !== 'null') ? id : undefined;
+
         const dados = {
-            id:             id || undefined,
+            id:             idLimpo,
             artista_id:     artistaId,
             escritorio_id:  Auth.currentUser?.escritorio_id || null,
             evento_nome:    eventoNome,
@@ -707,7 +775,7 @@ Pages.salvarPrestacao = async function(id) {
         await PrestacaoDB.salvarChecklist(saved.id, checklist);
 
         Utils.showToast('Fechamento salvo com sucesso!', 'success');
-        Pages.renderPrestacaoForm(saved.id);
+        Pages.renderPrestacaoForm(saved.id, artistaId);
 
     } catch (err) {
         console.error('[Prestacao Salvar]', err);
@@ -717,10 +785,10 @@ Pages.salvarPrestacao = async function(id) {
 
 // ─── Excluir ──────────────────────────────────────────────────────────────────
 
-Pages.confirmarExcluirPrestacao = function(id) {
+Pages.confirmarExcluirPrestacao = function(id, artistaId) {
     if (!confirm('Excluir este fechamento? Esta ação não pode ser desfeita.')) return;
     PrestacaoDB.excluir(id)
-        .then(() => { Utils.showToast('Excluído com sucesso', 'success'); Pages.renderPrestacao(); })
+        .then(() => { Utils.showToast('Excluído com sucesso', 'success'); Pages.renderPrestacao(artistaId || null); })
         .catch(err => Utils.showToast('Erro ao excluir: ' + err.message, 'error'));
 };
 

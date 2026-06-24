@@ -202,6 +202,7 @@ function mapPageToModule(page) {
         'turnes':       'Central de Turnê',
         'relatorios':   'Relatórios Consolidados',
         'financeiro':   'Financeiro',
+        'prestacao':    'Prestacao de Contas',
         'equipe':       'Equipe',
         'alertas':      'Alertas',
         'usuarios':     'Usuarios',
