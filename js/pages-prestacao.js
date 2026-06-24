@@ -448,11 +448,11 @@ Pages.renderPrestacaoForm = async function(id, presetArtistaId) {
                         <table class="data-table" id="tabelaDespesas">
                             <thead>
                                 <tr>
-                                    <th style="width:20%">Categoria</th>
+                                    <th style="width:27%">Categoria</th>
                                     <th style="width:17%">Valor Cobrado (R$)</th>
                                     <th style="width:17%">Valor Gasto (R$)</th>
                                     <th style="width:10%">Lucro</th>
-                                    <th style="width:30%">Responsável</th>
+                                    <th style="width:23%">Responsável</th>
                                     <th style="width:6%"></th>
                                 </tr>
                             </thead>

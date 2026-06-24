@@ -1306,16 +1306,18 @@ textarea.form-control {
 }
 
 /* Category cell */
-.pc-desp-cat-cell    { width: 20%; }
+.pc-desp-cat-cell    { width: 27%; }
 .pc-desp-val-cell    { width: 17%; }
 .pc-desp-lucro-cell  { width: 10%; }
-.pc-desp-resp-cell   { width: 30%; }
+.pc-desp-resp-cell   { width: 23%; }
 .pc-desp-action-cell { width: 6%; text-align: center; }
 
 .pc-desp-resp-cell .pc-select {
-    min-width: 140px;
+    min-width: 0;
+    width: 100%;
     white-space: nowrap;
     font-size: 13px;
+    padding: 8px 28px 8px 10px;
 }
 
 .pc-desp-cat-fixed,
