@@ -136,6 +136,7 @@ function renderDynamicMenu() {
         'Eventos':       '<a href="#" class="nav-item" data-page="eventos"><i class="fas fa-calendar-alt"></i><span>Eventos</span></a>',
         'Contratos':     '<a href="#" class="nav-item" data-page="contratos"><i class="fas fa-file-contract"></i><span>Contratos</span></a>',
         'Vendas':        '<a href="#" class="nav-item" data-page="vendas"><i class="fas fa-handshake"></i><span>Vendas</span></a>',
+        'Propostas':     '<a href="#" class="nav-item" data-page="propostas"><i class="fas fa-file-alt"></i><span>Propostas</span></a>',
         'Central de Turnê': '<a href="#" class="nav-item" data-page="turnes"><i class="fas fa-route"></i><span>Central de Turnê</span></a>',
         'Relatórios':    '<a href="#" class="nav-item" data-page="relatorios"><i class="fas fa-file-invoice-dollar"></i><span>Relatórios</span></a>',
         'Financeiro':    '<a href="#" class="nav-item" data-page="financeiro"><i class="fas fa-money-bill-wave"></i><span>Financeiro</span></a>',
