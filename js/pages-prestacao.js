@@ -185,11 +185,11 @@ Pages.renderPrestacao = async function(filtroArtistaId) {
         const _mesesNomes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
         const selectMes = '<select id="pcFiltroMes" class="pc-select" onchange="Pages._aplicarFiltroPC()" style="min-width:140px">'
-            + '<option value="">Todos os meses</option>'
+            + '<option value="">Relatório Mensal</option>'
             + _mesesNomes.map(function(m,i){ return '<option value="' + (i+1) + '">' + m + '</option>'; }).join('')
             + '</select>';
         const selectAno = '<select id="pcFiltroAno" class="pc-select" onchange="Pages._aplicarFiltroPC()" style="min-width:100px">'
-            + '<option value="">Todos os anos</option>'
+            + '<option value="">Relatório Anual</option>'
             + _anos.map(function(a){ return '<option value="' + a + '">' + a + '</option>'; }).join('')
             + '</select>';
         const filtrosHTML = '<div class="pc-filtros-bar mb-3"><div class="pc-filtros-inner">'
