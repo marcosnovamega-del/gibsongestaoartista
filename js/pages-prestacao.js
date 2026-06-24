@@ -177,6 +177,50 @@ Pages.renderPrestacao = async function(filtroArtistaId) {
         const artAtivoFoto = artAtivo?.foto
             || `https://ui-avatars.com/api/?name=${encodeURIComponent(artistaAtualNome)}&background=D4AF37&color=000&bold=true&size=80`;
 
+        // ── Filtros + tabela (calculado antes do template) ──
+        const _anos = [...new Set(lista
+            .filter(p => p.data_show)
+            .map(p => new Date(p.data_show + 'T00:00:00').getFullYear())
+        )].sort((a, b) => b - a);
+        const _mesesNomes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                             'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+        const htmlListaPC = `
+            <div class="pc-filtros-bar mb-3">
+                <div class="pc-filtros-inner">
+                    <i class="fas fa-filter" style="color:var(--brand-primary)"></i>
+                    <select id="pcFiltroMes" class="pc-select" onchange="Pages._aplicarFiltroPC()" style="min-width:140px">
+                        <option value="">Todos os meses</option>
+                        ${_mesesNomes.map((m, i) => `<option value="${i+1}">${m}</option>`).join('')}
+                    </select>
+                    <select id="pcFiltroAno" class="pc-select" onchange="Pages._aplicarFiltroPC()" style="min-width:100px">
+                        <option value="">Todos os anos</option>
+                        ${_anos.map(a => `<option value="${a}">${a}</option>`).join('')}
+                    </select>
+                    <button class="btn-secondary btn-sm" onclick="Pages._limparFiltroPC()">
+                        <i class="fas fa-times"></i> Limpar
+                    </button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Show / Evento</th>
+                            <th>Cidade</th>
+                            <th>Data</th>
+                            <th>Cachê</th>
+                            <th>Valor Contrato</th>
+                            <th>Líquido Artista</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pcListaBody">
+                        ${lista.map(p => Pages._htmlLinhaPrestacao(p, artistaAtivo)).join('')}
+                    </tbody>
+                </table>
+            </div>`;
+
         pageContent.innerHTML = `
             <div class="prestacao-container">
                 <div class="page-header flex-between mb-3">
@@ -225,55 +269,7 @@ Pages.renderPrestacao = async function(filtroArtistaId) {
                             <i class="fas fa-plus"></i> Novo Fechamento
                         </button>
                     </div>
-                ` : (() => {
-                    // Extrair anos disponíveis na lista
-                    const anos = [...new Set(lista
-                        .filter(p => p.data_show)
-                        .map(p => new Date(p.data_show + 'T00:00:00').getFullYear())
-                    )].sort((a, b) => b - a);
-
-                    const mesesNomes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
-                                        'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-
-                    return `
-                    <!-- Filtros mês/ano -->
-                    <div class="pc-filtros-bar mb-3">
-                        <div class="pc-filtros-inner">
-                            <i class="fas fa-filter" style="color:var(--brand-primary)"></i>
-                            <select id="pcFiltroMes" class="pc-select" onchange="Pages._aplicarFiltroPC()" style="min-width:140px">
-                                <option value="">Todos os meses</option>
-                                ${mesesNomes.map((m, i) => `<option value="${i+1}">${m}</option>`).join('')}
-                            </select>
-                            <select id="pcFiltroAno" class="pc-select" onchange="Pages._aplicarFiltroPC()" style="min-width:100px">
-                                <option value="">Todos os anos</option>
-                                ${anos.map(a => `<option value="${a}">${a}</option>`).join('')}
-                            </select>
-                            <button class="btn-secondary btn-sm" onclick="Pages._limparFiltroPC()">
-                                <i class="fas fa-times"></i> Limpar
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="table-container">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Show / Evento</th>
-                                    <th>Cidade</th>
-                                    <th>Data</th>
-                                    <th>Cachê</th>
-                                    <th>Valor Contrato</th>
-                                    <th>Líquido Artista</th>
-                                    <th>Status</th>
-                                    <th>Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody id="pcListaBody">
-                                ${lista.map(p => Pages._htmlLinhaPrestacao(p, artistaAtivo)).join('')}
-                            </tbody>
-                        </table>
-                    </div>`;
-                })()}
+                ` : htmlListaPC}
             </div>
         `;
 
