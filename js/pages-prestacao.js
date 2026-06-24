@@ -2,7 +2,9 @@
    GIBSON MANAGER PRO - PRESTAÇÃO DE CONTAS DE SHOWS
    Fechamento financeiro por evento/cidade
    Modelo híbrido: categorias padrão + itens extras
+   v2.1 - filtro mes/ano + tela resumo
 ======================================== */
+console.log('[Gibson] pages-prestacao.js v2.1 carregado — filtro + resumo ativos');
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
