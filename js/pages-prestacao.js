@@ -120,6 +120,7 @@ const PrestacaoDB = {
             tipo:           it.tipo || 'padrao',
             valor_cobrado:  parseFloat(it.valor_cobrado) || 0,
             valor_gasto:    parseFloat(it.valor_gasto)   || 0,
+            responsavel:    it.responsavel || 'contratante',
             ordem:          i
         }));
         const { error } = await sb.from('prestacao_despesas').insert(rows);
