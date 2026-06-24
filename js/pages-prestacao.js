@@ -898,8 +898,8 @@ Pages.salvarPrestacao = async function(id, presetArtistaId) {
         await PrestacaoDB.salvarDespesas(saved.id, despesas);
         await PrestacaoDB.salvarChecklist(saved.id, checklist);
 
-        Utils.showToast('Fechamento salvo com sucesso!', 'success');
-        Pages.renderPrestacaoForm(saved.id, artistaId);
+        Utils.showToast('Fechamento salvo! Abrindo relatório...', 'success');
+        Pages.renderResumoPrestacao(saved.id);
 
     } catch (err) {
         console.error('[Prestacao Salvar]', err);
