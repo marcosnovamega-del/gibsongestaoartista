@@ -106,6 +106,9 @@ async function showMainApp() {
         }, 300));
     }
 
+    // Theme toggle
+    setupThemeToggle();
+
     // Menu mobile toggle
     setupMobileMenu();
 
@@ -172,6 +175,34 @@ function setupNavigation() {
 
         Pages.changePage(page);
     });
+}
+
+function setupThemeToggle() {
+    const btn = document.getElementById('themeToggleBtn');
+    const icon = document.getElementById('themeToggleIcon');
+    const saved = localStorage.getItem('gibson-theme') || 'dark';
+
+    function applyTheme(theme) {
+        if (theme === 'light') {
+            document.documentElement.setAttribute('data-theme', 'light');
+            if (icon) icon.className = 'fas fa-moon';
+            if (btn) btn.title = 'Mudar para tema escuro';
+        } else {
+            document.documentElement.removeAttribute('data-theme');
+            if (icon) icon.className = 'fas fa-sun';
+            if (btn) btn.title = 'Mudar para tema claro';
+        }
+        localStorage.setItem('gibson-theme', theme);
+    }
+
+    applyTheme(saved);
+
+    if (btn) {
+        btn.addEventListener('click', () => {
+            const current = localStorage.getItem('gibson-theme') || 'dark';
+            applyTheme(current === 'dark' ? 'light' : 'dark');
+        });
+    }
 }
 
 function setupMobileMenu() {
