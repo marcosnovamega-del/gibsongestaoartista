@@ -266,15 +266,18 @@ Pages.renderPrestacao = async function(filtroArtistaId) {
 
 Pages._htmlLinhaPrestacao = function(p, artistaAtivo) {
     const statusClass = {
-        'rascunho': 'badge-warning',
-        'fechado':  'badge-info',
-        'aprovado': 'badge-success'
+        'rascunho':  'badge-warning',
+        'fechado':   'badge-info',
+        'aprovado':  'badge-success',
+        'concluido': 'badge-concluido'
     }[p.status] || 'badge-default';
     const statusLabel = {
-        'rascunho': 'Rascunho',
-        'fechado':  'Fechado',
-        'aprovado': 'Aprovado'
+        'rascunho':  'Rascunho',
+        'fechado':   'Fechado',
+        'aprovado':  'Aprovado',
+        'concluido': 'Concluído'
     }[p.status] || p.status;
+    const isConcluido = p.status === 'concluido';
     return `
     <tr>
         <td><strong>${p.evento_nome || '—'}</strong></td>
@@ -285,15 +288,17 @@ Pages._htmlLinhaPrestacao = function(p, artistaAtivo) {
         <td id="liquido-${p.id}">—</td>
         <td><span class="badge ${statusClass}">${statusLabel}</span></td>
         <td>
-            <button class="btn-icon" title="Ver Resumo" onclick="Pages.renderResumoPrestacao('${p.id}')">
-                <i class="fas fa-file-alt"></i>
-            </button>
-            <button class="btn-icon" title="Editar" onclick="Pages.renderPrestacaoForm('${p.id}')">
-                <i class="fas fa-edit"></i>
-            </button>
-            <button class="btn-icon btn-danger" title="Excluir" onclick="Pages.confirmarExcluirPrestacao('${p.id}', '${artistaAtivo}')">
-                <i class="fas fa-trash"></i>
-            </button>
+            <div class="pc-acoes-btn-group">
+                <button class="pc-btn-acao pc-btn-ver" title="Ver Resumo" onclick="Pages.renderResumoPrestacao('${p.id}')">
+                    <i class="fas fa-eye"></i><span>Ver</span>
+                </button>
+                ${!isConcluido ? `<button class="pc-btn-acao pc-btn-editar" title="Editar" onclick="Pages.renderPrestacaoForm('${p.id}')">
+                    <i class="fas fa-pen"></i><span>Editar</span>
+                </button>` : ''}
+                <button class="pc-btn-acao pc-btn-excluir" title="Excluir" onclick="Pages.confirmarExcluirPrestacao('${p.id}', '${artistaAtivo}')">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
         </td>
     </tr>`;
 };
@@ -493,9 +498,10 @@ Pages.renderPrestacaoForm = async function(id, presetArtistaId) {
                             <div class="form-group">
                                 <label>Status</label>
                                 <select id="pc_status" class="form-control">
-                                    <option value="rascunho" ${(!pc || pc.status==='rascunho') ? 'selected' : ''}>Rascunho</option>
-                                    <option value="fechado"  ${pc?.status==='fechado'  ? 'selected' : ''}>Fechado</option>
-                                    <option value="aprovado" ${pc?.status==='aprovado' ? 'selected' : ''}>Aprovado</option>
+                                    <option value="rascunho"  ${(!pc || pc.status==='rascunho')  ? 'selected' : ''}>Rascunho</option>
+                                    <option value="fechado"   ${pc?.status==='fechado'   ? 'selected' : ''}>Fechado</option>
+                                    <option value="aprovado"  ${pc?.status==='aprovado'  ? 'selected' : ''}>Aprovado</option>
+                                    <option value="concluido" ${pc?.status==='concluido' ? 'selected' : ''}>✅ Concluído — lança no Financeiro</option>
                                 </select>
                             </div>
                         </div>
@@ -974,6 +980,53 @@ Pages._pcOnEventoChange = async function(eventoId) {
     Utils.hideLoading();
 };
 
+// ─── Lançar no Financeiro ao Concluir ─────────────────────────────────────────
+
+Pages._lancarPrestacaoNoFinanceiro = async function(pc, despesas) {
+    try {
+        const dataRef = pc.data_show || new Date().toISOString().split('T')[0];
+        const label   = pc.evento_nome || 'Show';
+
+        // 1. Receita: cachê do artista como Parcela Paga
+        if (pc.cache_artista && pc.cache_artista > 0) {
+            await ParcelasDB.criar({
+                evento_id:       null,
+                artista_id:      pc.artista_id || null,
+                numero_parcela:  1,
+                valor:           parseFloat(pc.cache_artista),
+                data_vencimento: dataRef,
+                status:          'Pago',
+                descricao:       `Cachê – ${label}`,
+                origem:          'prestacao',
+                prestacao_id:    pc.id
+            });
+        }
+
+        // 2. Despesas: cada item do artista lançado como Despesa Paga
+        const despesasArtista = (despesas || []).filter(d => d.responsavel === 'artista' && (parseFloat(d.valor_gasto) || 0) > 0);
+        for (const d of despesasArtista) {
+            await DespesasDB.criar({
+                evento_id:       null,
+                artista_id:      pc.artista_id || null,
+                descricao:       `${d.categoria_nome || 'Despesa'} – ${label}`,
+                categoria:       d.categoria_nome || 'Prestação de Contas',
+                valor:           parseFloat(d.valor_gasto) || 0,
+                data_vencimento: dataRef,
+                status:          'Pago',
+                observacoes:     `Lançado via Prestação de Contas – ${label}`,
+                origem:          'prestacao',
+                prestacao_id:    pc.id
+            });
+        }
+
+        console.log(`[Prestação] Lançado no Financeiro: cachê + ${despesasArtista.length} despesa(s)`);
+    } catch(e) {
+        console.warn('[Prestação] Erro ao lançar no Financeiro:', e);
+        // Não bloqueia o salvamento — avisa mas não falha
+        Utils.showToast('Fechamento salvo, mas houve erro ao lançar no Financeiro. Verifique.', 'warning');
+    }
+};
+
 // ─── Salvar ───────────────────────────────────────────────────────────────────
 
 Pages.salvarPrestacao = async function(id, presetArtistaId) {
@@ -1012,6 +1065,11 @@ Pages.salvarPrestacao = async function(id, presetArtistaId) {
         const checklist = Pages._lerChecklistDoForm();
         await PrestacaoDB.salvarDespesas(saved.id, despesas);
         await PrestacaoDB.salvarChecklist(saved.id, checklist);
+
+        // Se status = concluido, lança receita e despesas no Financeiro
+        if (dados.status === 'concluido') {
+            await Pages._lancarPrestacaoNoFinanceiro(saved, despesas);
+        }
 
         Utils.showToast('Fechamento salvo! Abrindo relatório...', 'success');
         Pages.renderResumoPrestacao(saved.id);
