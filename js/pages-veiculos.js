@@ -273,6 +273,44 @@ Pages.renderVeiculos = async function () {
             }
             .frota-card-nome { font-size:15px; font-weight:700; color:var(--text-primary); margin-top:4px; }
             .frota-card-info { font-size:12px; color:var(--text-muted); margin-top:6px; }
+
+            /* ── Correção de legibilidade nos modais de veículos ── */
+            #modalViagem .form-label,
+            #modalVeiculo .form-label {
+                color: var(--text-primary) !important;
+                font-size: 12px !important;
+                font-weight: 600 !important;
+                text-transform: uppercase;
+                letter-spacing: .4px;
+                margin-bottom: 5px;
+                display: block;
+            }
+            #modalViagem .form-control,
+            #modalVeiculo .form-control {
+                background: var(--bg-secondary) !important;
+                color: var(--text-primary) !important;
+                border: 1px solid var(--border-color) !important;
+                border-radius: 8px;
+                padding: 9px 12px;
+                font-size: 14px;
+                width: 100%;
+                box-sizing: border-box;
+            }
+            #modalViagem .form-control:focus,
+            #modalVeiculo .form-control:focus {
+                border-color: var(--red-primary) !important;
+                outline: none;
+            }
+            #modalViagem .form-group,
+            #modalVeiculo .form-group {
+                display: flex;
+                flex-direction: column;
+                margin-bottom: 14px;
+            }
+            #modalViagem h4,
+            #modalVeiculo h4 {
+                color: var(--text-primary) !important;
+            }
         </style>
         `;
 
