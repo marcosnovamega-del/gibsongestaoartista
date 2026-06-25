@@ -1069,8 +1069,8 @@ const Pages = {
                                                 </span>
                                             </td>
                                             <td>
-                                                <button class="btn-secondary btn-sm" onclick="Modals.showContratoPreview('${c.id}')">
-                                                    <i class="fas fa-eye"></i> Ver
+                                                <button class="btn-secondary btn-sm" disabled title="Visualização do contrato em breve" style="opacity:0.45;cursor:not-allowed;">
+                                                    <i class="fas fa-lock"></i> Ver
                                                 </button>
                                                 ${c.status === 'Pendente' && Auth.canEdit('contratos') ? `
                                                     <button class="btn-primary btn-sm" onclick="Pages.assinarContrato('${c.id}')">
