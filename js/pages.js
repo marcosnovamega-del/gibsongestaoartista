@@ -18,11 +18,14 @@ const Pages = {
         const mes = hoje.getMonth();
         const ano = hoje.getFullYear();
 
-        const [totais, eventos, parcelas] = await Promise.all([
+        const [totais, eventos, parcelas, artistas] = await Promise.all([
             Utils.calcularTotaisMes(mes, ano),
             EventosDB.listar(),
-            ParcelasDB.listar()
+            ParcelasDB.listar(),
+            ArtistasDB.listar()
         ]);
+        const artMap = {};
+        artistas.forEach(a => { artMap[a.id] = a.nome; });
 
         const eventosDoMes = eventos.filter(e => {
             const d = new Date(e.data);
@@ -39,11 +42,17 @@ const Pages = {
             .sort((a, b) => new Date(a.data) - new Date(b.data))
             .slice(0, 5);
 
+        // Enriquecer proximosEventos com nome do artista
+        const proximosEventosRicos = proximosEventos.map(e => ({
+            ...e,
+            artistaNome: artMap[e.artista_id] || null
+        }));
+
         const data = {
             totais,
             eventosDoMes: eventosDoMes.length,
             parcelasAtrasadas: parcelasAtrasadas.length,
-            proximosEventos,
+            proximosEventos: proximosEventosRicos,
             mes,
             ano
         };
@@ -120,22 +129,36 @@ const Pages = {
                         <div class="card-header">
                             <h3 class="card-title">Próximos Eventos</h3>
                         </div>
-                        <div class="card-body">
-                            ${data.proximosEventos.length > 0 ? 
-                                data.proximosEventos.map(e => `
-                                    <div style="padding: 12px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-                                        <div>
-                                            <strong>${e.local}</strong>
-                                            <p style="margin: 4px 0 0; font-size: 13px; color: var(--text-secondary);">
-                                                ${Utils.formatDate(e.data)} - ${e.cidade}/${e.estado}
-                                            </p>
+                        <div class="card-body" style="padding:8px 0;">
+                            ${data.proximosEventos.length > 0 ?
+                                data.proximosEventos.map(e => {
+                                    const dataEvento = new Date(e.data + 'T00:00:00');
+                                    const hoje2 = new Date(); hoje2.setHours(0,0,0,0);
+                                    const diffMs = dataEvento - hoje2;
+                                    const diffDias = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+                                    const diaNum = dataEvento.getDate();
+                                    const mesNomes = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+                                    const mesAbrev = mesNomes[dataEvento.getMonth()];
+                                    const ano2 = dataEvento.getFullYear();
+                                    const countdown = diffDias === 0 ? 'hoje!' : diffDias === 1 ? 'amanhã' : `em ${diffDias} dias`;
+                                    const cidade = [e.cidade, e.estado].filter(Boolean).join('/');
+                                    return `
+                                    <div class="agenda-card-item">
+                                        <div class="agenda-day-badge">
+                                            <span class="agenda-day-num">${diaNum}</span>
+                                            <span class="agenda-day-mes">${mesAbrev}</span>
                                         </div>
-                                        <span class="badge badge-${e.status === 'Confirmado' ? 'success' : 'warning'}">
-                                            ${e.status}
-                                        </span>
-                                    </div>
-                                `).join('') 
-                                : '<p class="text-muted">Nenhum evento próximo</p>'
+                                        <div class="agenda-card-info">
+                                            <div class="agenda-card-meta">${Utils.formatDate(e.data)} <span class="agenda-countdown">(${countdown})</span></div>
+                                            <div class="agenda-card-local">${e.local || '—'}</div>
+                                            <div class="agenda-card-sub">
+                                                ${e.artistaNome ? `<span><i class="fas fa-microphone-alt"></i> ${e.artistaNome}</span>` : ''}
+                                                ${cidade ? `<span><i class="fas fa-map-marker-alt"></i> ${cidade}</span>` : ''}
+                                            </div>
+                                        </div>
+                                    </div>`;
+                                }).join('')
+                                : '<p class="text-muted" style="padding:16px;">Nenhum evento próximo</p>'
                             }
                         </div>
                     </div>
