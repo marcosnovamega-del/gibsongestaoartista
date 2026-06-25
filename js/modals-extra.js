@@ -431,6 +431,26 @@ Modals.submitUsuarioForm = async function(event, usuarioId) {
         }
     }
 
+    // Proteção conta master
+    const MASTER_EMAIL = 'agenciagibson@gmail.com';
+    if (usuarioId) {
+        const usuarioAtual = await UsuariosDB.buscarPorId(usuarioId);
+        if (usuarioAtual && usuarioAtual.email === MASTER_EMAIL) {
+            // Não deixa alterar email nem rebaixar nível
+            if (data.email && data.email !== MASTER_EMAIL) {
+                Utils.showToast('O e-mail da conta master não pode ser alterado.', 'error');
+                return;
+            }
+            if (data.nivel && data.nivel !== 'Admin Master') {
+                Utils.showToast('O nível da conta master não pode ser alterado.', 'error');
+                return;
+            }
+            // Garante que email e nível permaneçam fixos
+            data.email = MASTER_EMAIL;
+            data.nivel = 'Admin Master';
+        }
+    }
+
     Utils.showLoading();
     let result;
     if (usuarioId) {

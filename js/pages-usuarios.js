@@ -143,10 +143,14 @@ Pages.renderUsuariosTableRows = async function(usuarios) {
                     <button class="btn-secondary btn-sm" onclick="Modals.showUsuarioModal('${usuario.id}')">
                         <i class="fas fa-edit"></i>
                     </button>
-                    ${usuario.id !== Auth.currentUser.id ? `
+                    ${(usuario.id !== Auth.currentUser.id && usuario.email !== 'agenciagibson@gmail.com') ? `
                         <button class="btn-secondary btn-sm" onclick="Pages.toggleUsuarioStatus('${usuario.id}', ${!usuario.ativo})" style="color: ${usuario.ativo ? 'var(--danger)' : 'var(--success)'};">
                             <i class="fas fa-${usuario.ativo ? 'ban' : 'check'}"></i>
                         </button>
+                    ` : usuario.email === 'agenciagibson@gmail.com' ? `
+                        <span title="Conta master protegida" style="padding:4px 8px;font-size:12px;color:var(--text-muted);">
+                            <i class="fas fa-shield-alt" style="color:#D4AF37;"></i>
+                        </span>
                     ` : ''}
                 </td>
             </tr>
@@ -157,6 +161,15 @@ Pages.renderUsuariosTableRows = async function(usuarios) {
 };
 
 Pages.toggleUsuarioStatus = async function(usuarioId, novoStatus) {
+    // Proteção master
+    const MASTER = 'agenciagibson@gmail.com';
+    const todosUs = await UsuariosDB.listar();
+    const alvo = todosUs.find(u => u.id === usuarioId);
+    if (alvo && alvo.email === MASTER) {
+        Utils.showToast('Conta master não pode ser desativada.', 'error');
+        return;
+    }
+
     const texto = novoStatus ? 'ativar' : 'desativar';
     const confirmed = await Utils.confirm(`Tem certeza que deseja ${texto} este usuário?`);
     if (!confirmed) return;

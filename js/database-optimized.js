@@ -675,7 +675,13 @@ const UsuariosDB = {
 
     async buscarPorUsername(username) {
         const usuarios = await this.listar();
-        return usuarios.find(u => u.username === username);
+        // Aceita username OU email no campo de login
+        return usuarios.find(u => u.username === username || u.email === username);
+    },
+
+    async buscarPorId(id) {
+        const usuarios = await this.listar();
+        return usuarios.find(u => u.id === id) || null;
     },
 
     async criar(usuario) {
@@ -704,6 +710,12 @@ const UsuariosDB = {
     },
 
     async deletar(id) {
+        const MASTER_EMAIL = 'agenciagibson@gmail.com';
+        const usuario = await this.buscarPorId(id);
+        if (usuario && usuario.email === MASTER_EMAIL) {
+            if (typeof Utils !== 'undefined') Utils.showToast('Esta conta é protegida e não pode ser excluída.', 'error');
+            return false;
+        }
         return await DB.delete('usuarios', id);
     }
 };
