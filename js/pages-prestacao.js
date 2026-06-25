@@ -994,7 +994,7 @@ Pages.salvarPrestacao = async function(id, presetArtistaId) {
             id:             idLimpo,
             artista_id:     artistaId,
             escritorio_id:  Auth.currentUser?.escritorio_id || null,
-            evento_id:      eventoId || null,
+            // evento_id omitido — coluna não existe no schema do Supabase
             evento_nome:    eventoNome,
             cidade:         document.getElementById('pc_cidade')?.value?.trim()   || '',
             data_show:      document.getElementById('pc_data_show')?.value        || null,
