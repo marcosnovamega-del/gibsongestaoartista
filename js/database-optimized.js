@@ -901,12 +901,12 @@ const PropostasDB = {
         return await DB.delete('propostas', id);
     },
 
-    // Gera parcelas automaticamente ao converter proposta em evento
+    // Gera parcelas automaticamente ao assinar contrato
     async _gerarParcelasDoEvento(proposta, eventoId) {
         try {
             let cronograma = [];
 
-            // Tentar parsear condicoes_pagamento se for string JSON
+            // Parsear condicoes_pagamento
             if (proposta.condicoes_pagamento) {
                 const cond = typeof proposta.condicoes_pagamento === 'string'
                     ? JSON.parse(proposta.condicoes_pagamento)
@@ -914,29 +914,46 @@ const PropostasDB = {
                 cronograma = cond.cronograma || [];
             }
 
-            if (!cronograma.length) {
-                // Fallback: parcela única no dia do evento
-                cronograma = [{ pct: 100, dias_antes_show: 0, descricao: 'Pagamento integral', tipo: 'integral', numero: 1 }];
-            }
-
             const dataEvento = proposta.data_evento ? new Date(proposta.data_evento + 'T12:00:00') : new Date();
             const cacheBruto = proposta.cache_bruto || 0;
-            const comissao   = proposta.comissao || 10;
-            const liquido    = cacheBruto - (cacheBruto * comissao / 100);
+            // Sem dedução de comissão de produtora — valor líquido = cachê bruto
+            const liquido = cacheBruto;
+
+            if (!cronograma.length) {
+                // Fallback: parcela única na data do evento
+                cronograma = [{
+                    valor: liquido,
+                    data_vencimento: proposta.data_evento || dataEvento.toISOString().split('T')[0],
+                    descricao: 'Pagamento integral',
+                    tipo: 'integral',
+                    numero: 1
+                }];
+            }
 
             for (let i = 0; i < cronograma.length; i++) {
                 const item = cronograma[i];
-                const diasOffset = item.dias_antes_show || 0;
-                const venc = new Date(dataEvento);
-                venc.setDate(venc.getDate() + diasOffset);
 
-                const valor = liquido * (item.pct || 100) / 100;
+                // NOVO modelo: usa valor direto e data_vencimento direta
+                // ANTIGO modelo (retrocompat): calcula via pct e dias_antes_show
+                const valor = item.valor !== undefined
+                    ? item.valor
+                    : parseFloat((liquido * (item.pct || 100) / 100).toFixed(2));
+
+                let dataVenc;
+                if (item.data_vencimento) {
+                    dataVenc = item.data_vencimento;
+                } else {
+                    const diasOffset = item.dias_antes_show || 0;
+                    const venc = new Date(dataEvento);
+                    venc.setDate(venc.getDate() + diasOffset);
+                    dataVenc = venc.toISOString().split('T')[0];
+                }
 
                 await ParcelasDB.criar({
                     evento_id:       eventoId,
                     numero_parcela:  item.numero || (i + 1),
                     valor:           parseFloat(valor.toFixed(2)),
-                    data_vencimento: venc.toISOString().split('T')[0],
+                    data_vencimento: dataVenc,
                     status:          'Pendente',
                     descricao:       item.descricao || `Parcela ${i + 1}`,
                 });
@@ -949,22 +966,9 @@ const PropostasDB = {
                     descricao:       `Comissão Vendedor – ${proposta.vendedor_nome || 'Vendedor'}`,
                     categoria:       'Comissão',
                     valor:           proposta.vendedor_comissao_valor,
-                    data_vencimento: dataEvento.toISOString().split('T')[0],
+                    data_vencimento: proposta.data_evento || dataEvento.toISOString().split('T')[0],
                     status:          'Pendente',
                     observacoes:     'Gerada automaticamente da proposta',
-                });
-            }
-
-            // Gerar despesa de comissão do parceiro, se houver
-            if (proposta.parceiro_nome && proposta.parceiro_comissao_valor > 0) {
-                await DespesasDB.criar({
-                    evento_id:       eventoId,
-                    descricao:       `Comissão Parceiro – ${proposta.parceiro_nome}`,
-                    categoria:       'Comissão',
-                    valor:           proposta.parceiro_comissao_valor,
-                    data_vencimento: dataEvento.toISOString().split('T')[0],
-                    status:          'Pendente',
-                    observacoes:     'Aprovação pendente – parceiro externo',
                 });
             }
 
