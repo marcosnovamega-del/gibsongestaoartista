@@ -595,23 +595,7 @@ const ContratosDB = {
             await DB.patch('eventos', contrato.evento_id, { status: 'Confirmado' });
             DB.invalidateCache('eventos');
 
-            // GERAÇÃO FINANCEIRA APÓS ASSINATURA
-            try {
-                const evento = await EventosDB.buscarPorId(contrato.evento_id);
-                if (evento && evento.proposta_id) {
-                    const proposta = await PropostasDB.buscarPorId(evento.proposta_id);
-                    if (proposta && typeof PropostasDB._gerarParcelasDoEvento === 'function') {
-                        // Verificar se já foram geradas parcelas para este evento para evitar duplicidade
-                        const parcelasExistentes = await ParcelasDB.buscarPorEvento(evento.id);
-                        if (!parcelasExistentes || parcelasExistentes.length === 0) {
-                            await PropostasDB._gerarParcelasDoEvento(proposta, evento.id);
-                            console.log("Financeiro gerado após assinatura do contrato.");
-                        }
-                    }
-                }
-            } catch (err) {
-                console.error("Erro ao processar financeiro pós-assinatura:", err);
-            }
+            // Nota: geração de parcelas financeiras é manual (confirmação no Financeiro)
 
             // CRIAÇÃO AUTOMÁTICA DE TURNÊ
             try {
