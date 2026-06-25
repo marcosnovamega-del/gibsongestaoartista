@@ -56,12 +56,11 @@ Pages.renderVendas = async function() {
         contratosAssinados.push({ ...c, evento: ev, artista: ar });
     }
 
-    // KPIs
-    const totalPropostas  = propostasRicas.length;
-    const emNegociacao    = col2.length;
-    const aguardandoAssin = col3.length;
-    const fechados        = col4.length;
-    const receitaFechada  = col4.reduce((s, p) => s + (p.cache_bruto || 0), 0);
+    // KPIs — cada um espelha exatamente a coluna do kanban
+    const totalPropostas  = col1.length;                     // só rascunhos
+    const emNegociacao    = col2.length;                     // só enviadas
+    const aguardandoAssin = col3.length;                     // aceitas sem contrato assinado
+    const totalContratos  = contratosAssinados.length;       // contratos assinados
 
     const html = `
     <div class="vendas-page">
@@ -85,7 +84,7 @@ Pages.renderVendas = async function() {
                 <div class="stat-icon" style="background:rgba(107,114,128,0.15);">
                     <i class="fas fa-file-alt" style="color:#9CA3AF"></i>
                 </div>
-                <div class="stat-content"><h3>${totalPropostas}</h3><p>Total Propostas</p></div>
+                <div class="stat-content"><h3>${totalPropostas}</h3><p>Propostas</p></div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon yellow"><i class="fas fa-paper-plane"></i></div>
@@ -98,10 +97,10 @@ Pages.renderVendas = async function() {
                 <div class="stat-content"><h3>${aguardandoAssin}</h3><p>Aguard. Assinatura</p></div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon green"><i class="fas fa-trophy"></i></div>
+                <div class="stat-icon green"><i class="fas fa-handshake"></i></div>
                 <div class="stat-content">
-                    <h3>${Utils.formatCurrency(receitaFechada)}</h3>
-                    <p>Receita Fechada (${fechados} shows)</p>
+                    <h3>${totalContratos}</h3>
+                    <p>Contratos Assinados</p>
                 </div>
             </div>
         </div>
