@@ -159,8 +159,8 @@ Modals.showPropostaModal = async function(propostaId = null) {
                                         <input type="date" name="data_evento" value="${proposta?.data_evento || ''}" required>
                                     </div>
                                     <div class="form-group">
-                                        <label>Horário *</label>
-                                        <input type="time" name="horario" value="${proposta?.horario || ''}" required>
+                                        <label>Horário <span style="font-size:11px;color:var(--text-muted);font-weight:400;">(opcional)</span></label>
+                                        <input type="time" name="horario" value="${proposta?.horario || ''}">
                                     </div>
                                 </div>
                                 <div class="form-group">
