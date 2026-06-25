@@ -595,7 +595,24 @@ const ContratosDB = {
             await DB.patch('eventos', contrato.evento_id, { status: 'Confirmado' });
             DB.invalidateCache('eventos');
 
-            // Nota: geração de parcelas financeiras é manual (confirmação no Financeiro)
+            // Gerar parcelas financeiras automaticamente do cronograma da proposta
+            try {
+                const evento = await EventosDB.buscarPorId(contrato.evento_id);
+                if (evento?.proposta_id) {
+                    const proposta = await PropostasDB.buscarPorId(evento.proposta_id);
+                    if (proposta) {
+                        // Apaga parcelas anteriores do evento (evita duplicatas)
+                        const parcelasExist = await DB.search('parcelas', { evento_id: contrato.evento_id });
+                        for (const p of parcelasExist) {
+                            await DB.delete('parcelas', p.id);
+                        }
+                        await PropostasDB._gerarParcelasDoEvento(proposta, contrato.evento_id);
+                        console.log('✅ Parcelas geradas do cronograma da proposta.');
+                    }
+                }
+            } catch(err) {
+                console.error('Erro ao gerar parcelas ao assinar contrato:', err);
+            }
 
             // CRIAÇÃO AUTOMÁTICA DE TURNÊ
             try {
