@@ -393,6 +393,11 @@ Pages.renderPrestacaoForm = async function(id, presetArtistaId) {
             || (selectedGlobal !== 'todos' ? selectedGlobal : null)
             || (artistas.length ? artistas[0].id : '');
 
+        // Carregar eventos do artista para o select
+        const todosEventos = await EventosDB.listar();
+        const eventosArtista = todosEventos.filter(e => e.artista_id === artistaId)
+            .sort((a, b) => (b.data || '') < (a.data || '') ? -1 : 1);
+
         // Se não há despesas salvas ainda, pré-carregar categorias padrão (zeradas)
         if (!despesas.length) {
             despesas = CATEGORIAS_PADRAO.map((cat, i) => ({
@@ -438,20 +443,37 @@ Pages.renderPrestacaoForm = async function(id, presetArtistaId) {
                 <div class="card mb-3">
                     <div class="card-header"><h3><i class="fas fa-info-circle"></i> Informações do Show</h3></div>
                     <div class="card-body">
+                        <input type="hidden" id="pc_evento_id" value="${pc?.evento_id || ''}">
                         <div class="grid grid-3" style="gap:1rem">
                             <div class="form-group">
                                 <label>Artista *</label>
-                                <select id="pc_artista_id" class="form-control" required>
+                                <select id="pc_artista_id" class="form-control" required
+                                        onchange="Pages._pcCarregarEventos(this.value)">
                                     <option value="">Selecionar...</option>
                                     ${artistas.map(a =>
                                         `<option value="${a.id}" ${a.id === artistaId ? 'selected' : ''}>${a.nome}</option>`
                                     ).join('')}
                                 </select>
                             </div>
-                            <div class="form-group">
-                                <label>Nome do Evento / Show *</label>
-                                <input type="text" id="pc_evento_nome" class="form-control" placeholder="Ex: Show Forró do Dino"
-                                    value="${pc?.evento_nome || ''}" required>
+                            <div class="form-group" style="grid-column:span 2;">
+                                <label>Evento / Show *
+                                    <small style="font-weight:400;color:var(--text-muted);margin-left:6px;">
+                                        — selecione para preencher automaticamente
+                                    </small>
+                                </label>
+                                <select id="pc_evento_sel" class="form-control"
+                                        onchange="Pages._pcOnEventoChange(this.value)">
+                                    <option value="">Selecionar evento do sistema...</option>
+                                    ${eventosArtista.map(e => {
+                                        const label = `${e.data ? Utils.formatDate(e.data) : '—'} · ${e.local || e.cidade || '—'}`;
+                                        return `<option value="${e.id}" ${e.id === (pc?.evento_id||'') ? 'selected' : ''}>${label}</option>`;
+                                    }).join('')}
+                                    <option value="__manual__" ${!pc?.evento_id ? 'selected' : ''}>✏️ Preencher manualmente</option>
+                                </select>
+                                <input type="text" id="pc_evento_nome" class="form-control mt-1"
+                                    placeholder="Nome do show / evento"
+                                    value="${pc?.evento_nome || ''}" required
+                                    style="${pc?.evento_id ? 'display:none' : ''}">
                             </div>
                             <div class="form-group">
                                 <label>Cidade</label>
@@ -754,11 +776,11 @@ Pages._htmlResumo = function(t) {
 
 // ─── Interação no formulário ──────────────────────────────────────────────────
 
-Pages._adicionarLinhaDespesa = function() {
+Pages._adicionarLinhaDespesa = function(dados) {
     const tbody = document.getElementById('despesasBody');
     if (!tbody) { console.error('[Prestacao] despesasBody não encontrado'); return; }
     const uid = ++Pages._pcRowIdx;
-    const novaLinha = Pages._htmlLinhaDespesa({
+    const novaLinha = Pages._htmlLinhaDespesa(dados || {
         categoria_nome: '', tipo: 'personalizado', valor_cobrado: 0, valor_gasto: 0
     }, uid);
     // Inserir antes da linha NF para manter Outros + extras acima de NF/Comissão
@@ -864,12 +886,104 @@ Pages._atualizarResumo = function() {
     if (resumoBody) resumoBody.innerHTML = Pages._htmlResumo(totais);
 };
 
+// ─── Cascade: artista → eventos ──────────────────────────────────────────────
+Pages._pcCarregarEventos = async function(artistaId) {
+    const sel = document.getElementById('pc_evento_sel');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Carregando...</option>';
+
+    const todos = await EventosDB.listar(true);
+    const lista = todos.filter(e => e.artista_id === artistaId)
+        .sort((a, b) => (b.data || '') < (a.data || '') ? -1 : 1);
+
+    sel.innerHTML = '<option value="">Selecionar evento do sistema...</option>'
+        + lista.map(e => {
+            const lbl = `${e.data ? Utils.formatDate(e.data) : '—'} · ${e.local || e.cidade || '—'}`;
+            return `<option value="${e.id}">${lbl}</option>`;
+        }).join('')
+        + '<option value="__manual__">✏️ Preencher manualmente</option>';
+
+    document.getElementById('pc_evento_nome').style.display = 'block';
+    document.getElementById('pc_evento_id').value = '';
+};
+
+// ─── Ao selecionar evento: auto-preenche todos os campos + carrega despesas ──
+Pages._pcOnEventoChange = async function(eventoId) {
+    const nomeInput = document.getElementById('pc_evento_nome');
+
+    if (!eventoId || eventoId === '__manual__') {
+        if (nomeInput) { nomeInput.style.display = 'block'; nomeInput.value = ''; }
+        document.getElementById('pc_evento_id').value = '';
+        return;
+    }
+
+    Utils.showLoading();
+    try {
+        const evento = await EventosDB.buscarPorId(eventoId);
+        if (!evento) { Utils.hideLoading(); return; }
+
+        // Preencher campos do show
+        document.getElementById('pc_evento_id').value = eventoId;
+        if (nomeInput) {
+            nomeInput.style.display = 'none';
+            nomeInput.value = evento.local || evento.cidade || '';
+        }
+        const cidadeEl = document.getElementById('pc_cidade');
+        if (cidadeEl) cidadeEl.value = `${evento.cidade || evento.local || ''}${evento.estado ? ' - ' + evento.estado : ''}`;
+
+        const dataEl = document.getElementById('pc_data_show');
+        if (dataEl && evento.data) dataEl.value = evento.data;
+
+        const cacheEl = document.getElementById('pc_cache');
+        if (cacheEl && evento.cache_bruto) {
+            cacheEl.value = evento.cache_bruto;
+            Pages._atualizarResumo();
+        }
+
+        // Carregar despesas do financeiro vinculadas ao evento
+        const despesasFinanceiro = await DespesasDB.buscarPorEvento(eventoId);
+        if (despesasFinanceiro && despesasFinanceiro.length > 0) {
+            const tbody = document.getElementById('despesasBody');
+            if (tbody) {
+                // Manter linhas padrão e adicionar despesas do financeiro
+                // Primeiro zerar as linhas padrão, depois adicionar as do financeiro
+                const linhasExist = [...tbody.querySelectorAll('tr')];
+
+                // Adicionar cada despesa do financeiro como nova linha
+                despesasFinanceiro.forEach(d => {
+                    // Evitar duplicar se já existe uma linha com o mesmo nome
+                    const jaExiste = linhasExist.some(tr => {
+                        const nomeCel = tr.querySelector('.desp-nome');
+                        return nomeCel && nomeCel.value.toLowerCase() === (d.descricao || '').toLowerCase();
+                    });
+                    if (!jaExiste) {
+                        Pages._adicionarLinhaDespesa({
+                            categoria_nome: d.descricao || d.categoria || 'Despesa',
+                            valor_cobrado:  0,
+                            valor_gasto:    parseFloat(d.valor) || 0
+                        });
+                    }
+                });
+
+                Utils.showToast(`✅ ${despesasFinanceiro.length} despesa(s) carregada(s) do Financeiro`, 'success');
+            }
+        }
+    } catch(e) {
+        console.error('Erro ao carregar evento na prestação:', e);
+    }
+    Utils.hideLoading();
+};
+
 // ─── Salvar ───────────────────────────────────────────────────────────────────
 
 Pages.salvarPrestacao = async function(id, presetArtistaId) {
     try {
-        const artistaId = document.getElementById('pc_artista_id')?.value || presetArtistaId;
-        const eventoNome = document.getElementById('pc_evento_nome')?.value?.trim();
+        const artistaId  = document.getElementById('pc_artista_id')?.value || presetArtistaId;
+        const eventoId   = document.getElementById('pc_evento_id')?.value || null;
+        // Nome do evento: do campo texto ou do select (local do evento)
+        const selEvento  = document.getElementById('pc_evento_sel');
+        const nomeTexto  = document.getElementById('pc_evento_nome')?.value?.trim();
+        const eventoNome = nomeTexto || selEvento?.options[selEvento.selectedIndex]?.text?.replace(/✏️\s*/,'') || '';
         if (!artistaId) { Utils.showToast('Selecione o artista', 'error'); return; }
         if (!eventoNome) { Utils.showToast('Informe o nome do evento', 'error'); return; }
 
@@ -880,6 +994,7 @@ Pages.salvarPrestacao = async function(id, presetArtistaId) {
             id:             idLimpo,
             artista_id:     artistaId,
             escritorio_id:  Auth.currentUser?.escritorio_id || null,
+            evento_id:      eventoId || null,
             evento_nome:    eventoNome,
             cidade:         document.getElementById('pc_cidade')?.value?.trim()   || '',
             data_show:      document.getElementById('pc_data_show')?.value        || null,

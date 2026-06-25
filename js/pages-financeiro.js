@@ -706,28 +706,42 @@ Pages.deletarMembroEquipe = async function(id, artistaId) {
 };
 
 Pages.renderAlertas = async function() {
-    const parcelasAtrasadas = await ParcelasDB.verificarAtrasadas();
-    const eventos = await EventosDB.listar();
-    const contratos = await ContratosDB.listar();
-    
-    // Eventos próximos (próximos 7 dias)
-    const hoje = new Date();
-    const em7Dias = new Date();
-    em7Dias.setDate(hoje.getDate() + 7);
-    
+    const todasParcelas  = await ParcelasDB.listar();
+    const eventos        = await EventosDB.listar();
+    const contratos      = await ContratosDB.listar();
+    const despesas       = await DespesasDB.listar();
+
+    const hoje    = new Date(); hoje.setHours(0,0,0,0);
+    const em7d    = new Date(hoje); em7d.setDate(hoje.getDate() + 7);
+    const em30d   = new Date(hoje); em30d.setDate(hoje.getDate() + 30);
+
+    // Parcelas em aberto — separar atrasadas e a vencer (próximos 30 dias)
+    const parcelasAtrasadas = todasParcelas.filter(p => {
+        if (p.status === 'Pago') return false;
+        if (!p.data_vencimento) return false;
+        return new Date(p.data_vencimento + 'T00:00:00') < hoje;
+    });
+    const parcelasAVencer = todasParcelas.filter(p => {
+        if (p.status === 'Pago') return false;
+        if (!p.data_vencimento) return false;
+        const d = new Date(p.data_vencimento + 'T00:00:00');
+        return d >= hoje && d <= em30d;
+    });
+
+    // Eventos próximos (7 dias)
     const eventosProximos = eventos.filter(e => {
-        const dataEvento = new Date(e.data);
-        return dataEvento >= hoje && dataEvento <= em7Dias;
+        if (!e.data) return false;
+        const d = new Date(e.data + 'T00:00:00');
+        return d >= hoje && d <= em7d;
     });
 
     // Contratos não assinados
     const contratosPendentes = contratos.filter(c => c.status === 'Pendente');
 
     // Despesas pendentes
-    const despesas = await DespesasDB.listar();
     const despesasPendentes = despesas.filter(d => d.status === 'Pendente');
 
-    const totalAlertas = parcelasAtrasadas.length + eventosProximos.length + contratosPendentes.length + despesasPendentes.length;
+    const totalAlertas = parcelasAtrasadas.length + parcelasAVencer.length + eventosProximos.length + contratosPendentes.length + despesasPendentes.length;
 
     const html = `
         <div class="alertas-container">
@@ -736,16 +750,30 @@ Pages.renderAlertas = async function() {
                 <p class="text-muted">${totalAlertas} alerta(s) ativo(s)</p>
             </div>
 
-            <!-- Parcelas Atrasadas -->
+            <!-- Parcelas Atrasadas (VENCIDAS) -->
             ${parcelasAtrasadas.length > 0 ? `
                 <div class="card mb-3" style="border-left: 4px solid var(--danger);">
                     <div class="card-header" style="background: rgba(239, 68, 68, 0.1);">
                         <h3 class="card-title" style="color: var(--danger);">
-                            <i class="fas fa-exclamation-triangle"></i> Parcelas Atrasadas (${parcelasAtrasadas.length})
+                            <i class="fas fa-exclamation-triangle"></i> Parcelas Vencidas (${parcelasAtrasadas.length})
                         </h3>
                     </div>
                     <div class="card-body">
                         ${await this.renderParcelasAtrasadasAlerta(parcelasAtrasadas)}
+                    </div>
+                </div>
+            ` : ''}
+
+            <!-- Parcelas A Vencer (próximos 30 dias) -->
+            ${parcelasAVencer.length > 0 ? `
+                <div class="card mb-3" style="border-left: 4px solid #F59E0B;">
+                    <div class="card-header" style="background: rgba(245,158,11,0.08);">
+                        <h3 class="card-title" style="color:#F59E0B;">
+                            <i class="fas fa-clock"></i> Parcelas em Aberto — Próximos 30 dias (${parcelasAVencer.length})
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        ${await this.renderParcelasAVencerAlerta(parcelasAVencer, eventos)}
                     </div>
                 </div>
             ` : ''}
@@ -833,6 +861,36 @@ Pages.renderParcelasAtrasadasAlerta = async function(parcelas) {
         `;
     }
     
+    html += '</div>';
+    return html;
+};
+
+Pages.renderParcelasAVencerAlerta = async function(parcelas, eventos) {
+    let html = '<div class="alert-list">';
+    for (const parcela of parcelas) {
+        const evento = eventos?.find(e => e.id === parcela.evento_id)
+            || await EventosDB.buscarPorId(parcela.evento_id);
+        const hoje = new Date(); hoje.setHours(0,0,0,0);
+        const venc = new Date(parcela.data_vencimento + 'T00:00:00');
+        const diff  = Math.ceil((venc - hoje) / 86400000);
+        const cor   = diff <= 7 ? '#F59E0B' : 'var(--text-primary)';
+        const label = diff === 0 ? 'Vence hoje' : `Vence em ${diff} dia(s)`;
+        html += `
+            <div style="padding:12px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <strong style="color:${cor};">${parcela.descricao || ('Parcela ' + parcela.numero_parcela)} — ${evento?.local || 'Evento'}</strong>
+                    <p style="margin:4px 0 0;font-size:13px;color:var(--text-muted);">
+                        ${Utils.formatDate(parcela.data_vencimento)} &nbsp;·&nbsp; <span style="color:${cor};font-weight:600;">${label}</span>
+                    </p>
+                </div>
+                <div style="text-align:right;">
+                    <strong style="color:var(--success);">${Utils.formatCurrency(parcela.valor)}</strong>
+                    <button class="btn-primary btn-sm mt-1" onclick="Pages.marcarParcelaPaga('${parcela.id}')">
+                        Marcar Pago
+                    </button>
+                </div>
+            </div>`;
+    }
     html += '</div>';
     return html;
 };
