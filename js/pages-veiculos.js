@@ -491,35 +491,35 @@ Pages._renderModalViagemBody = function(viagem, editId, trechos = [], despesas =
     <form id="formViagem" onsubmit="event.preventDefault(); Pages._salvarViagem();">
         <div class="form-grid" style="grid-template-columns:1fr 1fr; gap:14px; margin-bottom:18px;">
             <div class="form-group">
-                <label class="form-label">Veículo *</label>
+                <label style="display:block;font-size:12px;font-weight:700;color:var(--text-primary);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;">Veículo *</label>
                 <select class="form-control" name="veiculo_id" required>${optVei}</select>
             </div>
             <div class="form-group">
-                <label class="form-label">Evento Vinculado</label>
+                <label style="display:block;font-size:12px;font-weight:700;color:var(--text-primary);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;">Evento Vinculado</label>
                 <select class="form-control" name="evento_id">${optEv}</select>
             </div>
             <div class="form-group">
-                <label class="form-label">Data Início</label>
+                <label style="display:block;font-size:12px;font-weight:700;color:var(--text-primary);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;">Data Início</label>
                 <input type="date" class="form-control" name="data_inicio" value="${v.data_inicio || ''}">
             </div>
             <div class="form-group">
-                <label class="form-label">Data Fim</label>
+                <label style="display:block;font-size:12px;font-weight:700;color:var(--text-primary);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;">Data Fim</label>
                 <input type="date" class="form-control" name="data_fim" value="${v.data_fim || ''}">
             </div>
             <div class="form-group">
-                <label class="form-label">KM Inicial (hodômetro)</label>
+                <label style="display:block;font-size:12px;font-weight:700;color:var(--text-primary);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;">KM Inicial (hodômetro)</label>
                 <input type="number" step="0.1" class="form-control" name="km_inicial" value="${v.km_inicial || ''}" placeholder="Ex: 793713.8">
             </div>
             <div class="form-group">
-                <label class="form-label">KM Final (hodômetro)</label>
+                <label style="display:block;font-size:12px;font-weight:700;color:var(--text-primary);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;">KM Final (hodômetro)</label>
                 <input type="number" step="0.1" class="form-control" name="km_final" value="${v.km_final || ''}" placeholder="Ex: 795674.3">
             </div>
             <div class="form-group">
-                <label class="form-label">Receita de Transporte (R$)</label>
+                <label style="display:block;font-size:12px;font-weight:700;color:var(--text-primary);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;">Receita de Transporte (R$)</label>
                 <input type="number" step="0.01" class="form-control" name="receita_transporte" value="${v.receita_transporte || ''}" placeholder="0,00">
             </div>
             <div class="form-group">
-                <label class="form-label">Status</label>
+                <label style="display:block;font-size:12px;font-weight:700;color:var(--text-primary);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;">Status</label>
                 <select class="form-control" name="status">
                     <option value="em_andamento" ${(v.status||'em_andamento') === 'em_andamento' ? 'selected' : ''}>Em Andamento</option>
                     <option value="concluida" ${v.status === 'concluida' ? 'selected' : ''}>Concluída</option>
@@ -551,7 +551,7 @@ Pages._renderModalViagemBody = function(viagem, editId, trechos = [], despesas =
 
         <!-- Observações -->
         <div class="form-group" style="margin-bottom:20px;">
-            <label class="form-label">Observações</label>
+            <label style="display:block;font-size:12px;font-weight:700;color:var(--text-primary);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;">Observações</label>
             <textarea class="form-control" name="observacoes" rows="2" placeholder="Anotações gerais da viagem...">${v.observacoes || ''}</textarea>
         </div>
 
@@ -578,33 +578,33 @@ Pages._htmlTrecho = function(idx, t = {}) {
         </div>
         <div class="trecho-grid" style="margin-bottom:10px;">
             <div class="form-group" style="margin:0;">
-                <label class="form-label" style="font-size:11px;">Data</label>
+                <label style="display:block;font-size:11px;font-weight:700;color:var(--text-primary);margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px;">Data</label>
                 <input type="date" class="form-control" name="tr_data_${idx}" value="${t.data || ''}">
             </div>
             <div class="form-group" style="margin:0;">
-                <label class="form-label" style="font-size:11px;">Cidade Origem</label>
+                <label style="display:block;font-size:11px;font-weight:700;color:var(--text-primary);margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px;">Cidade Origem</label>
                 <input type="text" class="form-control" name="tr_origem_${idx}" value="${t.cidade_origem || ''}" placeholder="Ex: Dores de Campos">
             </div>
             <div class="form-group" style="margin:0;">
-                <label class="form-label" style="font-size:11px;">Cidade Destino</label>
+                <label style="display:block;font-size:11px;font-weight:700;color:var(--text-primary);margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px;">Cidade Destino</label>
                 <input type="text" class="form-control" name="tr_destino_${idx}" value="${t.cidade_destino || ''}" placeholder="Ex: Itaperuna">
             </div>
         </div>
         <div class="trecho-grid-4">
             <div class="form-group" style="margin:0;">
-                <label class="form-label" style="font-size:11px;">KM Saída</label>
+                <label style="display:block;font-size:11px;font-weight:700;color:var(--text-primary);margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px;">KM Saída</label>
                 <input type="number" step="0.1" class="form-control" name="tr_kmsaida_${idx}" value="${t.km_saida || ''}" placeholder="793713.8">
             </div>
             <div class="form-group" style="margin:0;">
-                <label class="form-label" style="font-size:11px;">KM Chegada</label>
+                <label style="display:block;font-size:11px;font-weight:700;color:var(--text-primary);margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px;">KM Chegada</label>
                 <input type="number" step="0.1" class="form-control" name="tr_kmchegada_${idx}" value="${t.km_chegada || ''}" placeholder="794410.2">
             </div>
             <div class="form-group" style="margin:0;">
-                <label class="form-label" style="font-size:11px;">KM Abastecimento</label>
+                <label style="display:block;font-size:11px;font-weight:700;color:var(--text-primary);margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px;">KM Abastecimento</label>
                 <input type="number" step="0.1" class="form-control" name="tr_kmabast_${idx}" value="${t.km_abastecimento || ''}" placeholder="793923.1">
             </div>
             <div class="form-group" style="margin:0;">
-                <label class="form-label" style="font-size:11px;">Valor Abastecimento</label>
+                <label style="display:block;font-size:11px;font-weight:700;color:var(--text-primary);margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px;">Valor Abastecimento</label>
                 <input type="number" step="0.01" class="form-control" name="tr_vlrabast_${idx}" value="${t.valor_abastecimento || ''}" placeholder="2649.15">
             </div>
         </div>
@@ -624,7 +624,7 @@ Pages._htmlDespExtra = function(idx, d = {}) {
     return `
     <div class="despesa-row" id="desp-${idx}">
         <div class="form-group" style="margin:0;">
-            <label class="form-label" style="font-size:11px;">Tipo</label>
+            <label style="display:block;font-size:11px;font-weight:700;color:var(--text-primary);margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px;">Tipo</label>
             <select class="form-control" name="dp_tipo_${idx}">
                 <option value="pedagio"     ${(d.tipo||'pedagio') === 'pedagio'     ? 'selected' : ''}>Pedágio</option>
                 <option value="manutencao"  ${d.tipo === 'manutencao'  ? 'selected' : ''}>Manutenção</option>
@@ -632,11 +632,11 @@ Pages._htmlDespExtra = function(idx, d = {}) {
             </select>
         </div>
         <div class="form-group" style="margin:0;">
-            <label class="form-label" style="font-size:11px;">Descrição</label>
+            <label style="display:block;font-size:11px;font-weight:700;color:var(--text-primary);margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px;">Descrição</label>
             <input type="text" class="form-control" name="dp_desc_${idx}" value="${d.descricao || ''}" placeholder="Descrição">
         </div>
         <div class="form-group" style="margin:0;">
-            <label class="form-label" style="font-size:11px;">Valor (R$)</label>
+            <label style="display:block;font-size:11px;font-weight:700;color:var(--text-primary);margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px;">Valor (R$)</label>
             <input type="number" step="0.01" class="form-control" name="dp_valor_${idx}" value="${d.valor || ''}" placeholder="0,00">
         </div>
         <button type="button" class="btn-secondary btn-sm" style="color:var(--danger);align-self:flex-end;" onclick="document.getElementById('desp-${idx}').remove()">
@@ -786,27 +786,27 @@ Pages._renderModalVeiculoBody = function(vei, editId) {
     <form id="formVeiculo" onsubmit="event.preventDefault(); Pages._salvarVeiculo();">
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px;">
             <div class="form-group" style="grid-column:span 2;">
-                <label class="form-label">Nome / Apelido *</label>
+                <label style="display:block;font-size:12px;font-weight:700;color:var(--text-primary);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;">Nome / Apelido *</label>
                 <input type="text" class="form-control" name="nome" value="${v.nome || ''}" placeholder="Ex: Ônibus Principal" required>
             </div>
             <div class="form-group">
-                <label class="form-label">Placa</label>
+                <label style="display:block;font-size:12px;font-weight:700;color:var(--text-primary);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;">Placa</label>
                 <input type="text" class="form-control" name="placa" value="${v.placa || ''}" placeholder="ABC-1234" style="text-transform:uppercase;">
             </div>
             <div class="form-group">
-                <label class="form-label">Modelo</label>
+                <label style="display:block;font-size:12px;font-weight:700;color:var(--text-primary);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;">Modelo</label>
                 <input type="text" class="form-control" name="modelo" value="${v.modelo || ''}" placeholder="Ex: Mercedes Benz 1621">
             </div>
             <div class="form-group">
-                <label class="form-label">Ano</label>
+                <label style="display:block;font-size:12px;font-weight:700;color:var(--text-primary);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;">Ano</label>
                 <input type="text" class="form-control" name="ano" value="${v.ano || ''}" placeholder="2015">
             </div>
             <div class="form-group">
-                <label class="form-label">Cor</label>
+                <label style="display:block;font-size:12px;font-weight:700;color:var(--text-primary);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;">Cor</label>
                 <input type="text" class="form-control" name="cor" value="${v.cor || ''}" placeholder="Branco">
             </div>
             <div class="form-group" style="grid-column:span 2;">
-                <label class="form-label">Observações</label>
+                <label style="display:block;font-size:12px;font-weight:700;color:var(--text-primary);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;">Observações</label>
                 <textarea class="form-control" name="observacoes" rows="2" placeholder="Capacidade, características...">${v.observacoes || ''}</textarea>
             </div>
         </div>
