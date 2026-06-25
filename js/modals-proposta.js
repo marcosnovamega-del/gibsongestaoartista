@@ -236,18 +236,11 @@ Modals.showPropostaModal = async function(propostaId = null) {
                                     <!-- À VISTA -->
                                     <div id="pag_avista_config">
                                         <div class="form-group" style="margin:0;">
-                                            <label>Quando será pago? *</label>
-                                            <select id="pag_avista_quando" name="pag_avista_quando" onchange="Modals.atualizarCronograma()">
-                                                <option value="-30">30 dias antes do show</option>
-                                                <option value="-15">15 dias antes do show</option>
-                                                <option value="-7">7 dias antes do show</option>
-                                                <option value="-3">3 dias antes do show</option>
-                                                <option value="-1">1 dia antes do show</option>
-                                                <option value="0">No dia do show</option>
-                                                <option value="7">Até 7 dias após o show</option>
-                                                <option value="15">Até 15 dias após o show</option>
-                                                <option value="30">Até 30 dias após o show</option>
-                                            </select>
+                                            <label>Data de Vencimento *</label>
+                                            <input type="date" id="pag_avista_data" name="pag_avista_data"
+                                                   value="${proposta?.condicoes_pagamento ? (() => { try { const c = JSON.parse(proposta.condicoes_pagamento); return c?.cronograma?.[0]?.data_vencimento || ''; } catch(e) { return ''; } })() : ''}"
+                                                   oninput="Modals.atualizarCronograma()"
+                                                   style="max-width:220px;">
                                         </div>
                                     </div>
 
@@ -432,15 +425,15 @@ Modals.submitProposta = async function(propostaId) {
     const vendedorNome = get('vendedor_nome_fin') || get('vendedor_nome') || '';
 
     if (pagTipo === 'avista') {
-        const dias = parseInt(get('pag_avista_quando') || '0');
-        cronograma = [{ valor: cacheBruto, dias_antes_show: -dias, descricao: dias <= 0 ? (dias === 0 ? 'Pagamento no dia do show' : `Pagamento ${Math.abs(dias)}d antes`) : `Pagamento até ${dias}d após show`, tipo: 'integral' }];
+        const dataVenc = document.getElementById('pag_avista_data')?.value || null;
+        cronograma = [{ valor: cacheBruto, data_vencimento: dataVenc, descricao: 'Pagamento integral', tipo: 'integral' }];
     } else {
         const linhas = document.querySelectorAll('.parcela-linha');
         linhas.forEach((linha, i) => {
-            const valor = parseFloat(linha.querySelector('.parcela-valor')?.value) || 0;
-            const dias  = parseInt(linha.querySelector('.parcela-dias')?.value)    || 0;
-            const desc  = linha.querySelector('.parcela-desc')?.value || `Parcela ${i+1}`;
-            cronograma.push({ valor, dias_antes_show: -dias, descricao: desc, tipo: i === 0 ? 'entrada' : 'restante', numero: i+1 });
+            const valor      = parseFloat(linha.querySelector('.parcela-valor')?.value) || 0;
+            const dataVenc   = linha.querySelector('.parcela-data')?.value || null;
+            const desc       = linha.querySelector('.parcela-desc')?.value || `Parcela ${i+1}`;
+            cronograma.push({ valor, data_vencimento: dataVenc, descricao: desc, tipo: i === 0 ? 'entrada' : 'restante', numero: i+1 });
         });
     }
 
@@ -496,14 +489,27 @@ Modals.gerarLinhasParcelas = function() {
     const valorParcela = cache > 0 ? parseFloat((cache / n).toFixed(2)) : 0;
     const liquido = cache; // sem dedução de produtora
     const labels = ['Entrada', '2ª parcela', '3ª parcela', '4ª parcela', '5ª parcela'];
-    const diasPadrao = [-30, 0, 15, 30, 45];
+
+    // Carregar datas existentes se estiver editando
+    let datasExistentes = [];
+    try {
+        const propostaEl = document.getElementById('proposta-form');
+        if (propostaEl) {
+            const cronStr = propostaEl.dataset.cronograma;
+            if (cronStr) {
+                const cron = JSON.parse(cronStr);
+                datasExistentes = (cron.cronograma || []).map(c => c.data_vencimento || '');
+            }
+        }
+    } catch(e) {}
 
     let html = '';
     for (let i = 0; i < n; i++) {
         // Última parcela recebe o ajuste de arredondamento
         const v = i === n - 1 ? parseFloat((liquido - valorParcela * (n - 1)).toFixed(2)) : valorParcela;
+        const dataVal = datasExistentes[i] || '';
         html += `
-        <div class="parcela-linha" style="display:grid;grid-template-columns:1fr 110px 100px;gap:8px;align-items:center;margin-bottom:8px;">
+        <div class="parcela-linha" style="display:grid;grid-template-columns:1fr 110px 140px;gap:8px;align-items:center;margin-bottom:8px;">
             <input class="parcela-desc" placeholder="${labels[i] || `Parcela ${i+1}`}" value="${labels[i] || `Parcela ${i+1}`}"
                    style="padding:6px 8px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:12px;">
             <div style="position:relative;">
@@ -512,16 +518,9 @@ Modals.gerarLinhasParcelas = function() {
                        oninput="Modals.validarValores()"
                        style="padding:6px 8px 6px 28px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:12px;width:100%;">
             </div>
-            <select class="parcela-dias" onchange="Modals.atualizarCronograma()"
-                    style="padding:6px 4px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:11px;">
-                <option value="-30" ${diasPadrao[i]===-30?'selected':''}>30d antes</option>
-                <option value="-15" ${diasPadrao[i]===-15?'selected':''}>15d antes</option>
-                <option value="-7"  ${diasPadrao[i]===-7?'selected':''}>7d antes</option>
-                <option value="0"   ${diasPadrao[i]===0?'selected':''}>No dia</option>
-                <option value="7"   ${diasPadrao[i]===7?'selected':''}>7d depois</option>
-                <option value="15"  ${diasPadrao[i]===15?'selected':''}>15d depois</option>
-                <option value="30"  ${diasPadrao[i]===30?'selected':''}>30d depois</option>
-            </select>
+            <input type="date" class="parcela-data" value="${dataVal}"
+                   oninput="Modals.atualizarCronograma()"
+                   style="padding:6px 8px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:12px;width:100%;">
         </div>`;
     }
     const el = document.getElementById('pag_parcelas_linhas');
@@ -542,7 +541,6 @@ Modals.validarValores = function() {
 };
 
 Modals.atualizarCronograma = function() {
-    const dataEvento = document.querySelector('[name="data_evento"]')?.value;
     const cache      = parseFloat(document.getElementById('p_cache')?.value) || 0;
     const liquido    = cache; // sem dedução de produtora
     const tipo       = document.getElementById('pag_tipo')?.value || 'avista';
@@ -550,27 +548,28 @@ Modals.atualizarCronograma = function() {
     const linhasEl   = document.getElementById('cronograma_linhas');
     if (!prev || !linhasEl) return;
 
-    if (!dataEvento || liquido <= 0) { prev.style.display = 'none'; return; }
+    if (liquido <= 0) { prev.style.display = 'none'; return; }
 
-    const showDate = new Date(dataEvento + 'T12:00:00');
     let items = [];
 
     if (tipo === 'avista') {
-        const dias = parseInt(document.getElementById('pag_avista_quando')?.value || '0');
-        const venc = new Date(showDate); venc.setDate(venc.getDate() + dias);
-        items = [{ desc: dias > 0 ? `Pagamento integral (até ${dias}d após show)` : dias === 0 ? 'Pagamento no dia do show' : `Pagamento (${Math.abs(dias)}d antes)`, valor: liquido, venc }];
+        const dataStr = document.getElementById('pag_avista_data')?.value;
+        if (!dataStr) { prev.style.display = 'none'; return; }
+        const venc = new Date(dataStr + 'T12:00:00');
+        items = [{ desc: 'Pagamento integral', valor: liquido, venc }];
     } else {
         document.querySelectorAll('.parcela-linha').forEach((linha, i) => {
-            const valor = parseFloat(linha.querySelector('.parcela-valor')?.value) || 0;
-            const dias  = parseInt(linha.querySelector('.parcela-dias')?.value) || 0;
-            const desc  = linha.querySelector('.parcela-desc')?.value || `Parcela ${i+1}`;
-            const venc  = new Date(showDate); venc.setDate(venc.getDate() + dias);
-            items.push({ desc, valor, venc });
+            const valor   = parseFloat(linha.querySelector('.parcela-valor')?.value) || 0;
+            const dataStr = linha.querySelector('.parcela-data')?.value;
+            const desc    = linha.querySelector('.parcela-desc')?.value || `Parcela ${i+1}`;
+            const venc    = dataStr ? new Date(dataStr + 'T12:00:00') : null;
+            if (venc) items.push({ desc, valor, venc });
         });
+        if (items.length === 0) { prev.style.display = 'none'; return; }
     }
 
     prev.style.display = 'block';
-    linhasEl.innerHTML = items.map((it, i) => {
+    linhasEl.innerHTML = items.map((it) => {
         const hoje  = new Date();
         const diff  = Math.ceil((it.venc - hoje) / 86400000);
         const alert = diff < 0 ? '🔴' : diff <= 7 ? '🟡' : '🟢';

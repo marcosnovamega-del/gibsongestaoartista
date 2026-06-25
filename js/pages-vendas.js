@@ -692,10 +692,14 @@ Pages.renderPropostas = async function() {
                 </thead>
                 <tbody>
                     ${cronograma.map((item, i) => {
-                        // Compatível com registros antigos (pct) e novos (valor)
+                        // Compatível com registros antigos (pct/dias_antes_show) e novos (valor/data_vencimento)
                         const valor = item.valor !== undefined ? item.valor : liquido * (item.pct || 100) / 100;
                         let vencText = '—';
-                        if (dataEvento && item.dias_antes_show !== undefined) {
+                        if (item.data_vencimento) {
+                            // Novo modelo: data direta
+                            vencText = Utils.formatDate(item.data_vencimento);
+                        } else if (dataEvento && item.dias_antes_show !== undefined) {
+                            // Retrocompatibilidade: calcular a partir de dias_antes_show
                             const venc = new Date(dataEvento);
                             venc.setDate(venc.getDate() + (item.dias_antes_show || 0));
                             vencText = Utils.formatDate(venc.toISOString().split('T')[0]);
