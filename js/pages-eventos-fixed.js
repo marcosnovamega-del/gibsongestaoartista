@@ -194,15 +194,31 @@ Pages.renderCalendario = async function(eventos, mes, ano) {
                 color: var(--text-secondary);
                 margin-top: 6px;
             }
-            .calendar-day-event-dot {
-                width: 6px;
-                height: 6px;
-                background: var(--red-primary);
-                border-radius: 50%;
-                display: inline-block;
-                margin-right: 4px;
-                box-shadow: 0 0 8px var(--red-primary);
+            .cal-event-chip {
+                margin-top: 6px;
+                background: rgba(212,175,55,0.1);
+                border: 1px solid rgba(212,175,55,0.25);
+                border-radius: 6px;
+                padding: 4px 6px;
             }
+            .cal-event-local {
+                font-size: 11px;
+                font-weight: 700;
+                color: var(--brand-primary, #D4AF37);
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 100%;
+            }
+            .cal-event-sub {
+                font-size: 10px;
+                color: var(--text-muted);
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                margin-top: 2px;
+            }
+            .cal-event-sub i { font-size: 9px; color: var(--brand-primary, #D4AF37); }
         </style>
     `;
     
@@ -216,29 +232,43 @@ Pages.renderCalendario = async function(eventos, mes, ano) {
         html += '<div class="calendar-day" style="opacity: 0.3;"></div>';
     }
     
+    // Artistas para enriquecer as células
+    const artistas = await ArtistasDB.listar();
+    const artMap = {};
+    artistas.forEach(a => { artMap[a.id] = a.nome; });
+
     // Dias do mês
     for (let dia = 1; dia <= ultimoDia; dia++) {
-        const dataCompleta = new Date(ano, mes, dia);
         const eventosNoDia = eventos.filter(e => {
             const dataEvento = new Date(e.data);
-            return dataEvento.getDate() === dia && 
-                   dataEvento.getMonth() === mes && 
+            return dataEvento.getDate() === dia &&
+                   dataEvento.getMonth() === mes &&
                    dataEvento.getFullYear() === ano;
         });
-        
+
         const isHoje = dia === diaHoje && mes === mesHoje && ano === anoHoje;
         const hasEvent = eventosNoDia.length > 0;
-        
+        const dataStr = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+
+        let eventosHTML = '';
+        if (hasEvent) {
+            eventosHTML = eventosNoDia.map(e => {
+                const artistaNome = artMap[e.artista_id] || '';
+                const cidade = [e.cidade, e.estado].filter(Boolean).join('/');
+                return `
+                <div class="cal-event-chip">
+                    <div class="cal-event-local">${e.local || '—'}</div>
+                    ${artistaNome ? `<div class="cal-event-sub"><i class="fas fa-microphone-alt"></i> ${artistaNome}</div>` : ''}
+                    ${cidade ? `<div class="cal-event-sub"><i class="fas fa-map-marker-alt"></i> ${cidade}</div>` : ''}
+                </div>`;
+            }).join('');
+        }
+
         html += `
-            <div class="calendar-day ${hasEvent ? 'has-event' : ''} ${isHoje ? 'today' : ''}" 
-                 ${hasEvent ? `onclick="Pages.showEventosDoDay('${ano}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}')"` : ''}>
+            <div class="calendar-day ${hasEvent ? 'has-event' : ''} ${isHoje ? 'today' : ''}"
+                 ${hasEvent ? `onclick="Pages.showEventosDoDay('${dataStr}')"` : ''}>
                 <div class="calendar-day-number">${dia}</div>
-                ${hasEvent ? `
-                    <div class="calendar-day-events">
-                        <span class="calendar-day-event-dot"></span>
-                        ${eventosNoDia.length} evento(s)
-                    </div>
-                ` : ''}
+                ${eventosHTML}
             </div>
         `;
     }

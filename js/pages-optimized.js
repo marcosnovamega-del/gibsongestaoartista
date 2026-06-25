@@ -41,6 +41,7 @@ const Pages = {
             financeiro:         'Financeiro',
             'gestao-financeira':'Gestão Financeira',
             prestacao:          'Prestação de Contas',
+            veiculos:           'Gestão de Veículos',
             equipe:             'Equipe',
             alertas:            'Alertas',
             usuarios:           'Usuários',
@@ -117,6 +118,9 @@ const Pages = {
                     break;
                 case 'prestacao':
                     if (typeof this.renderPrestacao === 'function') await this.renderPrestacao();
+                    break;
+                case 'veiculos':
+                    if (typeof this.renderVeiculos === 'function') await this.renderVeiculos();
                     break;
                 case 'gestao-financeira':
                     await this.renderGestaoFinanceira();

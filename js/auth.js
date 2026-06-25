@@ -320,7 +320,7 @@ const Auth = {
         if (!this.currentUser) return [];
 
         if (this.isAdmin()) {
-            return ['Dashboard', 'Artistas', 'Eventos', 'Contratos', 'Vendas', 'Propostas', 'Central de Turnê', 'Financeiro', 'Prestacao de Contas', 'Equipe', 'Alertas', 'Usuarios', 'Configuracoes'];
+            return ['Dashboard', 'Artistas', 'Eventos', 'Contratos', 'Vendas', 'Propostas', 'Central de Turnê', 'Financeiro', 'Prestacao de Contas', 'Veiculos', 'Equipe', 'Alertas', 'Usuarios', 'Configuracoes'];
         }
 
         const permissions = this.currentUser.permissoes || [];
