@@ -191,56 +191,29 @@ Modals.showPropostaModal = async function(propostaId = null) {
                         <div class="proposta-etapa" id="proposta-etapa-4">
                             <div style="padding:24px;">
                                 <h4 class="etapa-title"><i class="fas fa-dollar-sign"></i> Proposta Financeira & Pagamento</h4>
-                                <div class="grid grid-2">
-                                    <div class="form-group">
-                                        <label>Cachê Bruto (R$) *</label>
-                                        <input type="number" name="cache_bruto" id="p_cache" value="${proposta?.cache_bruto || ''}" min="0" step="0.01" required
-                                               oninput="Modals.calcPropostaLiquido();Modals.atualizarCronograma()">
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Comissão da Produtora (R$) *</label>
-                                        <input type="number" name="comissao" id="p_comissao" value="${proposta?.comissao || ''}" min="0" step="0.01" placeholder="Ex: 1500.00" required
-                                               oninput="Modals.calcPropostaLiquido();Modals.atualizarCronograma()">
-                                    </div>
-                                </div>
+
                                 <div class="form-group">
-                                    <label>Valor Líquido (calculado)</label>
-                                    <input type="text" id="p_liquido" readonly
-                                           style="background:var(--bg-secondary);color:var(--success);font-weight:700;font-size:18px;">
+                                    <label>Cachê (R$) *</label>
+                                    <input type="number" name="cache_bruto" id="p_cache" value="${proposta?.cache_bruto || ''}" min="0" step="0.01" required
+                                           oninput="Modals.atualizarCronograma()">
                                 </div>
 
-                                <!-- COMISSÕES (VENDEDOR / PARCEIRO) -->
+                                <!-- VENDEDOR -->
                                 <div style="background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:10px;padding:16px;margin-bottom:16px;">
                                     <label style="font-size:13px;font-weight:700;color:var(--text-primary);display:block;margin-bottom:12px;">
-                                        <i class="fas fa-hand-holding-usd" style="color:var(--red-primary)"></i> Comissões Adicionais
+                                        <i class="fas fa-user-tie" style="color:var(--brand-primary)"></i> Vendedor
                                     </label>
-                                    <div class="form-group">
-                                        <label>Comissão do Vendedor (R$)</label>
-                                        <input type="number" name="vendedor_comissao_valor" id="p_vendedor_comissao" value="${proposta?.vendedor_comissao_valor || ''}" min="0" step="0.01" placeholder="Ex: 500.00">
-                                        <small class="text-muted" style="display:block;margin-top:4px;">Este valor será programado automaticamente no financeiro.</small>
-                                    </div>
-
-                                    <div class="form-group" style="margin-top:12px;">
-                                        <label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer;">
-                                            <input type="checkbox" id="tem_parceiro" onchange="document.getElementById('bloco_parceiro').style.display = this.checked ? 'block' : 'none'" ${proposta?.parceiro_nome ? 'checked' : ''}>
-                                            Tem parceiro nesta venda?
-                                        </label>
-                                    </div>
-                                    <div id="bloco_parceiro" style="display:${proposta?.parceiro_nome ? 'block' : 'none'}; padding-top:10px; border-top:1px dashed var(--border-color); margin-top:10px;">
-                                        <div class="grid grid-2">
-                                            <div class="form-group">
-                                                <label>Nome do Parceiro</label>
-                                                <input type="text" name="parceiro_nome" id="p_parceiro_nome" value="${proposta?.parceiro_nome || ''}" placeholder="Nome do parceiro">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Comissão do Parceiro (R$)</label>
-                                                <input type="number" name="parceiro_comissao_valor" id="p_parceiro_comissao" value="${proposta?.parceiro_comissao_valor || ''}" min="0" step="0.01" placeholder="Ex: 300.00">
-                                            </div>
+                                    <div class="grid grid-2">
+                                        <div class="form-group" style="margin-bottom:0;">
+                                            <label>Nome do Vendedor</label>
+                                            <input type="text" name="vendedor_nome_fin" id="p_vendedor_nome_fin" value="${proposta?.vendedor_nome || (window.Auth?.currentUser?.nome || '')}" placeholder="Nome do vendedor">
                                         </div>
-                                        <div style="font-size:11px;color:#B45309;background:rgba(245,158,11,0.1);padding:8px;border-radius:6px;margin-top:4px;">
-                                            <i class="fas fa-exclamation-triangle"></i> A comissão do parceiro será lançada como <b>Aprovação Pendente</b> no financeiro.
+                                        <div class="form-group" style="margin-bottom:0;">
+                                            <label>Comissão do Vendedor (R$)</label>
+                                            <input type="number" name="vendedor_comissao_valor" id="p_vendedor_comissao" value="${proposta?.vendedor_comissao_valor || ''}" min="0" step="0.01" placeholder="Ex: 500.00">
                                         </div>
                                     </div>
+                                    <small class="text-muted" style="display:block;margin-top:8px;"><i class="fas fa-info-circle"></i> Comissão lançada automaticamente no Financeiro ao confirmar o contrato.</small>
                                 </div>
 
                                 <!-- FORMA DE PAGAMENTO -->
@@ -412,11 +385,8 @@ Modals.togglePropostaPJ = function() {
 };
 
 Modals.calcPropostaLiquido = function() {
-    const cache    = parseFloat(document.getElementById('p_cache')?.value)    || 0;
-    const comissao = parseFloat(document.getElementById('p_comissao')?.value) || 0;
-    const liquido  = cache - comissao;
-    const el = document.getElementById('p_liquido');
-    if (el) el.value = Utils.formatCurrency(liquido >= 0 ? liquido : 0);
+    // Mantido por compatibilidade — sem dedução de produtora
+    Modals.atualizarCronograma();
 };
 
 Modals.gerarResumoPropostaPreview = function() {
@@ -428,30 +398,22 @@ Modals.gerarResumoPropostaPreview = function() {
     const artistaSelect = document.getElementById('p_artista_id');
     const artistaNome   = artistaSelect?.options[artistaSelect.selectedIndex]?.text || '—';
 
-    const cache    = parseFloat(get('cache_bruto')) || 0;
-    const comissao = parseFloat(get('comissao'))    || 0;
-    const liquido  = Math.max(0, cache - comissao);
+    const cache   = parseFloat(get('cache_bruto')) || 0;
+    const vendNome = get('vendedor_nome_fin') || get('vendedor_nome') || '—';
+    const vendComissao = parseFloat(get('vendedor_comissao_valor')) || 0;
 
     document.getElementById('propostaResumo').innerHTML = `
         <div class="resumo-row"><span>Artista</span><strong>${artistaNome}</strong></div>
-        <div class="resumo-row"><span>Vendedor</span><strong>${get('vendedor_nome')}</strong></div>
+        <div class="resumo-row"><span>Vendedor</span><strong>${vendNome}</strong></div>
         <div class="resumo-row"><span>Contratante</span><strong>${get('razao_social') || get('nome_contratante')}</strong></div>
         <div class="resumo-row"><span>Responsável</span><strong>${get('responsavel')}</strong></div>
         <div class="resumo-row"><span>Evento</span><strong>${get('tipo_evento')} — ${get('local_evento')}</strong></div>
-        <div class="resumo-row"><span>Data / Hora</span><strong>${get('data_evento') ? Utils.formatDate(get('data_evento')) : '—'} às ${get('horario')}</strong></div>
+        <div class="resumo-row"><span>Data / Hora</span><strong>${get('data_evento') ? Utils.formatDate(get('data_evento')) : '—'}${get('horario') ? ' às ' + get('horario') : ''}</strong></div>
         <div class="resumo-row"><span>Cidade</span><strong>${get('cidade_evento')}/${get('estado_evento')}</strong></div>
         <div class="resumo-row" style="border-top:1px solid var(--border-color);margin-top:8px;padding-top:8px;">
-            <span>Cachê Bruto</span><strong style="color:var(--text-primary)">${Utils.formatCurrency(cache)}</strong>
+            <span>Cachê</span><strong style="color:var(--success);font-size:16px;">${Utils.formatCurrency(cache)}</strong>
         </div>
-        <div class="resumo-row">
-            <span>Comissão Produtora</span><strong style="color:var(--danger)">- ${Utils.formatCurrency(comissao)}</strong>
-        </div>
-        <div class="resumo-row">
-            <span>Valor Líquido</span><strong style="color:var(--success);font-size:16px;">${Utils.formatCurrency(liquido)}</strong>
-        </div>
-        ${get('vendedor_comissao_valor') ? `<div class="resumo-row"><span>Comissão Vendedor</span><strong>${Utils.formatCurrency(parseFloat(get('vendedor_comissao_valor')))}</strong></div>` : ''}
-        ${get('parceiro_nome') ? `<div class="resumo-row"><span>Parceiro (${get('parceiro_nome')})</span><strong style="color:var(--warning)">${Utils.formatCurrency(parseFloat(get('parceiro_comissao_valor')))}</strong></div>` : ''}
-        <div class="resumo-row"><span>Pagamento</span><strong>${get('condicoes_pagamento')}</strong></div>
+        ${vendComissao ? `<div class="resumo-row"><span>Comissão Vendedor</span><strong style="color:var(--warning);">${Utils.formatCurrency(vendComissao)}</strong></div>` : ''}
         <div class="resumo-row"><span>Validade</span><strong>${get('validade') ? Utils.formatDate(get('validade')) : '—'}</strong></div>
     `;
 };
@@ -467,12 +429,11 @@ Modals.submitProposta = async function(propostaId) {
     const pagTipo = get('pag_tipo') || 'avista';
     let cronograma = [];
     const cacheBruto = parseFloat(get('cache_bruto')) || 0;
-    const comissaoVal = parseFloat(get('comissao')) || 0;
-    const liquidoVal = Math.max(0, cacheBruto - comissaoVal);
+    const vendedorNome = get('vendedor_nome_fin') || get('vendedor_nome') || '';
 
     if (pagTipo === 'avista') {
         const dias = parseInt(get('pag_avista_quando') || '0');
-        cronograma = [{ valor: liquidoVal, dias_antes_show: -dias, descricao: dias <= 0 ? (dias === 0 ? 'Pagamento no dia do show' : `Pagamento ${Math.abs(dias)}d antes`) : `Pagamento até ${dias}d após show`, tipo: 'integral' }];
+        cronograma = [{ valor: cacheBruto, dias_antes_show: -dias, descricao: dias <= 0 ? (dias === 0 ? 'Pagamento no dia do show' : `Pagamento ${Math.abs(dias)}d antes`) : `Pagamento até ${dias}d após show`, tipo: 'integral' }];
     } else {
         const linhas = document.querySelectorAll('.parcela-linha');
         linhas.forEach((linha, i) => {
@@ -484,7 +445,7 @@ Modals.submitProposta = async function(propostaId) {
     }
 
     const data = {
-        artista_id: get('artista_id'), vendedor_nome: get('vendedor_nome'),
+        artista_id: get('artista_id'), vendedor_nome: vendedorNome,
         validade: get('validade') || null, observacoes: get('observacoes'),
         tipo_contratante: get('tipo_contratante'), razao_social: get('razao_social'),
         nome_fantasia: get('nome_fantasia'), cnpj: get('cnpj'),
@@ -496,10 +457,10 @@ Modals.submitProposta = async function(propostaId) {
         local_evento: get('local_evento'), cidade_evento: get('cidade_evento'),
         estado_evento: (get('estado_evento') || '').toUpperCase(), tipo_evento: get('tipo_evento'),
         cache_bruto: cacheBruto,
-        comissao: comissaoVal,
+        comissao: 0,
         vendedor_comissao_valor: parseFloat(get('vendedor_comissao_valor')) || 0,
-        parceiro_nome: document.getElementById('tem_parceiro')?.checked ? get('parceiro_nome') : null,
-        parceiro_comissao_valor: document.getElementById('tem_parceiro')?.checked ? (parseFloat(get('parceiro_comissao_valor')) || 0) : 0,
+        parceiro_nome: null,
+        parceiro_comissao_valor: 0,
         condicoes_pagamento: JSON.stringify({ tipo: pagTipo, cronograma }),
     };
 
@@ -532,9 +493,8 @@ Modals.setPagTipo = function(tipo) {
 Modals.gerarLinhasParcelas = function() {
     const n   = parseInt(document.getElementById('pag_num_parcelas')?.value || 2);
     const cache    = parseFloat(document.getElementById('p_cache')?.value) || 0;
-    const comissao = parseFloat(document.getElementById('p_comissao')?.value) || 0;
-    const liquido  = Math.max(0, cache - comissao);
-    const valorParcela = liquido > 0 ? parseFloat((liquido / n).toFixed(2)) : 0;
+    const valorParcela = cache > 0 ? parseFloat((cache / n).toFixed(2)) : 0;
+    const liquido = cache; // sem dedução de produtora
     const labels = ['Entrada', '2ª parcela', '3ª parcela', '4ª parcela', '5ª parcela'];
     const diasPadrao = [-30, 0, 15, 30, 45];
 
@@ -569,16 +529,13 @@ Modals.gerarLinhasParcelas = function() {
 };
 
 Modals.validarValores = function() {
-    const inputs  = document.querySelectorAll('.parcela-valor');
-    const total   = Array.from(inputs).reduce((s, i) => s + (parseFloat(i.value) || 0), 0);
-    const cache    = parseFloat(document.getElementById('p_cache')?.value) || 0;
-    const comissao = parseFloat(document.getElementById('p_comissao')?.value) || 0;
-    const liquido  = Math.max(0, cache - comissao);
+    const inputs = document.querySelectorAll('.parcela-valor');
+    const total  = Array.from(inputs).reduce((s, i) => s + (parseFloat(i.value) || 0), 0);
+    const cache  = parseFloat(document.getElementById('p_cache')?.value) || 0;
     const el = document.getElementById('pag_pct_total');
     if (el) {
-        const diff = Math.abs(total - liquido);
-        const ok   = diff < 0.02;
-        el.textContent = `Total: ${Utils.formatCurrency(total)} ${ok ? '✅' : `⚠️ deve somar ${Utils.formatCurrency(liquido)}`}`;
+        const ok = Math.abs(total - cache) < 0.02;
+        el.textContent = `Total: ${Utils.formatCurrency(total)} ${ok ? '✅' : `⚠️ deve somar ${Utils.formatCurrency(cache)}`}`;
         el.style.color = ok ? 'var(--success)' : 'var(--danger)';
     }
     Modals.atualizarCronograma();
@@ -587,8 +544,7 @@ Modals.validarValores = function() {
 Modals.atualizarCronograma = function() {
     const dataEvento = document.querySelector('[name="data_evento"]')?.value;
     const cache      = parseFloat(document.getElementById('p_cache')?.value) || 0;
-    const comissao   = parseFloat(document.getElementById('p_comissao')?.value) || 0;
-    const liquido    = Math.max(0, cache - comissao);
+    const liquido    = cache; // sem dedução de produtora
     const tipo       = document.getElementById('pag_tipo')?.value || 'avista';
     const prev       = document.getElementById('cronograma_preview');
     const linhasEl   = document.getElementById('cronograma_linhas');

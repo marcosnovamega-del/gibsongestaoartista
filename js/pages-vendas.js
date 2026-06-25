@@ -439,6 +439,7 @@ Pages.enviarPropostaWhatsApp = async function(id) {
         `🎤 *Tipo:* ${p.tipo_evento || '—'}`,
         ``,
         `💰 *Cachê:* ${Utils.formatCurrency(p.cache_bruto || 0)}`,
+        p.vendedor_comissao_valor ? `👤 *Comissão Vendedor:* ${Utils.formatCurrency(p.vendedor_comissao_valor)}` : '',
         `💳 *Pagamento:* ${p.condicoes_pagamento || '—'}`,
         ``,
         p.observacoes ? `📝 *Obs:* ${p.observacoes}\n` : '',
@@ -669,8 +670,7 @@ Pages.renderPropostas = async function() {
         }
 
         const cacheBruto = p.cache_bruto || 0;
-        const comissao   = p.comissao || 10;
-        const liquido    = cacheBruto - (cacheBruto * comissao / 100);
+        const liquido    = cacheBruto; // sem dedução de produtora
         const dataEvento = p.data_evento ? new Date(p.data_evento + 'T12:00:00') : null;
 
         if (!cronograma.length) {
@@ -850,15 +850,15 @@ Pages.renderPropostas = async function() {
                                 <div style="font-size:13px;font-weight:600;">${p.tipo_evento || '—'}</div>
                             </div>
                             <div style="background:var(--bg-secondary);border-radius:8px;padding:10px;">
-                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">Comissão Produtora</div>
-                                <div style="font-size:13px;font-weight:600;color:var(--danger);">
-                                    ${Utils.formatCurrency(p.comissao || 0)}
+                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">Comissão Vendedor</div>
+                                <div style="font-size:13px;font-weight:600;color:var(--warning);">
+                                    ${p.vendedor_comissao_valor ? Utils.formatCurrency(p.vendedor_comissao_valor) : '—'}
                                 </div>
                             </div>
                             <div style="background:var(--bg-secondary);border-radius:8px;padding:10px;">
-                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">Valor Líquido</div>
-                                <div style="font-size:13px;font-weight:700;color:var(--success);">
-                                    ${Utils.formatCurrency(Math.max(0, (p.cache_bruto||0) - (p.comissao||0)))}
+                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">Vendedor</div>
+                                <div style="font-size:13px;font-weight:600;">
+                                    ${p.vendedor_nome || '—'}
                                 </div>
                             </div>
                             <div style="background:var(--bg-secondary);border-radius:8px;padding:10px;">
