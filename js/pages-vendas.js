@@ -686,14 +686,14 @@ Pages.renderPropostas = async function() {
                     <tr style="border-bottom:1px solid var(--border-color);">
                         <th style="padding:6px 8px;text-align:left;color:var(--text-muted);font-weight:500;">#</th>
                         <th style="padding:6px 8px;text-align:left;color:var(--text-muted);font-weight:500;">Descrição</th>
-                        <th style="padding:6px 8px;text-align:right;color:var(--text-muted);font-weight:500;">%</th>
                         <th style="padding:6px 8px;text-align:right;color:var(--text-muted);font-weight:500;">Valor</th>
                         <th style="padding:6px 8px;text-align:left;color:var(--text-muted);font-weight:500;">Vencimento</th>
                     </tr>
                 </thead>
                 <tbody>
                     ${cronograma.map((item, i) => {
-                        const valor = liquido * (item.pct || 100) / 100;
+                        // Compatível com registros antigos (pct) e novos (valor)
+                        const valor = item.valor !== undefined ? item.valor : liquido * (item.pct || 100) / 100;
                         let vencText = '—';
                         if (dataEvento && item.dias_antes_show !== undefined) {
                             const venc = new Date(dataEvento);
@@ -703,7 +703,6 @@ Pages.renderPropostas = async function() {
                         return `<tr style="border-bottom:1px solid var(--border-color);">
                             <td style="padding:6px 8px;">${item.numero || (i+1)}</td>
                             <td style="padding:6px 8px;">${item.descricao || 'Parcela ' + (i+1)}</td>
-                            <td style="padding:6px 8px;text-align:right;">${item.pct || 100}%</td>
                             <td style="padding:6px 8px;text-align:right;color:var(--success);font-weight:600;">
                                 ${Utils.formatCurrency(valor)}
                             </td>
@@ -713,7 +712,7 @@ Pages.renderPropostas = async function() {
                 </tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="3" style="padding:8px;text-align:right;font-weight:600;color:var(--text-muted);">Total líquido:</td>
+                        <td colspan="2" style="padding:8px;text-align:right;font-weight:600;color:var(--text-muted);">Total líquido:</td>
                         <td style="padding:8px;text-align:right;font-weight:700;color:var(--success);">
                             ${Utils.formatCurrency(liquido)}
                         </td>
@@ -851,15 +850,15 @@ Pages.renderPropostas = async function() {
                                 <div style="font-size:13px;font-weight:600;">${p.tipo_evento || '—'}</div>
                             </div>
                             <div style="background:var(--bg-secondary);border-radius:8px;padding:10px;">
-                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">Comissão</div>
-                                <div style="font-size:13px;font-weight:600;">${p.comissao || 10}%
-                                    (${Utils.formatCurrency((p.cache_bruto||0) * (p.comissao||10) / 100)})
+                                <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">Comissão Produtora</div>
+                                <div style="font-size:13px;font-weight:600;color:var(--danger);">
+                                    ${Utils.formatCurrency(p.comissao || 0)}
                                 </div>
                             </div>
                             <div style="background:var(--bg-secondary);border-radius:8px;padding:10px;">
                                 <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">Valor Líquido</div>
                                 <div style="font-size:13px;font-weight:700;color:var(--success);">
-                                    ${Utils.formatCurrency((p.cache_bruto||0) - (p.cache_bruto||0) * (p.comissao||10) / 100)}
+                                    ${Utils.formatCurrency(Math.max(0, (p.cache_bruto||0) - (p.comissao||0)))}
                                 </div>
                             </div>
                             <div style="background:var(--bg-secondary);border-radius:8px;padding:10px;">

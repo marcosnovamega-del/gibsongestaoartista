@@ -198,9 +198,9 @@ Modals.showPropostaModal = async function(propostaId = null) {
                                                oninput="Modals.calcPropostaLiquido();Modals.atualizarCronograma()">
                                     </div>
                                     <div class="form-group">
-                                        <label>Comissão da Produtora (%) *</label>
-                                        <input type="number" name="comissao" id="p_comissao" value="${proposta?.comissao || 10}" min="0" max="100" step="0.5" required
-                                               oninput="Modals.calcPropostaLiquido()">
+                                        <label>Comissão da Produtora (R$) *</label>
+                                        <input type="number" name="comissao" id="p_comissao" value="${proposta?.comissao || ''}" min="0" step="0.01" placeholder="Ex: 1500.00" required
+                                               oninput="Modals.calcPropostaLiquido();Modals.atualizarCronograma()">
                                     </div>
                                 </div>
                                 <div class="form-group">
@@ -414,9 +414,9 @@ Modals.togglePropostaPJ = function() {
 Modals.calcPropostaLiquido = function() {
     const cache    = parseFloat(document.getElementById('p_cache')?.value)    || 0;
     const comissao = parseFloat(document.getElementById('p_comissao')?.value) || 0;
-    const liquido  = cache - (cache * comissao / 100);
+    const liquido  = cache - comissao;
     const el = document.getElementById('p_liquido');
-    if (el) el.value = Utils.formatCurrency(liquido);
+    if (el) el.value = Utils.formatCurrency(liquido >= 0 ? liquido : 0);
 };
 
 Modals.gerarResumoPropostaPreview = function() {
@@ -430,7 +430,7 @@ Modals.gerarResumoPropostaPreview = function() {
 
     const cache    = parseFloat(get('cache_bruto')) || 0;
     const comissao = parseFloat(get('comissao'))    || 0;
-    const liquido  = cache - (cache * comissao / 100);
+    const liquido  = Math.max(0, cache - comissao);
 
     document.getElementById('propostaResumo').innerHTML = `
         <div class="resumo-row"><span>Artista</span><strong>${artistaNome}</strong></div>
@@ -444,7 +444,7 @@ Modals.gerarResumoPropostaPreview = function() {
             <span>Cachê Bruto</span><strong style="color:var(--text-primary)">${Utils.formatCurrency(cache)}</strong>
         </div>
         <div class="resumo-row">
-            <span>Comissão (${comissao}%)</span><strong style="color:var(--danger)">- ${Utils.formatCurrency(cache * comissao / 100)}</strong>
+            <span>Comissão Produtora</span><strong style="color:var(--danger)">- ${Utils.formatCurrency(comissao)}</strong>
         </div>
         <div class="resumo-row">
             <span>Valor Líquido</span><strong style="color:var(--success);font-size:16px;">${Utils.formatCurrency(liquido)}</strong>
@@ -466,16 +466,20 @@ Modals.submitProposta = async function(propostaId) {
     // Montar cronograma JSON
     const pagTipo = get('pag_tipo') || 'avista';
     let cronograma = [];
+    const cacheBruto = parseFloat(get('cache_bruto')) || 0;
+    const comissaoVal = parseFloat(get('comissao')) || 0;
+    const liquidoVal = Math.max(0, cacheBruto - comissaoVal);
+
     if (pagTipo === 'avista') {
         const dias = parseInt(get('pag_avista_quando') || '0');
-        cronograma = [{ pct: 100, dias_antes_show: -dias, descricao: dias <= 0 ? (dias === 0 ? 'Pagamento no dia do show' : `Pagamento ${Math.abs(dias)}d antes`) : `Pagamento até ${dias}d após show`, tipo: 'integral' }];
+        cronograma = [{ valor: liquidoVal, dias_antes_show: -dias, descricao: dias <= 0 ? (dias === 0 ? 'Pagamento no dia do show' : `Pagamento ${Math.abs(dias)}d antes`) : `Pagamento até ${dias}d após show`, tipo: 'integral' }];
     } else {
         const linhas = document.querySelectorAll('.parcela-linha');
         linhas.forEach((linha, i) => {
-            const pct  = parseFloat(linha.querySelector('.parcela-pct')?.value)  || 0;
-            const dias = parseInt(linha.querySelector('.parcela-dias')?.value)    || 0;
-            const desc = linha.querySelector('.parcela-desc')?.value || `Parcela ${i+1}`;
-            cronograma.push({ pct, dias_antes_show: -dias, descricao: desc, tipo: i === 0 ? 'entrada' : 'restante', numero: i+1 });
+            const valor = parseFloat(linha.querySelector('.parcela-valor')?.value) || 0;
+            const dias  = parseInt(linha.querySelector('.parcela-dias')?.value)    || 0;
+            const desc  = linha.querySelector('.parcela-desc')?.value || `Parcela ${i+1}`;
+            cronograma.push({ valor, dias_antes_show: -dias, descricao: desc, tipo: i === 0 ? 'entrada' : 'restante', numero: i+1 });
         });
     }
 
@@ -491,8 +495,8 @@ Modals.submitProposta = async function(propostaId) {
         data_evento: get('data_evento') || null, horario: get('horario'),
         local_evento: get('local_evento'), cidade_evento: get('cidade_evento'),
         estado_evento: (get('estado_evento') || '').toUpperCase(), tipo_evento: get('tipo_evento'),
-        cache_bruto: parseFloat(get('cache_bruto')) || 0,
-        comissao: parseFloat(get('comissao')) || 10,
+        cache_bruto: cacheBruto,
+        comissao: comissaoVal,
         vendedor_comissao_valor: parseFloat(get('vendedor_comissao_valor')) || 0,
         parceiro_nome: document.getElementById('tem_parceiro')?.checked ? get('parceiro_nome') : null,
         parceiro_comissao_valor: document.getElementById('tem_parceiro')?.checked ? (parseFloat(get('parceiro_comissao_valor')) || 0) : 0,
@@ -527,22 +531,26 @@ Modals.setPagTipo = function(tipo) {
 
 Modals.gerarLinhasParcelas = function() {
     const n   = parseInt(document.getElementById('pag_num_parcelas')?.value || 2);
-    const pct = Math.floor(100 / n);
+    const cache    = parseFloat(document.getElementById('p_cache')?.value) || 0;
+    const comissao = parseFloat(document.getElementById('p_comissao')?.value) || 0;
+    const liquido  = Math.max(0, cache - comissao);
+    const valorParcela = liquido > 0 ? parseFloat((liquido / n).toFixed(2)) : 0;
     const labels = ['Entrada', '2ª parcela', '3ª parcela', '4ª parcela', '5ª parcela'];
     const diasPadrao = [-30, 0, 15, 30, 45];
 
     let html = '';
     for (let i = 0; i < n; i++) {
-        const p = i === n - 1 ? 100 - pct * (n - 1) : pct;
+        // Última parcela recebe o ajuste de arredondamento
+        const v = i === n - 1 ? parseFloat((liquido - valorParcela * (n - 1)).toFixed(2)) : valorParcela;
         html += `
-        <div class="parcela-linha" style="display:grid;grid-template-columns:1fr 80px 100px;gap:8px;align-items:center;margin-bottom:8px;">
+        <div class="parcela-linha" style="display:grid;grid-template-columns:1fr 110px 100px;gap:8px;align-items:center;margin-bottom:8px;">
             <input class="parcela-desc" placeholder="${labels[i] || `Parcela ${i+1}`}" value="${labels[i] || `Parcela ${i+1}`}"
                    style="padding:6px 8px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:12px;">
             <div style="position:relative;">
-                <input type="number" class="parcela-pct" value="${p}" min="1" max="100"
-                       oninput="Modals.validarPercentuais()"
-                       style="padding:6px 8px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:12px;width:100%;">
-                <span style="position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--text-muted);">%</span>
+                <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--text-muted);">R$</span>
+                <input type="number" class="parcela-valor" value="${v}" min="0" step="0.01"
+                       oninput="Modals.validarValores()"
+                       style="padding:6px 8px 6px 28px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:12px;width:100%;">
             </div>
             <select class="parcela-dias" onchange="Modals.atualizarCronograma()"
                     style="padding:6px 4px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:11px;">
@@ -557,16 +565,20 @@ Modals.gerarLinhasParcelas = function() {
         </div>`;
     }
     const el = document.getElementById('pag_parcelas_linhas');
-    if (el) { el.innerHTML = html; Modals.validarPercentuais(); Modals.atualizarCronograma(); }
+    if (el) { el.innerHTML = html; Modals.validarValores(); Modals.atualizarCronograma(); }
 };
 
-Modals.validarPercentuais = function() {
-    const inputs = document.querySelectorAll('.parcela-pct');
-    const total  = Array.from(inputs).reduce((s, i) => s + (parseFloat(i.value) || 0), 0);
-    const el     = document.getElementById('pag_pct_total');
+Modals.validarValores = function() {
+    const inputs  = document.querySelectorAll('.parcela-valor');
+    const total   = Array.from(inputs).reduce((s, i) => s + (parseFloat(i.value) || 0), 0);
+    const cache    = parseFloat(document.getElementById('p_cache')?.value) || 0;
+    const comissao = parseFloat(document.getElementById('p_comissao')?.value) || 0;
+    const liquido  = Math.max(0, cache - comissao);
+    const el = document.getElementById('pag_pct_total');
     if (el) {
-        const ok = Math.abs(total - 100) < 0.01;
-        el.textContent = `Total: ${total}% ${ok ? '✅' : '⚠️ deve somar 100%'}`;
+        const diff = Math.abs(total - liquido);
+        const ok   = diff < 0.02;
+        el.textContent = `Total: ${Utils.formatCurrency(total)} ${ok ? '✅' : `⚠️ deve somar ${Utils.formatCurrency(liquido)}`}`;
         el.style.color = ok ? 'var(--success)' : 'var(--danger)';
     }
     Modals.atualizarCronograma();
@@ -576,7 +588,7 @@ Modals.atualizarCronograma = function() {
     const dataEvento = document.querySelector('[name="data_evento"]')?.value;
     const cache      = parseFloat(document.getElementById('p_cache')?.value) || 0;
     const comissao   = parseFloat(document.getElementById('p_comissao')?.value) || 0;
-    const liquido    = cache - (cache * comissao / 100);
+    const liquido    = Math.max(0, cache - comissao);
     const tipo       = document.getElementById('pag_tipo')?.value || 'avista';
     const prev       = document.getElementById('cronograma_preview');
     const linhasEl   = document.getElementById('cronograma_linhas');
@@ -593,11 +605,11 @@ Modals.atualizarCronograma = function() {
         items = [{ desc: dias > 0 ? `Pagamento integral (até ${dias}d após show)` : dias === 0 ? 'Pagamento no dia do show' : `Pagamento (${Math.abs(dias)}d antes)`, valor: liquido, venc }];
     } else {
         document.querySelectorAll('.parcela-linha').forEach((linha, i) => {
-            const pct  = parseFloat(linha.querySelector('.parcela-pct')?.value) || 0;
-            const dias = parseInt(linha.querySelector('.parcela-dias')?.value) || 0;
-            const desc = linha.querySelector('.parcela-desc')?.value || `Parcela ${i+1}`;
-            const venc = new Date(showDate); venc.setDate(venc.getDate() + dias);
-            items.push({ desc, valor: liquido * pct / 100, venc });
+            const valor = parseFloat(linha.querySelector('.parcela-valor')?.value) || 0;
+            const dias  = parseInt(linha.querySelector('.parcela-dias')?.value) || 0;
+            const desc  = linha.querySelector('.parcela-desc')?.value || `Parcela ${i+1}`;
+            const venc  = new Date(showDate); venc.setDate(venc.getDate() + dias);
+            items.push({ desc, valor, venc });
         });
     }
 
