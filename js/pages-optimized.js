@@ -123,7 +123,7 @@ const Pages = {
                     if (typeof this.renderVeiculos === 'function') await this.renderVeiculos();
                     break;
                 case 'comissao':
-                    if (typeof this.renderComissaoVendedor === 'function') await this.renderComissaoVendedor();
+                    await this.renderComissaoVendedor();
                     break;
                 case 'gestao-financeira':
                     await this.renderGestaoFinanceira();
