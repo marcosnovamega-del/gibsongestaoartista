@@ -167,9 +167,13 @@ const Auth = {
     hasModuleAccess(moduleName) {
         if (!this.currentUser) return false;
         if (this.isAdmin()) return true;
-        const permissions = this.currentUser.permissoes || [];
-        
-        // Se não tem array de permissões, usar lógica antiga (compatibilidade)
+
+        // Normalizar permissoes (pode vir como {} do banco em vez de [])
+        const permissions = Array.isArray(this.currentUser.permissoes)
+            ? this.currentUser.permissoes
+            : [];
+
+        // Se não tem array de permissões, usar lógica por nível
         if (permissions.length === 0) {
             return this.hasPermissionOld(moduleName);
         }
@@ -177,24 +181,23 @@ const Auth = {
         return permissions.includes(moduleName);
     },
 
-    // Lógica antiga de permissões (fallback)
+    // Lógica de permissões por nível (fallback)
     hasPermissionOld(permission) {
         if (!this.currentUser) return false;
 
         const permissions = {
-            'Admin Master': ['all'],
-            'Manager': ['Dashboard', 'Artistas', 'Eventos', 'Equipe', 'Contratos', 'Alertas'],
-            'Produtor': ['Dashboard', 'Eventos', 'Alertas'],
-            'Financeiro': ['Dashboard', 'Financeiro', 'Eventos', 'Contratos', 'Alertas'],
-            'Produção/Técnico': ['Dashboard', 'Agenda', 'Eventos', 'Equipe', 'Alertas']
+            'Admin Master':      ['all'],
+            'Manager':           ['Dashboard', 'Artistas', 'Eventos', 'Vendas', 'Propostas', 'Central de Turnê', 'Equipe', 'Contratos', 'Prestacao de Contas', 'Alertas'],
+            'Produtor':          ['Dashboard', 'Eventos', 'Central de Turnê', 'Alertas'],
+            'Financeiro':        ['Dashboard', 'Financeiro', 'Prestacao de Contas', 'Eventos', 'Contratos', 'Alertas'],
+            'Produção/Técnico':  ['Dashboard', 'Eventos', 'Central de Turnê', 'Equipe', 'Alertas'],
+            'Vendedor':          ['Dashboard', 'Eventos', 'Propostas', 'Vendas', 'Alertas']
         };
 
         const userPermissions = permissions[this.currentUser.nivel] || [];
-        
-        if (userPermissions.includes('all')) return true;
-        if (userPermissions.includes(permission)) return true;
 
-        return false;
+        if (userPermissions.includes('all')) return true;
+        return userPermissions.includes(permission);
     },
 
     // Verificar se usuário é admin
