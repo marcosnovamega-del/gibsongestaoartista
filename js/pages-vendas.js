@@ -917,87 +917,78 @@ Pages._toggleCronograma = function(id) {
 
 /* ========================================
    COMISSÃO VENDEDOR
+   Fonte: tabela despesas (categoria='Comissão')
+   Só existem após contrato assinado.
 ======================================== */
 Pages.renderComissaoVendedor = async function () {
     const pc = document.getElementById('pageContent');
 
-    let propostas = [];
-    let artistas  = [];
-    try { propostas = await PropostasDB.listar(false); } catch(e) { propostas = []; }
-    try { artistas  = await ArtistasDB.listar();       } catch(e) { artistas  = []; }
-
     const isAdmin = Auth.isAdmin();
     const meuNome = Auth.currentUser ? Auth.currentUser.nome : '';
+    const escId   = Auth.currentUser ? Auth.currentUser.escritorio_id : null;
 
-    const minhas = propostas
-        .filter(function(p) { return (parseFloat(p.vendedor_comissao_valor) || 0) > 0; })
-        .filter(function(p) { return isAdmin || p.vendedor_nome === meuNome; })
-        .sort(function(a, b) { return new Date(b.data_evento || 0) - new Date(a.data_evento || 0); });
-
-    var total     = 0;
-    var aReceber  = 0;
-    var recebido  = 0;
-    minhas.forEach(function(p) {
-        var v = parseFloat(p.vendedor_comissao_valor) || 0;
-        total += v;
-        if (p.status === 'Aceita') aReceber += v;
-    });
-    // Tentar buscar despesas de comissão pagas para calcular recebido
+    // Buscar despesas de comissão (criadas apenas ao assinar contrato)
+    var despesas = [];
     try {
-        var escId = Auth.currentUser && Auth.currentUser.escritorio_id;
-        var qComissao = sbClient.from('despesas').select('valor,status,descricao').eq('categoria', 'Comissão');
-        if (escId) qComissao = qComissao.eq('escritorio_id', escId);
-        var resC = await qComissao;
-        if (!resC.error && resC.data) {
-            resC.data.forEach(function(d) {
-                var nomeMatch = isAdmin || (d.descricao && d.descricao.indexOf(meuNome) !== -1);
-                if (nomeMatch && d.status === 'Pago') recebido += parseFloat(d.valor) || 0;
-            });
-        }
-    } catch(e) { recebido = 0; }
+        var q = sbClient.from('despesas').select('*').eq('categoria', 'Comissão');
+        if (escId) q = q.eq('escritorio_id', escId);
+        var res = await q;
+        if (!res.error) despesas = res.data || [];
+    } catch(e) { despesas = []; }
 
-    function sBadge(p) {
-        if (p.status === 'Aceita')   return '<span class="badge badge-success">Fechado</span>';
-        if (p.status === 'Enviada')  return '<span class="badge badge-warning">Em negociação</span>';
-        if (p.status === 'Recusada') return '<span class="badge badge-danger">Recusada</span>';
-        return '<span class="badge badge-secondary">Rascunho</span>';
-    }
+    // Filtrar por vendedor (nome aparece na descrição "Comissão Vendedor – Nome")
+    var minhas = despesas.filter(function(d) {
+        if (isAdmin) return true;
+        return d.descricao && d.descricao.indexOf(meuNome) !== -1;
+    }).sort(function(a, b) {
+        return new Date(b.data_vencimento || 0) - new Date(a.data_vencimento || 0);
+    });
 
+    // KPIs
+    var total    = 0, recebido = 0, aReceber = 0;
+    minhas.forEach(function(d) {
+        var v = parseFloat(d.valor) || 0;
+        total += v;
+        if (d.status === 'Pago') recebido += v;
+        else aReceber += v;
+    });
+
+    // Montar linhas da tabela
     var rows = '';
-    for (var i = 0; i < minhas.length; i++) {
-        var p   = minhas[i];
-        var art = null;
-        for (var j = 0; j < artistas.length; j++) {
-            if (artistas[j].id === p.artista_id) { art = artistas[j]; break; }
-        }
-        var val = parseFloat(p.vendedor_comissao_valor) || 0;
-        var comStatus = p.status === 'Aceita'
-            ? '<span class="badge badge-warning">Pendente</span>'
-            : '<span class="badge badge-secondary">—</span>';
+    minhas.forEach(function(d) {
+        // Extrair nome do vendedor da descrição
+        var matchNome = (d.descricao || '').match(/–\s*(.+)$/);
+        var vendNome  = matchNome ? matchNome[1].trim() : meuNome;
+        var dtShow    = d.data_vencimento ? Utils.formatDate(d.data_vencimento) : '—';
+        var dtPago    = d.data_pagamento  ? Utils.formatDate(d.data_pagamento)  : '';
+        var stBadge   = d.status === 'Pago'
+            ? '<span class="badge badge-success">Pago' + (dtPago ? ' — ' + dtPago : '') + '</span>'
+            : '<span class="badge badge-warning">Pendente</span>';
+
         rows += '<tr>' +
-            '<td><strong>' + (p.data_evento ? Utils.formatDate(p.data_evento) : '—') + '</strong></td>' +
-            (isAdmin ? '<td>' + (p.vendedor_nome || '—') + '</td>' : '') +
-            '<td>' + (art ? art.nome : '—') + '</td>' +
-            '<td>' + (p.local_evento || '—') + (p.cidade_evento ? '<small style="display:block;color:var(--text-muted)">' + p.cidade_evento + '</small>' : '') + '</td>' +
-            '<td style="color:var(--success);font-weight:600">' + Utils.formatCurrency(p.cache_bruto || 0) + '</td>' +
-            '<td><strong style="color:var(--brand-primary);font-size:15px">' + Utils.formatCurrency(val) + '</strong></td>' +
-            '<td>' + sBadge(p) + '</td>' +
-            '<td>' + comStatus + '</td>' +
+            '<td><strong>' + dtShow + '</strong></td>' +
+            (isAdmin ? '<td>' + vendNome + '</td>' : '') +
+            '<td style="max-width:220px;">' + (d.descricao || '—') + '</td>' +
+            '<td><strong style="color:var(--brand-primary);font-size:15px">' + Utils.formatCurrency(d.valor) + '</strong></td>' +
+            '<td>' + stBadge + '</td>' +
             '</tr>';
-    }
+    });
 
     var emptyState = '<div class="card" style="text-align:center;padding:3rem">' +
         '<i class="fas fa-hand-holding-usd" style="font-size:3rem;color:var(--text-muted);margin-bottom:1rem;display:block"></i>' +
-        '<h3>Nenhuma comissão encontrada</h3>' +
-        '<p class="text-muted">Crie propostas com comissão de vendedor.</p></div>';
+        '<h3>Nenhuma comissão gerada ainda</h3>' +
+        '<p class="text-muted">As comissões aparecem aqui somente após o contrato ser assinado.</p>' +
+        '</div>';
 
     var tableState = '<div class="card" style="padding:0;overflow:hidden">' +
-        '<div style="padding:16px 20px;border-bottom:1px solid var(--border-color)">' +
-        '<strong><i class="fas fa-list" style="color:var(--brand-primary);margin-right:8px"></i>Detalhamento</strong></div>' +
+        '<div style="padding:16px 20px;border-bottom:1px solid var(--border-color);display:flex;align-items:center;gap:8px;">' +
+        '<i class="fas fa-list" style="color:var(--brand-primary)"></i>' +
+        '<strong>Detalhamento — contratos assinados</strong>' +
+        '</div>' +
         '<div class="table-container" style="margin:0"><table><thead><tr>' +
         '<th>Data do Show</th>' +
         (isAdmin ? '<th>Vendedor</th>' : '') +
-        '<th>Artista</th><th>Local</th><th>Cachê Bruto</th><th>Comissão</th><th>Proposta</th><th>Status Comissão</th>' +
+        '<th>Descrição</th><th>Comissão</th><th>Status</th>' +
         '</tr></thead><tbody>' + rows + '</tbody></table></div></div>';
 
     pc.innerHTML = '<div class="fade-in">' +
@@ -1005,9 +996,10 @@ Pages.renderComissaoVendedor = async function () {
         '<h2 style="display:flex;align-items:center;gap:10px">' +
         '<i class="fas fa-hand-holding-usd" style="color:var(--brand-primary)"></i> ' +
         (isAdmin ? 'Comissões de Vendedores' : 'Minhas Comissões') + '</h2>' +
-        '<p class="text-muted">Shows fechados e comissões geradas</p></div></div>' +
+        '<p class="text-muted">Geradas automaticamente após assinatura do contrato</p>' +
+        '</div></div>' +
         '<div class="grid grid-4 mb-3">' +
-        '<div class="stat-card"><div class="stat-icon" style="background:rgba(212,175,55,0.15)"><i class="fas fa-handshake" style="color:var(--brand-primary)"></i></div><div class="stat-content"><h3>' + minhas.length + '</h3><p>Shows com Comissão</p></div></div>' +
+        '<div class="stat-card"><div class="stat-icon" style="background:rgba(212,175,55,0.15)"><i class="fas fa-file-signature" style="color:var(--brand-primary)"></i></div><div class="stat-content"><h3>' + minhas.length + '</h3><p>Contratos Assinados</p></div></div>' +
         '<div class="stat-card"><div class="stat-icon" style="background:rgba(16,185,129,0.15)"><i class="fas fa-check-circle" style="color:var(--success)"></i></div><div class="stat-content"><h3>' + Utils.formatCurrency(recebido) + '</h3><p>Recebido</p></div></div>' +
         '<div class="stat-card"><div class="stat-icon" style="background:rgba(245,158,11,0.15)"><i class="fas fa-clock" style="color:var(--warning)"></i></div><div class="stat-content"><h3>' + Utils.formatCurrency(aReceber) + '</h3><p>A Receber</p></div></div>' +
         '<div class="stat-card"><div class="stat-icon" style="background:rgba(212,175,55,0.15)"><i class="fas fa-coins" style="color:var(--brand-primary)"></i></div><div class="stat-content"><h3>' + Utils.formatCurrency(total) + '</h3><p>Total Geral</p></div></div>' +

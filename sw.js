@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kshow-v35';
+const CACHE_NAME = 'kshow-v36';
 const ASSETS = [
   './',
   './index.html',
