@@ -935,12 +935,26 @@ Pages.renderComissaoVendedor = async function () {
         .sort(function(a, b) { return new Date(b.data_evento || 0) - new Date(a.data_evento || 0); });
 
     var total     = 0;
-    var realizado = 0;
+    var aReceber  = 0;
+    var recebido  = 0;
     minhas.forEach(function(p) {
         var v = parseFloat(p.vendedor_comissao_valor) || 0;
         total += v;
-        if (p.status === 'Aceita') realizado += v;
+        if (p.status === 'Aceita') aReceber += v;
     });
+    // Tentar buscar despesas de comissão pagas para calcular recebido
+    try {
+        var escId = Auth.currentUser && Auth.currentUser.escritorio_id;
+        var qComissao = sbClient.from('despesas').select('valor,status,descricao').eq('categoria', 'Comissão');
+        if (escId) qComissao = qComissao.eq('escritorio_id', escId);
+        var resC = await qComissao;
+        if (!resC.error && resC.data) {
+            resC.data.forEach(function(d) {
+                var nomeMatch = isAdmin || (d.descricao && d.descricao.indexOf(meuNome) !== -1);
+                if (nomeMatch && d.status === 'Pago') recebido += parseFloat(d.valor) || 0;
+            });
+        }
+    } catch(e) { recebido = 0; }
 
     function sBadge(p) {
         if (p.status === 'Aceita')   return '<span class="badge badge-success">Fechado</span>';
@@ -992,9 +1006,10 @@ Pages.renderComissaoVendedor = async function () {
         '<i class="fas fa-hand-holding-usd" style="color:var(--brand-primary)"></i> ' +
         (isAdmin ? 'Comissões de Vendedores' : 'Minhas Comissões') + '</h2>' +
         '<p class="text-muted">Shows fechados e comissões geradas</p></div></div>' +
-        '<div class="grid grid-3 mb-3">' +
+        '<div class="grid grid-4 mb-3">' +
         '<div class="stat-card"><div class="stat-icon" style="background:rgba(212,175,55,0.15)"><i class="fas fa-handshake" style="color:var(--brand-primary)"></i></div><div class="stat-content"><h3>' + minhas.length + '</h3><p>Shows com Comissão</p></div></div>' +
-        '<div class="stat-card"><div class="stat-icon" style="background:rgba(245,158,11,0.15)"><i class="fas fa-clock" style="color:var(--warning)"></i></div><div class="stat-content"><h3>' + Utils.formatCurrency(realizado) + '</h3><p>A Receber (Fechados)</p></div></div>' +
+        '<div class="stat-card"><div class="stat-icon" style="background:rgba(16,185,129,0.15)"><i class="fas fa-check-circle" style="color:var(--success)"></i></div><div class="stat-content"><h3>' + Utils.formatCurrency(recebido) + '</h3><p>Recebido</p></div></div>' +
+        '<div class="stat-card"><div class="stat-icon" style="background:rgba(245,158,11,0.15)"><i class="fas fa-clock" style="color:var(--warning)"></i></div><div class="stat-content"><h3>' + Utils.formatCurrency(aReceber) + '</h3><p>A Receber</p></div></div>' +
         '<div class="stat-card"><div class="stat-icon" style="background:rgba(212,175,55,0.15)"><i class="fas fa-coins" style="color:var(--brand-primary)"></i></div><div class="stat-content"><h3>' + Utils.formatCurrency(total) + '</h3><p>Total Geral</p></div></div>' +
         '</div>' +
         (minhas.length === 0 ? emptyState : tableState) +
