@@ -133,9 +133,11 @@ const Auth = {
         this.selectedArtistaId = id;
         localStorage.setItem('gibson_selected_artista', id);
 
-        // Fechar dropdown e dar feedback visual imediato
+        // Fechar dropdown
         document.getElementById('artistaDropdown')?.classList.remove('show');
-        if (window.MultiArtista) MultiArtista.renderSelector();
+
+        // Atualizar o header do seletor DIRETAMENTE no DOM (sem re-render completo)
+        MultiArtista._atualizarHeaderSeletor(id, lista);
 
         // Limpar cache e recarregar página
         if (window.DB) DB.clearAllCache();
@@ -143,9 +145,6 @@ const Auth = {
             Pages.isChanging = false; // reset guard
             await Pages.changePage(Pages.currentPage || 'dashboard');
         }
-
-        // Re-renderizar seletor depois do changePage para garantir estado correto
-        if (window.MultiArtista) MultiArtista.renderSelector();
 
         // Toast de confirmação
         const nome = isTodos ? 'Todos os Artistas' : (lista.find(a => String(a.id) === String(id))?.nome || id);

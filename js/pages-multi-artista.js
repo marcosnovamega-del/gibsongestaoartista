@@ -67,6 +67,42 @@ const MultiArtista = {
         `;
     },
 
+    // Atualiza APENAS o header visível do seletor, sem re-renderizar o dropdown inteiro
+    _atualizarHeaderSeletor(id, lista) {
+        const isTodos = id === 'todos';
+        const artista = isTodos ? null : (lista || Auth.artistasPermitidos || []).find(a => String(a.id) === String(id));
+        const nome = isTodos ? 'Todos os Artistas' : (artista?.nome || 'Selecionar Artista');
+
+        // Atualizar texto
+        const nomeEl = document.querySelector('.selected-name');
+        if (nomeEl) nomeEl.textContent = nome;
+
+        // Atualizar thumb (ícone ou foto)
+        const thumbContainer = document.querySelector('.artista-selected');
+        if (thumbContainer) {
+            const oldThumb = thumbContainer.querySelector('.artista-thumb, .todos-thumb');
+            if (oldThumb) oldThumb.remove();
+            const thumbHTML = isTodos
+                ? `<div class="artista-thumb todos-thumb" style="flex-shrink:0;"><i class="fas fa-layer-group"></i></div>`
+                : `<img src="${artista?.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(nome.slice(0,2))}&background=E10600&color=fff&size=56&bold=true`}" class="artista-thumb">`;
+            thumbContainer.insertAdjacentHTML('afterbegin', thumbHTML);
+        }
+
+        // Atualizar item ativo no dropdown (se estiver aberto)
+        document.querySelectorAll('.artista-option').forEach(opt => {
+            const isActive = isTodos
+                ? opt.classList.contains('artista-option-todos')
+                : opt.getAttribute('onclick')?.includes(String(id));
+            opt.classList.toggle('active', !!isActive);
+            const check = opt.querySelector('i.fas.fa-check');
+            if (isActive && !check) {
+                opt.insertAdjacentHTML('beforeend', '<i class="fas fa-check" style="color:#D4AF37;font-size:11px;flex-shrink:0;margin-left:auto;"></i>');
+            } else if (!isActive && check) {
+                check.remove();
+            }
+        });
+    },
+
     toggleDropdown() {
         const dropdown = document.getElementById('artistaDropdown');
         dropdown.classList.toggle('show');
