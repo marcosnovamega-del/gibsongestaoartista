@@ -365,6 +365,7 @@ Modals.showUsuarioModal = async function(usuarioId = null) {
                                 <option value="Produtor" ${usuario?.nivel === 'Produtor' ? 'selected' : ''}>Produtor (Road Manager)</option>
                                 <option value="Financeiro" ${usuario?.nivel === 'Financeiro' ? 'selected' : ''}>Financeiro</option>
                                 <option value="Produção/Técnico" ${usuario?.nivel === 'Produção/Técnico' ? 'selected' : ''}>Produção/Técnico</option>
+                                <option value="Vendedor" ${usuario?.nivel === 'Vendedor' ? 'selected' : ''}>Vendedor</option>
                             </select>
                         </div>
                         <div class="form-group" id="artistaVinculadoGroup" style="display: ${['Manager', 'Produtor'].includes(usuario?.nivel) ? 'block' : 'none'};">

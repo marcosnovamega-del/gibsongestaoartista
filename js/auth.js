@@ -325,15 +325,18 @@ const Auth = {
             return ['Dashboard', 'Artistas', 'Eventos', 'Contratos', 'Vendas', 'Propostas', 'Central de Turnê', 'Financeiro', 'Prestacao de Contas', 'Veiculos', 'Equipe', 'Alertas', 'Usuarios', 'Configuracoes'];
         }
 
-        const permissions = this.currentUser.permissoes || [];
-        
+        const permissions = Array.isArray(this.currentUser.permissoes)
+            ? this.currentUser.permissoes
+            : [];
+
         if (permissions.length === 0) {
             // Usar lógica antiga
             const defaultPermissions = {
                 'Manager':           ['Dashboard', 'Artistas', 'Eventos', 'Vendas', 'Propostas', 'Central de Turnê', 'Equipe', 'Contratos', 'Prestacao de Contas', 'Alertas'],
                 'Financeiro':        ['Dashboard', 'Financeiro', 'Prestacao de Contas', 'Eventos', 'Contratos', 'Alertas'],
                 'Produção/Técnico':  ['Dashboard', 'Eventos', 'Central de Turnê', 'Equipe', 'Alertas'],
-                'Artista':           ['Dashboard', 'Eventos', 'Contratos', 'Central de Turnê', 'Alertas']
+                'Artista':           ['Dashboard', 'Eventos', 'Contratos', 'Central de Turnê', 'Alertas'],
+                'Vendedor':          ['Dashboard', 'Eventos', 'Propostas', 'Vendas', 'Alertas']
             };
             // Produtor também deve ter acesso
             if (this.isProdutor()) return ['Dashboard', 'Eventos', 'Central de Turnê', 'Alertas'];
