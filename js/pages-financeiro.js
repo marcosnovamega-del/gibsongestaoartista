@@ -136,6 +136,24 @@ Pages.renderFinanceiro = async function() {
             </div>
 
             ${Auth.isAdmin() ? `
+            <!-- COMISSÕES DE VENDEDORES -->
+            <div class="card mb-3" id="comissoes-vendedor-card">
+                <div class="card-header flex-between">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <i class="fas fa-user-tie" style="color:var(--brand-primary);font-size:18px;"></i>
+                        <div>
+                            <h3 class="card-title" style="margin:0;">Comissões de Vendedores</h3>
+                            <small class="text-muted">Controle de pagamento por vendedor</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body" id="comissoes-vendedor-body">
+                    <div class="loading-container"><div class="loading-spinner"></div></div>
+                </div>
+            </div>
+            ` : ''}
+
+            ${Auth.isAdmin() ? `
             <!-- Modelos de Despesa Recorrente -->
             <div class="card mb-3">
                 <div class="card-header flex-between">
@@ -240,6 +258,9 @@ Pages.renderFinanceiro = async function() {
 
     // Carregar recebimentos a confirmar (async, não bloqueia o render)
     Pages.carregarRecebimentosAConfirmar();
+
+    // Carregar comissões de vendedores
+    if (Auth.isAdmin()) Pages.carregarComissoesVendedores();
 };
 
 // ── Seção "Recebimentos a Confirmar" ─────────────────────────────────────────
@@ -537,6 +558,158 @@ Pages.carregarRecebimentosAConfirmar = async function() {
     } catch(e) {
         console.error('Erro ao carregar recebimentos a confirmar:', e);
         if (el) el.innerHTML = '<p class="text-muted" style="padding:16px;">Erro ao carregar recebimentos.</p>';
+    }
+};
+
+/* ── Comissões de Vendedores ─────────────────────────────────────────────── */
+Pages.carregarComissoesVendedores = async function() {
+    const el = document.getElementById('comissoes-vendedor-body');
+    if (!el) return;
+
+    try {
+        const escId = Auth.currentUser && Auth.currentUser.escritorio_id;
+
+        // Buscar despesas de comissão de vendedor
+        let qDespesas = sbClient.from('despesas')
+            .select('*')
+            .eq('categoria', 'Comissão');
+        if (escId) qDespesas = qDespesas.eq('escritorio_id', escId);
+        const { data: despesas, error } = await qDespesas;
+        if (error) throw error;
+
+        const todas = despesas || [];
+
+        if (todas.length === 0) {
+            el.innerHTML = '<p class="text-muted" style="padding:8px 0;">Nenhuma comissão de vendedor registrada ainda.</p>';
+            return;
+        }
+
+        // Agrupar por nome do vendedor (extraído da descrição "Comissão Vendedor – Nome")
+        const vendedores = {};
+        todas.forEach(function(d) {
+            // Nome vem na descrição: "Comissão Vendedor – NomeDoVendedor"
+            var match = (d.descricao || '').match(/–\s*(.+)$/);
+            var nome  = match ? match[1].trim() : (d.descricao || 'Desconhecido');
+            if (!vendedores[nome]) vendedores[nome] = { nome: nome, pendente: 0, pago: 0, total: 0, items: [] };
+            var v = parseFloat(d.valor) || 0;
+            vendedores[nome].total += v;
+            if (d.status === 'Pago') vendedores[nome].pago += v;
+            else vendedores[nome].pendente += v;
+            vendedores[nome].items.push(d);
+        });
+
+        var lista = Object.values(vendedores).sort(function(a,b){ return b.pendente - a.pendente; });
+
+        // Totais gerais
+        var gtPendente = lista.reduce(function(s,v){ return s+v.pendente; }, 0);
+        var gtPago     = lista.reduce(function(s,v){ return s+v.pago; }, 0);
+        var gtTotal    = lista.reduce(function(s,v){ return s+v.total; }, 0);
+
+        // Cards por vendedor
+        var cardsHtml = lista.map(function(v) {
+            var pct = v.total > 0 ? Math.round(v.pago / v.total * 100) : 0;
+            var cor = v.pendente === 0 ? 'var(--success)' : (v.pendente > 0 ? 'var(--warning)' : 'var(--text-muted)');
+
+            var linhas = v.items.map(function(d) {
+                var dtEvento = d.data_vencimento ? Utils.formatDate(d.data_vencimento) : '—';
+                var stBadge  = d.status === 'Pago'
+                    ? '<span class="badge badge-success" style="font-size:11px;">Pago</span>'
+                    : '<span class="badge badge-warning" style="font-size:11px;">Pendente</span>';
+                var btnPagar = d.status !== 'Pago'
+                    ? '<button class="btn-secondary btn-sm" onclick="Pages._pagarComissao(\'' + d.id + '\')" style="padding:3px 10px;font-size:11px;"><i class="fas fa-check" style="color:var(--success)"></i> Pagar</button>'
+                    : '<span style="color:var(--success);font-size:11px;"><i class="fas fa-check-circle"></i> ' + (d.data_pagamento ? Utils.formatDate(d.data_pagamento) : '') + '</span>';
+                return '<tr style="font-size:13px;">' +
+                    '<td style="padding:8px 10px;">' + dtEvento + '</td>' +
+                    '<td style="padding:8px 10px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (d.descricao || '—') + '</td>' +
+                    '<td style="padding:8px 10px;font-weight:600;color:var(--brand-primary);">' + Utils.formatCurrency(d.valor) + '</td>' +
+                    '<td style="padding:8px 10px;">' + stBadge + '</td>' +
+                    '<td style="padding:8px 10px;">' + btnPagar + '</td>' +
+                    '</tr>';
+            }).join('');
+
+            return '<div style="background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:14px;padding:18px 20px;margin-bottom:14px;">' +
+                // Cabeçalho do vendedor
+                '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px;">' +
+                    '<div style="display:flex;align-items:center;gap:12px;">' +
+                        '<div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--brand-primary),rgba(212,175,55,0.6));display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:16px;flex-shrink:0;">' +
+                            v.nome.charAt(0).toUpperCase() +
+                        '</div>' +
+                        '<div>' +
+                            '<div style="font-weight:700;font-size:15px;">' + v.nome + '</div>' +
+                            '<div style="font-size:12px;color:var(--text-muted);">' + v.items.length + ' comissão(ões)</div>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div style="display:flex;gap:18px;flex-wrap:wrap;">' +
+                        '<div style="text-align:center;">' +
+                            '<div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">A Pagar</div>' +
+                            '<div style="font-size:17px;font-weight:700;color:' + cor + ';">' + Utils.formatCurrency(v.pendente) + '</div>' +
+                        '</div>' +
+                        '<div style="text-align:center;">' +
+                            '<div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">Pago</div>' +
+                            '<div style="font-size:17px;font-weight:700;color:var(--success);">' + Utils.formatCurrency(v.pago) + '</div>' +
+                        '</div>' +
+                        '<div style="text-align:center;">' +
+                            '<div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">Total</div>' +
+                            '<div style="font-size:17px;font-weight:700;">' + Utils.formatCurrency(v.total) + '</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+                // Barra de progresso
+                '<div style="height:6px;background:var(--border-color);border-radius:3px;margin-bottom:14px;overflow:hidden;">' +
+                    '<div style="height:100%;width:' + pct + '%;background:var(--success);border-radius:3px;transition:width .4s;"></div>' +
+                '</div>' +
+                // Tabela de itens
+                '<div style="overflow-x:auto;">' +
+                '<table style="width:100%;border-collapse:collapse;">' +
+                    '<thead><tr style="border-bottom:1px solid var(--border-color);">' +
+                        '<th style="padding:6px 10px;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;">Vencimento</th>' +
+                        '<th style="padding:6px 10px;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;">Descrição</th>' +
+                        '<th style="padding:6px 10px;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;">Valor</th>' +
+                        '<th style="padding:6px 10px;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;">Status</th>' +
+                        '<th style="padding:6px 10px;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;">Ação</th>' +
+                    '</tr></thead>' +
+                    '<tbody>' + linhas + '</tbody>' +
+                '</table></div>' +
+            '</div>';
+        }).join('');
+
+        // Rodapé de totais
+        var footerHtml = '<div style="display:flex;gap:16px;flex-wrap:wrap;padding:14px 0 2px;border-top:1px solid var(--border-color);margin-top:4px;">' +
+            '<div style="flex:1;min-width:120px;text-align:center;padding:10px 0;">' +
+                '<div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Total a Pagar</div>' +
+                '<div style="font-size:20px;font-weight:800;color:var(--warning);">' + Utils.formatCurrency(gtPendente) + '</div>' +
+            '</div>' +
+            '<div style="flex:1;min-width:120px;text-align:center;padding:10px 0;">' +
+                '<div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Total Pago</div>' +
+                '<div style="font-size:20px;font-weight:800;color:var(--success);">' + Utils.formatCurrency(gtPago) + '</div>' +
+            '</div>' +
+            '<div style="flex:1;min-width:120px;text-align:center;padding:10px 0;">' +
+                '<div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Total Geral</div>' +
+                '<div style="font-size:20px;font-weight:800;color:var(--brand-primary);">' + Utils.formatCurrency(gtTotal) + '</div>' +
+            '</div>' +
+        '</div>';
+
+        el.innerHTML = cardsHtml + footerHtml;
+
+    } catch(e) {
+        console.error('Erro comissões vendedores:', e);
+        el.innerHTML = '<p class="text-muted" style="padding:8px 0;">Erro ao carregar comissões.</p>';
+    }
+};
+
+Pages._pagarComissao = async function(despesaId) {
+    if (!confirm('Confirmar pagamento desta comissão?')) return;
+    Utils.showLoading();
+    try {
+        var hoje = new Date().toISOString().split('T')[0];
+        var res = await sbClient.from('despesas').update({ status: 'Pago', data_pagamento: hoje }).eq('id', despesaId);
+        if (res.error) throw res.error;
+        Utils.hideLoading();
+        Utils.showToast('Comissão marcada como paga!', 'success');
+        Pages.carregarComissoesVendedores();
+    } catch(e) {
+        Utils.hideLoading();
+        Utils.showToast('Erro: ' + (e.message || e), 'error');
     }
 };
 
