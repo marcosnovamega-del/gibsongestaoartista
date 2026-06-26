@@ -775,53 +775,79 @@ Pages._exportarRecebimentosPDF = function() {
     const dataExport = new Date().toLocaleDateString('pt-BR');
     const titulo = cidadeFiltro ? `Recebimentos — ${cidadeFiltro}` : 'Recebimentos a Confirmar — Todas as Cidades';
 
-    // Cabeçalho do doc
-    doc.setFillColor(212, 175, 55);
-    doc.rect(0, 0, 297, 18, 'F');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(13);
-    doc.setTextColor(0, 0, 0);
-    doc.text('GIBSON MANAGER', 14, 7);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.text(titulo, 14, 13);
-    doc.setTextColor(60, 60, 60);
-    doc.setFontSize(9);
-    doc.text(`Gerado em: ${dataExport}`, 250, 13, { align: 'right' });
+    // Paleta Gibson
+    const COR_OURO   = [212, 175, 55];
+    const COR_PRETO  = [11,  10,  13];
+    const COR_VERM   = [224, 32,  27];
+    const COR_BRANCO = [255, 255, 255];
+    const COR_VERDE  = [34,  197, 94];
+    const COR_CINZA1 = [245, 245, 245];
+    const COR_CINZA2 = [255, 255, 255];
+    const COR_HDRFG  = [30,  30,  46];
 
-    let startY = 22;
+    const addPageHeader = () => {
+        // Faixa dourada do cabeçalho
+        doc.setFillColor(...COR_OURO);
+        doc.rect(0, 0, 297, 20, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(15);
+        doc.setTextColor(...COR_PRETO);
+        doc.text('GIBSON MANAGER', 14, 9);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(titulo, 14, 16);
+        doc.setFontSize(9);
+        doc.setTextColor(60, 60, 60);
+        doc.text(`Gerado em: ${dataExport}`, 283, 16, { align: 'right' });
+    };
+
+    addPageHeader();
+    let startY = 25;
+    let paginaAtual = 1;
 
     for (const { evento, proposta, cronograma } of itensFiltrados) {
-        const artista    = artistas.find(a => a.id === evento.artista_id);
-        const parcelasEv = todasParcelas.filter(p => p.evento_id === evento.id);
-        const cacheBruto = proposta.cache_bruto || 0;
-        const cidade     = evento.cidade || evento.estado || '—';
+        const artista     = artistas.find(a => a.id === evento.artista_id);
+        const parcelasEv  = todasParcelas.filter(p => p.evento_id === evento.id);
+        const cacheBruto  = proposta.cache_bruto || 0;
+        const cidade      = evento.cidade || evento.estado || '—';
         const nomeArtista = artista?.nome || '—';
-        const dataShow   = evento.data ? new Date(evento.data + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
-        const responsavel = proposta.contratante_nome || evento.contratante || '—';
-        const local      = evento.local || '—';
+        const dataShow    = evento.data ? new Date(evento.data + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
+        const responsavel = proposta.contratante_nome || evento.contratante || proposta.nome_contratante || '—';
+        const local       = evento.local || '—';
 
-        // Verifica espaço
-        if (startY > 170) { doc.addPage(); startY = 14; }
+        // Nova página se necessário (reserva 55mm para tabela + rodapé)
+        if (startY > 160) {
+            doc.addPage();
+            paginaAtual++;
+            addPageHeader();
+            startY = 25;
+        }
 
-        // Bloco de cabeçalho do show
-        doc.setFillColor(30, 30, 30);
-        doc.rect(0, startY, 297, 12, 'F');
-        doc.setTextColor(212, 175, 55);
+        // ── Faixa vermelha do show ──────────────────────────────────
+        doc.setFillColor(...COR_VERM);
+        doc.rect(0, startY, 297, 16, 'F');
+
+        // Linha 1: SHOW nome + data + valor
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
-        doc.text(`SHOW: ${nomeArtista}`, 14, startY + 4.5);
-        doc.setTextColor(255, 255, 255);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8);
-        doc.text(`Data: ${dataShow}`, 75, startY + 4.5);
-        doc.text(`Valor: ${Utils.formatCurrency(cacheBruto)}`, 115, startY + 4.5);
-        doc.text(`Cidade: ${cidade}`, 160, startY + 4.5);
-        doc.text(`Responsável: ${responsavel}`, 200, startY + 4.5);
-        doc.text(`Local: ${local}`, 14, startY + 9.5);
-        startY += 14;
+        doc.setFontSize(10);
+        doc.setTextColor(...COR_BRANCO);
+        doc.text(`SHOW: ${nomeArtista}`, 14, startY + 6);
 
-        // Tabela de parcelas
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.text(`Data: ${dataShow}`, 90, startY + 6);
+        doc.text(`Cachê: ${Utils.formatCurrency(cacheBruto)}`, 135, startY + 6);
+        doc.text(`Cidade: ${cidade}`, 185, startY + 6);
+        doc.text(`Resp.: ${responsavel}`, 230, startY + 6);
+
+        // Linha 2: local
+        doc.setFontSize(8.5);
+        doc.setTextColor(255, 230, 230);
+        doc.text(`Local: ${local}`, 14, startY + 13);
+
+        startY += 18;
+
+        // ── Tabela de parcelas ──────────────────────────────────────
         const tableRows = cronograma.map((item, idx) => {
             const numero = item.numero || (idx + 1);
             const valor  = item.valor !== undefined ? item.valor : parseFloat((cacheBruto * (item.pct || 100) / 100).toFixed(2));
@@ -832,15 +858,16 @@ Pages._exportarRecebimentosPDF = function() {
                 dataVenc = d.toISOString().split('T')[0];
             }
             const parc = parcelasEv.find(p => p.numero_parcela === numero);
+            const statusTxt = parc ? 'Lançado' : 'Pendente';
             return [
                 Utils.formatCurrency(valor),
                 dataVenc ? new Date(dataVenc + 'T12:00:00').toLocaleDateString('pt-BR') : '—',
                 parc?.data_recebimento ? new Date(parc.data_recebimento + 'T12:00:00').toLocaleDateString('pt-BR') : '—',
-                parc?.valor_recebido ? Utils.formatCurrency(parc.valor_recebido) : '—',
-                parc?.forma_pagamento || '—',
-                parc?.origem || '—',
-                parc?.instituicao || '—',
-                parc ? 'Lançado' : 'Pendente'
+                parc?.valor_recebido   ? Utils.formatCurrency(parc.valor_recebido) : '—',
+                parc?.forma_pagamento  || '—',
+                parc?.origem           || '—',
+                parc?.instituicao      || '—',
+                statusTxt
             ];
         });
 
@@ -854,29 +881,82 @@ Pages._exportarRecebimentosPDF = function() {
             startY,
             head: [['Valor a Receber','Data a Receber','Data Recebimento','Valor Recebido','Forma Pgto','Origem','Instituição','Status']],
             body: tableRows,
-            foot: [[
-                { content: 'TOTAL A RECEBER', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } },
-                { content: Utils.formatCurrency(totalAReceber), colSpan: 4, styles: { halign: 'center', textColor: [212,175,55], fontStyle: 'bold' } },
-                ''
-            ],[
-                { content: 'TOTAL RECEBIDO', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } },
-                { content: Utils.formatCurrency(totalRecebido), colSpan: 4, styles: { halign: 'center', textColor: [39,174,96], fontStyle: 'bold' } },
-                ''
-            ],[
-                { content: 'FALTAM', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } },
-                { content: Utils.formatCurrency(faltam), colSpan: 4, styles: { halign: 'center', textColor: faltam > 0 ? [231,76,60] : [39,174,96], fontStyle: 'bold' } },
-                ''
-            ]],
+            foot: [
+                [
+                    { content: 'TOTAL A RECEBER', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold', textColor: [60,60,60] } },
+                    { content: Utils.formatCurrency(totalAReceber), colSpan: 4, styles: { halign: 'center', textColor: COR_OURO, fontStyle: 'bold', fontSize: 9 } },
+                    { content: '' }
+                ],
+                [
+                    { content: 'TOTAL RECEBIDO', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold', textColor: [60,60,60] } },
+                    { content: Utils.formatCurrency(totalRecebido), colSpan: 4, styles: { halign: 'center', textColor: COR_VERDE, fontStyle: 'bold', fontSize: 9 } },
+                    { content: '' }
+                ],
+                [
+                    { content: 'FALTAM', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold', textColor: [60,60,60] } },
+                    { content: Utils.formatCurrency(faltam), colSpan: 4, styles: { halign: 'center', textColor: faltam > 0 ? COR_VERM : COR_VERDE, fontStyle: 'bold', fontSize: 10 } },
+                    { content: '' }
+                ]
+            ],
             theme: 'grid',
-            headStyles: { fillColor: [26,26,46], textColor: [212,175,55], fontStyle: 'bold', fontSize: 7.5 },
-            bodyStyles: { fontSize: 8, textColor: [40,40,40] },
-            footStyles: { fillColor: [240,240,240], fontSize: 8 },
-            alternateRowStyles: { fillColor: [248,248,248] },
-            columnStyles: { 0:{cellWidth:30}, 1:{cellWidth:25}, 2:{cellWidth:28}, 3:{cellWidth:28}, 4:{cellWidth:22}, 5:{cellWidth:30}, 6:{cellWidth:30}, 7:{cellWidth:20} },
+            headStyles: {
+                fillColor: COR_HDRFG,
+                textColor: COR_OURO,
+                fontStyle: 'bold',
+                fontSize: 8.5,
+                cellPadding: 3,
+                halign: 'center'
+            },
+            bodyStyles: {
+                fontSize: 9,
+                textColor: [40, 40, 40],
+                cellPadding: 3
+            },
+            footStyles: {
+                fillColor: [235, 235, 235],
+                fontSize: 8.5,
+                cellPadding: 3.5,
+                fontStyle: 'bold'
+            },
+            alternateRowStyles: { fillColor: COR_CINZA1 },
+            rowStyles: { fillColor: COR_CINZA2 },
+            columnStyles: {
+                0: { cellWidth: 32, halign: 'right'  },
+                1: { cellWidth: 27, halign: 'center' },
+                2: { cellWidth: 30, halign: 'center' },
+                3: { cellWidth: 30, halign: 'right'  },
+                4: { cellWidth: 24, halign: 'center' },
+                5: { cellWidth: 36, halign: 'left'   },
+                6: { cellWidth: 36, halign: 'left'   },
+                7: { cellWidth: 24, halign: 'center' }
+            },
             margin: { left: 14, right: 14 },
-            didDrawPage: (data) => { startY = data.cursor.y + 10; }
+            didParseCell: (data) => {
+                // Colorir status na tabela
+                if (data.section === 'body' && data.column.index === 7) {
+                    const v = data.cell.raw;
+                    if (v === 'Lançado')  { data.cell.styles.textColor = COR_VERDE; data.cell.styles.fontStyle = 'bold'; }
+                    if (v === 'Pendente') { data.cell.styles.textColor = [180, 120, 0]; }
+                }
+            },
+            didDrawPage: () => { }
         });
-        startY = doc.lastAutoTable.finalY + 12;
+
+        startY = doc.lastAutoTable.finalY + 14;
+    }
+
+    // Rodapé em todas as páginas
+    const totalPages = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setDrawColor(212, 175, 55);
+        doc.setLineWidth(0.5);
+        doc.line(14, 203, 283, 203);
+        doc.setFontSize(8);
+        doc.setTextColor(120, 120, 120);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Gibson Manager — Gestão Artística Profissional', 14, 207);
+        doc.text(`Página ${i} de ${totalPages}`, 283, 207, { align: 'right' });
     }
 
     const fileName = cidadeFiltro
