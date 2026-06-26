@@ -191,7 +191,7 @@ const Auth = {
             'Produtor':          ['Dashboard', 'Eventos', 'Central de Turnê', 'Alertas'],
             'Financeiro':        ['Dashboard', 'Financeiro', 'Prestacao de Contas', 'Eventos', 'Contratos', 'Alertas'],
             'Produção/Técnico':  ['Dashboard', 'Eventos', 'Central de Turnê', 'Equipe', 'Alertas'],
-            'Vendedor':          ['Dashboard', 'Eventos', 'Propostas', 'Vendas', 'Alertas']
+            'Vendedor':          ['Dashboard', 'Eventos', 'Propostas', 'Vendas', 'Alertas', 'Comissao']
         };
 
         const userPermissions = permissions[this.currentUser.nivel] || [];
@@ -339,7 +339,7 @@ const Auth = {
                 'Financeiro':        ['Dashboard', 'Financeiro', 'Prestacao de Contas', 'Eventos', 'Contratos', 'Alertas'],
                 'Produção/Técnico':  ['Dashboard', 'Eventos', 'Central de Turnê', 'Equipe', 'Alertas'],
                 'Artista':           ['Dashboard', 'Eventos', 'Contratos', 'Central de Turnê', 'Alertas'],
-                'Vendedor':          ['Dashboard', 'Eventos', 'Propostas', 'Vendas', 'Alertas']
+                'Vendedor':          ['Dashboard', 'Eventos', 'Propostas', 'Vendas', 'Alertas', 'Comissao']
             };
             // Produtor também deve ter acesso
             if (this.isProdutor()) return ['Dashboard', 'Eventos', 'Central de Turnê', 'Alertas'];
