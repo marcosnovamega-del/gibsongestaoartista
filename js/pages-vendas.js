@@ -7,12 +7,19 @@ Pages.renderVendas = async function() {
     document.getElementById('pageContent').innerHTML =
         '<div class="loading-container"><div class="loading-spinner"></div></div>';
 
-    const [propostas, contratos, eventos, artistas] = await Promise.all([
+    let [propostas, contratos, eventos, artistas] = await Promise.all([
         PropostasDB.listar(true),
         ContratosDB.listar(),
         EventosDB.listar(),
         ArtistasDB.listar()
     ]);
+
+    // Vendedor vê apenas suas próprias propostas
+    const isVendedor = Auth.currentUser?.nivel === 'Vendedor';
+    if (isVendedor) {
+        const meuNome = Auth.currentUser.nome;
+        propostas = propostas.filter(p => p.vendedor_nome === meuNome);
+    }
 
     // Enriquecer propostas e detectar se contrato foi assinado
     const propostasRicas = [];
@@ -615,12 +622,18 @@ Pages.renderPropostas = async function() {
     document.getElementById('pageContent').innerHTML =
         '<div class="loading-container"><div class="loading-spinner"></div></div>';
 
-    const [propostas, artistas, eventos, contratos] = await Promise.all([
+    let [propostas, artistas, eventos, contratos] = await Promise.all([
         PropostasDB.listar(true),
         ArtistasDB.listar(),
         EventosDB.listar(),
         ContratosDB.listar()
     ]);
+
+    // Vendedor vê apenas suas próprias propostas
+    if (Auth.currentUser?.nivel === 'Vendedor') {
+        const meuNome = Auth.currentUser.nome;
+        propostas = propostas.filter(p => p.vendedor_nome === meuNome);
+    }
 
     // Enriquecer propostas com artista, evento e contrato vinculado
     const propostasRicas = propostas.map(p => {

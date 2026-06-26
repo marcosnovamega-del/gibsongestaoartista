@@ -287,30 +287,33 @@ Pages.showEventosDoDay = async function(data) {
 
     if (eventosDoDay.length === 0) return;
 
+    const _isVendedor = Auth.currentUser?.nivel === 'Vendedor';
     let html = '<div style="margin-top: 16px;">';
     for (const evento of eventosDoDay) {
         const artista = await ArtistasDB.buscarPorId(evento.artista_id);
-        const lucro = await Utils.calcularLucroEvento(evento.id);
-        
+        const lucro = _isVendedor ? null : await Utils.calcularLucroEvento(evento.id);
+
         html += `
             <div class="card mb-2" style="padding: 16px;">
                 <div class="flex-between">
                     <div>
                         <h4 style="margin-bottom: 4px;">${evento.local}</h4>
                         <p style="font-size: 13px; color: var(--text-secondary); margin: 4px 0;">
-                            <i class="fas fa-microphone"></i> ${artista ? artista.nome : '-'} | 
-                            <i class="fas fa-clock"></i> ${evento.horario}
+                            <i class="fas fa-microphone"></i> ${artista ? artista.nome : '-'} |
+                            <i class="fas fa-clock"></i> ${evento.horario || '—'}
                         </p>
+                        ${!_isVendedor ? `
                         <p style="font-size: 13px; color: var(--text-secondary); margin: 4px 0;">
-                            <i class="fas fa-dollar-sign"></i> Cachê: ${Utils.formatCurrency(evento.cache_bruto)} | 
+                            <i class="fas fa-dollar-sign"></i> Cachê: ${Utils.formatCurrency(evento.cache_bruto)} |
                             Lucro: <strong style="color: ${lucro.lucro >= 0 ? 'var(--success)' : 'var(--danger)'};">${Utils.formatCurrency(lucro.lucro)}</strong>
-                        </p>
+                        </p>` : ''}
                     </div>
                     <div>
                         <span class="badge badge-${evento.status === 'Confirmado' ? 'success' : 'warning'}">${evento.status}</span>
+                        ${!_isVendedor ? `
                         <button class="btn-secondary btn-sm mt-1" onclick="Modals.showEventoMultiStepModal('${evento.id}')">
                             <i class="fas fa-eye"></i> Ver
-                        </button>
+                        </button>` : ''}
                     </div>
                 </div>
             </div>
@@ -353,12 +356,12 @@ Pages.renderProximosEventosLista = async function(eventos) {
         return '<p class="text-muted">Nenhum evento próximo.</p>';
     }
 
+    const _isVendedor = Auth.currentUser?.nivel === 'Vendedor';
     let html = '';
     for (const evento of proximos) {
         const artista = await ArtistasDB.buscarPorId(evento.artista_id);
-        const lucro = await Utils.calcularLucroEvento(evento.id);
         const diasFaltando = Utils.daysBetween(hoje, evento.data);
-        
+
         html += `
             <div class="card mb-2" style="padding: 16px; border-left: 4px solid var(--red-primary);">
                 <div class="flex-between">
@@ -375,7 +378,7 @@ Pages.renderProximosEventosLista = async function(eventos) {
                             </div>
                         </div>
                         <p style="font-size: 13px; color: var(--text-secondary); margin: 4px 0;">
-                            <i class="fas fa-microphone"></i> ${artista ? artista.nome : '-'} | 
+                            <i class="fas fa-microphone"></i> ${artista ? artista.nome : '-'} |
                             <i class="fas fa-map-marker-alt"></i> ${evento.cidade}/${evento.estado}
                         </p>
                     </div>
@@ -383,9 +386,10 @@ Pages.renderProximosEventosLista = async function(eventos) {
                         <span class="badge badge-${evento.status === 'Confirmado' ? 'success' : 'warning'}">
                             ${evento.status}
                         </span>
+                        ${!_isVendedor ? `
                         <button class="btn-secondary btn-sm mt-2" onclick="Modals.showEventoMultiStepModal('${evento.id}')">
                             <i class="fas fa-eye"></i> Ver
-                        </button>
+                        </button>` : ''}
                     </div>
                 </div>
             </div>
@@ -411,6 +415,7 @@ Pages.renderListaView = async function(eventos) {
         `;
     }
 
+    const _isVendedor = Auth.currentUser?.nivel === 'Vendedor';
     return `
         <div class="table-container">
             <table>
@@ -420,8 +425,7 @@ Pages.renderListaView = async function(eventos) {
                         <th>Artista</th>
                         <th>Local</th>
                         <th>Cidade/UF</th>
-                        <th>Cachê</th>
-                        <th>Lucro</th>
+                        ${!_isVendedor ? '<th>Cachê</th><th>Lucro</th>' : ''}
                         <th>Status</th>
                         <th>Ações</th>
                     </tr>
@@ -435,36 +439,39 @@ Pages.renderListaView = async function(eventos) {
 };
 
 Pages.renderEventosTableRows = async function(eventos) {
+    const _isVendedor = Auth.currentUser?.nivel === 'Vendedor';
     let html = '';
-    
+
     // Ordenar por data (mais recentes primeiro)
     eventos.sort((a, b) => new Date(b.data) - new Date(a.data));
-    
+
     for (const evento of eventos) {
         const artista = await ArtistasDB.buscarPorId(evento.artista_id);
-        const lucro = await Utils.calcularLucroEvento(evento.id);
-        
+        const lucro = _isVendedor ? null : await Utils.calcularLucroEvento(evento.id);
+
         html += `
             <tr>
                 <td><strong>${Utils.formatDate(evento.data)}</strong></td>
                 <td>${artista ? artista.nome : '-'}</td>
                 <td>${evento.local}</td>
                 <td>${evento.cidade}/${evento.estado}</td>
+                ${!_isVendedor ? `
                 <td>${Utils.formatCurrency(evento.cache_bruto)}</td>
                 <td class="${lucro.lucro >= 0 ? 'text-success' : 'text-danger'}">
                     ${Utils.formatCurrency(lucro.lucro)}
                     <small style="display: block; font-size: 11px;">(${lucro.margem}%)</small>
-                </td>
+                </td>` : ''}
                 <td>
                     <span class="badge badge-${
-                        evento.status === 'Confirmado' ? 'success' : 
-                        evento.status === 'Realizado' ? 'info' : 
+                        evento.status === 'Confirmado' ? 'success' :
+                        evento.status === 'Realizado' ? 'info' :
                         evento.status === 'Cancelado' ? 'danger' : 'warning'
                     }">
                         ${evento.status}
                     </span>
                 </td>
                 <td>
+                    ${!_isVendedor ? `
                     <button class="btn-secondary btn-sm" onclick="Modals.showEventoMultiStepModal('${evento.id}')">
                         <i class="fas fa-eye"></i>
                     </button>
@@ -472,7 +479,7 @@ Pages.renderEventosTableRows = async function(eventos) {
                         <button class="btn-secondary btn-sm" onclick="Pages.deleteEvento('${evento.id}')" style="color: var(--danger);">
                             <i class="fas fa-trash"></i>
                         </button>
-                    ` : ''}
+                    ` : ''}` : ''}
                 </td>
             </tr>
         `;
