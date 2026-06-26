@@ -144,7 +144,10 @@ const Pages = {
         }
 
         this.isChanging = false;
-        
+
+        // Garantir que o seletor de artista sempre reflita o estado atual
+        if (window.MultiArtista) MultiArtista.renderSelector();
+
         // Limpar busca ao trocar de página
         const searchInput = document.getElementById('globalSearch');
         if (searchInput) searchInput.value = '';
