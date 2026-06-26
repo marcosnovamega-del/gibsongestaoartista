@@ -48,13 +48,19 @@ const MultiArtista = {
                             ${isTodos ? '<i class="fas fa-check"></i>' : ''}
                         </div>
                         <div class="dropdown-divider"></div>
-                        ${artistas.map(a => `
+                        ${artistas.map(a => {
+                            const initials = a.nome.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+                            const colors = ['E10600','D4AF37','7C3AED','059669','DC2626','2563EB'];
+                            const colorIdx = a.nome.charCodeAt(0) % colors.length;
+                            const bgColor = colors[colorIdx];
+                            const avatarUrl = a.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&background=${bgColor}&color=fff&size=56&bold=true`;
+                            return `
                             <div class="artista-option ${a.id === selectedId ? 'active' : ''}" onclick="Auth.setSelectedArtista('${a.id}')">
-                                <img src="${a.foto || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(a.nome)}" class="artista-thumb-sm" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(a.nome)}&background=E10600&color=fff'">
+                                <img src="${avatarUrl}" class="artista-thumb-sm" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&background=${bgColor}&color=fff&size=56&bold=true'">
                                 <span>${a.nome}</span>
-                                ${a.id === selectedId ? '<i class="fas fa-check"></i>' : ''}
-                            </div>
-                        `).join('')}
+                                ${a.id === selectedId ? '<i class="fas fa-check" style="color:#D4AF37;font-size:11px;flex-shrink:0;"></i>' : ''}
+                            </div>`;
+                        }).join('')}
                     </div>
                 </div>
             </div>
@@ -129,56 +135,80 @@ const multiArtistaStyles = `
     }
     .artista-dropdown {
         position: absolute;
-        top: calc(100% + 8px);
+        top: calc(100% + 6px);
         left: 0;
         width: 100%;
-        background: #151515;
-        border: 1px solid var(--op-border);
+        background: #1c1c1c;
+        border: 1px solid rgba(212,175,55,0.25);
         border-radius: 12px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        box-shadow: 0 12px 40px rgba(0,0,0,0.6);
         display: none;
         overflow: hidden;
+        z-index: 2000;
     }
     .artista-dropdown.show {
         display: block;
-        animation: fadeInDown 0.2s ease-out;
+        animation: fadeInDown 0.18s ease-out;
     }
     .dropdown-search {
-        padding: 10px;
-        border-bottom: 1px solid rgba(255,255,255,0.05);
+        padding: 10px 10px 8px;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
     }
     .dropdown-search input {
         width: 100%;
-        background: #000;
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 6px;
-        padding: 6px 10px;
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(212,175,55,0.2);
+        border-radius: 7px;
+        padding: 7px 10px;
         color: #fff;
         font-size: 12px;
+        box-sizing: border-box;
+        outline: none;
     }
+    .dropdown-search input::placeholder { color: rgba(255,255,255,0.35); }
+    .dropdown-search input:focus { border-color: rgba(212,175,55,0.5); }
     .artistas-list {
-        max-height: 250px;
+        max-height: 240px;
         overflow-y: auto;
+        padding: 4px 0;
     }
+    .artistas-list::-webkit-scrollbar { width: 4px; }
+    .artistas-list::-webkit-scrollbar-track { background: transparent; }
+    .artistas-list::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.3); border-radius: 4px; }
     .artista-option {
-        padding: 10px 12px;
+        padding: 9px 12px;
         display: flex;
         align-items: center;
         gap: 10px;
         cursor: pointer;
-        transition: background 0.2s;
+        transition: background 0.15s;
+    }
+    .artista-option span {
+        color: #e8e8e8 !important;
+        font-size: 13px;
+        font-weight: 500;
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     .artista-option:hover {
-        background: rgba(255,255,255,0.05);
+        background: rgba(255,255,255,0.08);
     }
+    .artista-option:hover span { color: #fff !important; }
     .artista-option.active {
-        background: rgba(212, 175, 55, 0.1);
+        background: rgba(212, 175, 55, 0.12);
+    }
+    .artista-option.active span {
+        color: #D4AF37 !important;
+        font-weight: 700;
     }
     .artista-thumb-sm {
-        width: 24px;
-        height: 24px;
-        border-radius: 4px;
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
         object-fit: cover;
+        flex-shrink: 0;
     }
     .artista-option-todos {
         background: rgba(212, 175, 55, 0.05);
