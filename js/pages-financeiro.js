@@ -346,16 +346,14 @@ Pages.carregarRecebimentosAConfirmar = async function() {
         ]);
 
         const contratosAssinados = contratos.filter(c => c.status === 'Assinado');
-        let blocos = '';
-        let algumItem = false;
 
+        // Montar lista de eventos válidos com dados
+        const itens = [];
         for (const contrato of contratosAssinados) {
             const evento = eventos.find(e => e.id === contrato.evento_id);
             if (!evento || !evento.proposta_id) continue;
-
             const proposta = await PropostasDB.buscarPorId(evento.proposta_id);
             if (!proposta?.condicoes_pagamento) continue;
-
             let cronograma = [];
             try {
                 const cond = typeof proposta.condicoes_pagamento === 'string'
@@ -363,132 +361,11 @@ Pages.carregarRecebimentosAConfirmar = async function() {
                     : proposta.condicoes_pagamento;
                 cronograma = cond.cronograma || [];
             } catch(e) { continue; }
-
             if (!cronograma.length) continue;
-            algumItem = true;
-
-            const artista    = artistas.find(a => a.id === evento.artista_id);
-            const parcelasEv = todasParcelas.filter(p => p.evento_id === evento.id);
-            const cacheBruto = proposta.cache_bruto || 0;
-            const totalAReceber = cronograma.reduce((s, item, idx) => {
-                const v = item.valor !== undefined ? item.valor : parseFloat((cacheBruto * (item.pct || 100) / 100).toFixed(2));
-                return s + v;
-            }, 0);
-            const totalRecebido = parcelasEv.filter(p => p.status === 'Pago').reduce((s, p) => s + (parseFloat(p.valor_recebido || p.valor) || 0), 0);
-            const faltam = totalAReceber - totalRecebido;
-
-            // Linhas do cronograma
-            const linhas = cronograma.map((item, idx) => {
-                const numero   = item.numero || (idx + 1);
-                const valor    = item.valor !== undefined ? item.valor : parseFloat((cacheBruto * (item.pct || 100) / 100).toFixed(2));
-                let dataVenc   = item.data_vencimento;
-                if (!dataVenc && item.dias_antes_show !== undefined && evento.data) {
-                    const d = new Date(evento.data + 'T12:00:00');
-                    d.setDate(d.getDate() + (item.dias_antes_show || 0));
-                    dataVenc = d.toISOString().split('T')[0];
-                }
-                const descricao = item.descricao || `Parcela ${numero}`;
-                const parc      = parcelasEv.find(p => p.numero_parcela === numero);
-                const confirmada = !!parc;
-                const uid = `rec_${evento.id}_${numero}`;
-
-                return `
-                <tr class="${confirmada ? 'parc-confirmada' : ''}">
-                    <td class="locked">${Utils.formatCurrency(valor)}</td>
-                    <td class="locked">${dataVenc ? Utils.formatDate(dataVenc) : '—'}</td>
-                    <td><input type="date" class="rec-input" id="${uid}_dtreceb" value="${parc?.data_recebimento || ''}" ${confirmada ? 'disabled' : ''}></td>
-                    <td><input type="number" step="0.01" class="rec-input" id="${uid}_vlrreceb" value="${confirmada ? (parc?.valor_recebido || valor) : (parc?.valor_recebido || '')}" placeholder="${Utils.formatCurrency(valor)}" ${confirmada ? 'disabled' : ''}></td>
-                    <td>
-                        <select class="rec-input" id="${uid}_forma" ${confirmada ? 'disabled' : ''}>
-                            <option value="">—</option>
-                            <option value="PIX" ${parc?.forma_pagamento==='PIX'?'selected':''}>PIX</option>
-                            <option value="TED" ${parc?.forma_pagamento==='TED'?'selected':''}>TED</option>
-                            <option value="DOC" ${parc?.forma_pagamento==='DOC'?'selected':''}>DOC</option>
-                            <option value="Boleto" ${parc?.forma_pagamento==='Boleto'?'selected':''}>Boleto</option>
-                            <option value="Cheque" ${parc?.forma_pagamento==='Cheque'?'selected':''}>Cheque</option>
-                            <option value="Dinheiro" ${parc?.forma_pagamento==='Dinheiro'?'selected':''}>Dinheiro</option>
-                            <option value="Cartão" ${parc?.forma_pagamento==='Cartão'?'selected':''}>Cartão</option>
-                        </select>
-                    </td>
-                    <td><input type="text" class="rec-input" id="${uid}_origem" value="${parc?.origem || ''}" placeholder="Ex: Guiche Web" ${confirmada ? 'disabled' : ''}></td>
-                    <td><input type="text" class="rec-input" id="${uid}_inst" value="${parc?.instituicao || ''}" placeholder="Ex: Banco Itaú" ${confirmada ? 'disabled' : ''}></td>
-                    <td style="text-align:center;">
-                        ${confirmada
-                            ? `<span style="color:var(--success);font-weight:700;font-size:12px;"><i class="fas fa-check-circle"></i> Lançado</span>`
-                            : `<button class="btn-confirmar-parc" onclick="Pages.confirmarLancamentoParcela('${evento.id}',${numero},'${descricao}',${valor},'${dataVenc||''}','${uid}')">
-                                <i class="fas fa-check"></i> Confirmar
-                               </button>`
-                        }
-                    </td>
-                </tr>`;
-            }).join('');
-
-            blocos += `
-            <div class="rec-table-wrap">
-                <div class="rec-show-header">
-                    <div class="rsh-cell">
-                        <span class="rsh-label">Show</span>
-                        <span class="rsh-value">${artista?.nome || '—'}</span>
-                    </div>
-                    <div class="rsh-cell">
-                        <span class="rsh-label">Data do Show</span>
-                        <span class="rsh-value">${evento.data ? Utils.formatDate(evento.data) : '—'}</span>
-                    </div>
-                    <div class="rsh-cell">
-                        <span class="rsh-label">Valor do Show</span>
-                        <span class="rsh-value">${Utils.formatCurrency(cacheBruto)}</span>
-                    </div>
-                    <div class="rsh-cell">
-                        <span class="rsh-label">Responsável</span>
-                        <span class="rsh-value">${proposta.contratante_nome || evento.contratante || '—'}</span>
-                    </div>
-                    <div class="rsh-cell">
-                        <span class="rsh-label">Telefone</span>
-                        <span class="rsh-value">${proposta.contratante_telefone || evento.telefone || '—'}</span>
-                    </div>
-                    <div class="rsh-cell">
-                        <span class="rsh-label">Local do Show</span>
-                        <span class="rsh-value">${evento.local || '—'}</span>
-                    </div>
-                </div>
-                <table class="rec-body-table">
-                    <thead>
-                        <tr>
-                            <th>Valor a Receber</th>
-                            <th>Data a Receber</th>
-                            <th>Data do Recebimento</th>
-                            <th>Valor Recebido</th>
-                            <th>Forma de Pagamento</th>
-                            <th>Origem</th>
-                            <th>Instituição</th>
-                            <th>Ação</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${linhas}
-                    </tbody>
-                    <tfoot>
-                        <tr>
-                            <td colspan="3" class="rec-total-label">TOTAL A RECEBER</td>
-                            <td class="rec-total-val" colspan="4">${Utils.formatCurrency(totalAReceber)}</td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td colspan="3" class="rec-total-label">TOTAL RECEBIDO</td>
-                            <td class="rec-total-val rec-total-receb" colspan="4">${Utils.formatCurrency(totalRecebido)}</td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td colspan="3" class="rec-total-label">FALTAM</td>
-                            <td class="rec-total-val rec-total-falta" colspan="4">${Utils.formatCurrency(faltam)}</td>
-                            <td></td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>`;
+            itens.push({ contrato, evento, proposta, cronograma });
         }
 
-        if (!algumItem) {
+        if (!itens.length) {
             el.innerHTML = `<p class="text-muted" style="text-align:center;padding:20px;font-size:13px;">
                 <i class="fas fa-check-circle" style="color:var(--success);margin-right:6px;"></i>
                 Nenhum recebimento pendente de confirmação.
@@ -496,7 +373,166 @@ Pages.carregarRecebimentosAConfirmar = async function() {
             return;
         }
 
-        el.innerHTML = estilos + blocos;
+        // Cidades únicas
+        const cidades = [...new Set(
+            itens.map(it => it.evento.cidade || it.evento.estado || '—').filter(c => c && c !== '—')
+        )].sort();
+
+        // Guardar dados no window para filtro/PDF
+        window._recebimentosData = { itens, artistas, todasParcelas };
+
+        function buildBlocos(filtroCity) {
+            const itensFiltrados = filtroCity
+                ? itens.filter(it => (it.evento.cidade || it.evento.estado || '') === filtroCity)
+                : itens;
+
+            return itensFiltrados.map(({ evento, proposta, cronograma }) => {
+                const artista    = artistas.find(a => a.id === evento.artista_id);
+                const parcelasEv = todasParcelas.filter(p => p.evento_id === evento.id);
+                const cacheBruto = proposta.cache_bruto || 0;
+                const totalAReceber = cronograma.reduce((s, item) => {
+                    const v = item.valor !== undefined ? item.valor : parseFloat((cacheBruto * (item.pct || 100) / 100).toFixed(2));
+                    return s + v;
+                }, 0);
+                const totalRecebido = parcelasEv.filter(p => p.status === 'Pago').reduce((s, p) => s + (parseFloat(p.valor_recebido || p.valor) || 0), 0);
+                const faltam = totalAReceber - totalRecebido;
+                const cidade = evento.cidade || evento.estado || '—';
+
+                const linhas = cronograma.map((item, idx) => {
+                    const numero   = item.numero || (idx + 1);
+                    const valor    = item.valor !== undefined ? item.valor : parseFloat((cacheBruto * (item.pct || 100) / 100).toFixed(2));
+                    let dataVenc   = item.data_vencimento;
+                    if (!dataVenc && item.dias_antes_show !== undefined && evento.data) {
+                        const d = new Date(evento.data + 'T12:00:00');
+                        d.setDate(d.getDate() + (item.dias_antes_show || 0));
+                        dataVenc = d.toISOString().split('T')[0];
+                    }
+                    const descricao = item.descricao || `Parcela ${numero}`;
+                    const parc      = parcelasEv.find(p => p.numero_parcela === numero);
+                    const confirmada = !!parc;
+                    const uid = `rec_${evento.id}_${numero}`;
+
+                    return `
+                    <tr class="${confirmada ? 'parc-confirmada' : ''}">
+                        <td class="locked">${Utils.formatCurrency(valor)}</td>
+                        <td class="locked">${dataVenc ? Utils.formatDate(dataVenc) : '—'}</td>
+                        <td><input type="date" class="rec-input" id="${uid}_dtreceb" value="${parc?.data_recebimento || ''}" ${confirmada ? 'disabled' : ''}></td>
+                        <td><input type="number" step="0.01" class="rec-input" id="${uid}_vlrreceb" value="${confirmada ? (parc?.valor_recebido || valor) : (parc?.valor_recebido || '')}" placeholder="${Utils.formatCurrency(valor)}" ${confirmada ? 'disabled' : ''}></td>
+                        <td>
+                            <select class="rec-input" id="${uid}_forma" ${confirmada ? 'disabled' : ''}>
+                                <option value="">—</option>
+                                <option value="PIX" ${parc?.forma_pagamento==='PIX'?'selected':''}>PIX</option>
+                                <option value="TED" ${parc?.forma_pagamento==='TED'?'selected':''}>TED</option>
+                                <option value="DOC" ${parc?.forma_pagamento==='DOC'?'selected':''}>DOC</option>
+                                <option value="Boleto" ${parc?.forma_pagamento==='Boleto'?'selected':''}>Boleto</option>
+                                <option value="Cheque" ${parc?.forma_pagamento==='Cheque'?'selected':''}>Cheque</option>
+                                <option value="Dinheiro" ${parc?.forma_pagamento==='Dinheiro'?'selected':''}>Dinheiro</option>
+                                <option value="Cartão" ${parc?.forma_pagamento==='Cartão'?'selected':''}>Cartão</option>
+                            </select>
+                        </td>
+                        <td><input type="text" class="rec-input" id="${uid}_origem" value="${parc?.origem || ''}" placeholder="Ex: Guiche Web" ${confirmada ? 'disabled' : ''}></td>
+                        <td><input type="text" class="rec-input" id="${uid}_inst" value="${parc?.instituicao || ''}" placeholder="Ex: Banco Itaú" ${confirmada ? 'disabled' : ''}></td>
+                        <td style="text-align:center;">
+                            ${confirmada
+                                ? `<span style="color:var(--success);font-weight:700;font-size:12px;"><i class="fas fa-check-circle"></i> Lançado</span>`
+                                : `<button class="btn-confirmar-parc" onclick="Pages.confirmarLancamentoParcela('${evento.id}',${numero},'${descricao}',${valor},'${dataVenc||''}','${uid}')">
+                                    <i class="fas fa-check"></i> Confirmar
+                                   </button>`
+                            }
+                        </td>
+                    </tr>`;
+                }).join('');
+
+                return `
+                <div class="rec-table-wrap" data-cidade="${cidade}">
+                    <div class="rec-show-header">
+                        <div class="rsh-cell">
+                            <span class="rsh-label">Show</span>
+                            <span class="rsh-value">${artista?.nome || '—'}</span>
+                        </div>
+                        <div class="rsh-cell">
+                            <span class="rsh-label">Data do Show</span>
+                            <span class="rsh-value">${evento.data ? Utils.formatDate(evento.data) : '—'}</span>
+                        </div>
+                        <div class="rsh-cell">
+                            <span class="rsh-label">Valor do Show</span>
+                            <span class="rsh-value">${Utils.formatCurrency(cacheBruto)}</span>
+                        </div>
+                        <div class="rsh-cell">
+                            <span class="rsh-label">Cidade</span>
+                            <span class="rsh-value">${cidade}</span>
+                        </div>
+                        <div class="rsh-cell">
+                            <span class="rsh-label">Responsável</span>
+                            <span class="rsh-value">${proposta.contratante_nome || evento.contratante || '—'}</span>
+                        </div>
+                        <div class="rsh-cell">
+                            <span class="rsh-label">Local do Show</span>
+                            <span class="rsh-value">${evento.local || '—'}</span>
+                        </div>
+                    </div>
+                    <table class="rec-body-table">
+                        <thead>
+                            <tr>
+                                <th>Valor a Receber</th>
+                                <th>Data a Receber</th>
+                                <th>Data do Recebimento</th>
+                                <th>Valor Recebido</th>
+                                <th>Forma de Pagamento</th>
+                                <th>Origem</th>
+                                <th>Instituição</th>
+                                <th>Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody>${linhas}</tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3" class="rec-total-label">TOTAL A RECEBER</td>
+                                <td class="rec-total-val" colspan="4">${Utils.formatCurrency(totalAReceber)}</td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" class="rec-total-label">TOTAL RECEBIDO</td>
+                                <td class="rec-total-val rec-total-receb" colspan="4">${Utils.formatCurrency(totalRecebido)}</td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" class="rec-total-label">FALTAM</td>
+                                <td class="rec-total-val rec-total-falta" colspan="4">${Utils.formatCurrency(faltam)}</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>`;
+            }).join('');
+        }
+
+        // Barra de controles: filtro de cidade + botão PDF
+        const cidadeChips = `
+        <div class="rec-controls" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:20px;">
+            <div class="rec-city-filter" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-secondary);margin-right:4px;"><i class="fas fa-map-marker-alt"></i> Cidade:</span>
+                <button class="rec-city-chip active" onclick="Pages._filtrarRecebimentos(null, this)" data-city="">Todas</button>
+                ${cidades.map(c => `<button class="rec-city-chip" onclick="Pages._filtrarRecebimentos('${c}', this)" data-city="${c}">${c}</button>`).join('')}
+            </div>
+            <button onclick="Pages._exportarRecebimentosPDF()" style="background:linear-gradient(135deg,#c0392b,#e74c3c);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;">
+                <i class="fas fa-file-pdf"></i> Exportar PDF
+            </button>
+        </div>
+        <style>
+            .rec-city-chip {
+                padding:5px 14px; border-radius:20px; border:1px solid var(--border-color);
+                background:var(--bg-secondary); color:var(--text-secondary);
+                font-size:12px; font-weight:600; cursor:pointer; transition:all .15s;
+            }
+            .rec-city-chip:hover { border-color:#D4AF37; color:#D4AF37; }
+            .rec-city-chip.active { background:#D4AF37; color:#000; border-color:#D4AF37; }
+        </style>`;
+
+        el.innerHTML = estilos + cidadeChips + `<div id="rec-blocos-container">${buildBlocos(null)}</div>`;
+
+        // Guardar buildBlocos para reuso no filtro
+        window._buildRecBlocos = buildBlocos;
 
     } catch(e) {
         console.error('Erro ao carregar recebimentos a confirmar:', e);
@@ -536,6 +572,144 @@ Pages.confirmarLancamentoParcela = async function(eventoId, numero, descricao, v
         Utils.hideLoading();
         Utils.showToast('Erro ao confirmar: ' + e.message, 'error');
     }
+};
+
+Pages._filtrarRecebimentos = function(cidade, btnEl) {
+    // Atualizar chip ativo
+    document.querySelectorAll('.rec-city-chip').forEach(b => b.classList.remove('active'));
+    if (btnEl) btnEl.classList.add('active');
+    // Re-renderizar blocos
+    const container = document.getElementById('rec-blocos-container');
+    if (container && window._buildRecBlocos) {
+        container.innerHTML = window._buildRecBlocos(cidade || null);
+    }
+};
+
+Pages._exportarRecebimentosPDF = function() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+    // Detectar filtro ativo
+    const chipAtivo = document.querySelector('.rec-city-chip.active');
+    const cidadeFiltro = chipAtivo?.dataset?.city || null;
+    const { itens, artistas, todasParcelas } = window._recebimentosData || {};
+    if (!itens) return;
+
+    const itensFiltrados = cidadeFiltro
+        ? itens.filter(it => (it.evento.cidade || it.evento.estado || '') === cidadeFiltro)
+        : itens;
+
+    const dataExport = new Date().toLocaleDateString('pt-BR');
+    const titulo = cidadeFiltro ? `Recebimentos — ${cidadeFiltro}` : 'Recebimentos a Confirmar — Todas as Cidades';
+
+    // Cabeçalho do doc
+    doc.setFillColor(212, 175, 55);
+    doc.rect(0, 0, 297, 18, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.setTextColor(0, 0, 0);
+    doc.text('GIBSON MANAGER', 14, 7);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(titulo, 14, 13);
+    doc.setTextColor(60, 60, 60);
+    doc.setFontSize(9);
+    doc.text(`Gerado em: ${dataExport}`, 250, 13, { align: 'right' });
+
+    let startY = 22;
+
+    for (const { evento, proposta, cronograma } of itensFiltrados) {
+        const artista    = artistas.find(a => a.id === evento.artista_id);
+        const parcelasEv = todasParcelas.filter(p => p.evento_id === evento.id);
+        const cacheBruto = proposta.cache_bruto || 0;
+        const cidade     = evento.cidade || evento.estado || '—';
+        const nomeArtista = artista?.nome || '—';
+        const dataShow   = evento.data ? new Date(evento.data + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
+        const responsavel = proposta.contratante_nome || evento.contratante || '—';
+        const local      = evento.local || '—';
+
+        // Verifica espaço
+        if (startY > 170) { doc.addPage(); startY = 14; }
+
+        // Bloco de cabeçalho do show
+        doc.setFillColor(30, 30, 30);
+        doc.rect(0, startY, 297, 12, 'F');
+        doc.setTextColor(212, 175, 55);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.text(`SHOW: ${nomeArtista}`, 14, startY + 4.5);
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.text(`Data: ${dataShow}`, 75, startY + 4.5);
+        doc.text(`Valor: ${Utils.formatCurrency(cacheBruto)}`, 115, startY + 4.5);
+        doc.text(`Cidade: ${cidade}`, 160, startY + 4.5);
+        doc.text(`Responsável: ${responsavel}`, 200, startY + 4.5);
+        doc.text(`Local: ${local}`, 14, startY + 9.5);
+        startY += 14;
+
+        // Tabela de parcelas
+        const tableRows = cronograma.map((item, idx) => {
+            const numero = item.numero || (idx + 1);
+            const valor  = item.valor !== undefined ? item.valor : parseFloat((cacheBruto * (item.pct || 100) / 100).toFixed(2));
+            let dataVenc = item.data_vencimento;
+            if (!dataVenc && item.dias_antes_show !== undefined && evento.data) {
+                const d = new Date(evento.data + 'T12:00:00');
+                d.setDate(d.getDate() + (item.dias_antes_show || 0));
+                dataVenc = d.toISOString().split('T')[0];
+            }
+            const parc = parcelasEv.find(p => p.numero_parcela === numero);
+            return [
+                Utils.formatCurrency(valor),
+                dataVenc ? new Date(dataVenc + 'T12:00:00').toLocaleDateString('pt-BR') : '—',
+                parc?.data_recebimento ? new Date(parc.data_recebimento + 'T12:00:00').toLocaleDateString('pt-BR') : '—',
+                parc?.valor_recebido ? Utils.formatCurrency(parc.valor_recebido) : '—',
+                parc?.forma_pagamento || '—',
+                parc?.origem || '—',
+                parc?.instituicao || '—',
+                parc ? 'Lançado' : 'Pendente'
+            ];
+        });
+
+        const totalAReceber = cronograma.reduce((s, item) => {
+            return s + (item.valor !== undefined ? item.valor : parseFloat((cacheBruto * (item.pct || 100) / 100).toFixed(2)));
+        }, 0);
+        const totalRecebido = parcelasEv.filter(p => p.status === 'Pago').reduce((s, p) => s + (parseFloat(p.valor_recebido || p.valor) || 0), 0);
+        const faltam = totalAReceber - totalRecebido;
+
+        doc.autoTable({
+            startY,
+            head: [['Valor a Receber','Data a Receber','Data Recebimento','Valor Recebido','Forma Pgto','Origem','Instituição','Status']],
+            body: tableRows,
+            foot: [[
+                { content: 'TOTAL A RECEBER', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } },
+                { content: Utils.formatCurrency(totalAReceber), colSpan: 4, styles: { halign: 'center', textColor: [212,175,55], fontStyle: 'bold' } },
+                ''
+            ],[
+                { content: 'TOTAL RECEBIDO', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } },
+                { content: Utils.formatCurrency(totalRecebido), colSpan: 4, styles: { halign: 'center', textColor: [39,174,96], fontStyle: 'bold' } },
+                ''
+            ],[
+                { content: 'FALTAM', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } },
+                { content: Utils.formatCurrency(faltam), colSpan: 4, styles: { halign: 'center', textColor: faltam > 0 ? [231,76,60] : [39,174,96], fontStyle: 'bold' } },
+                ''
+            ]],
+            theme: 'grid',
+            headStyles: { fillColor: [26,26,46], textColor: [212,175,55], fontStyle: 'bold', fontSize: 7.5 },
+            bodyStyles: { fontSize: 8, textColor: [40,40,40] },
+            footStyles: { fillColor: [240,240,240], fontSize: 8 },
+            alternateRowStyles: { fillColor: [248,248,248] },
+            columnStyles: { 0:{cellWidth:30}, 1:{cellWidth:25}, 2:{cellWidth:28}, 3:{cellWidth:28}, 4:{cellWidth:22}, 5:{cellWidth:30}, 6:{cellWidth:30}, 7:{cellWidth:20} },
+            margin: { left: 14, right: 14 },
+            didDrawPage: (data) => { startY = data.cursor.y + 10; }
+        });
+        startY = doc.lastAutoTable.finalY + 12;
+    }
+
+    const fileName = cidadeFiltro
+        ? `recebimentos-${cidadeFiltro.toLowerCase().replace(/\s+/g,'-')}-${dataExport.replace(/\//g,'-')}.pdf`
+        : `recebimentos-todas-cidades-${dataExport.replace(/\//g,'-')}.pdf`;
+    doc.save(fileName);
 };
 
 Pages.gerarDespesaModeloFinanceiro = async function(modeloId) {
