@@ -247,6 +247,64 @@ Pages.carregarRecebimentosAConfirmar = async function() {
     const el = document.getElementById('recebimentos-confirmar-body');
     if (!el) return;
 
+    const estilos = `
+    <style>
+        .rec-table-wrap { overflow-x:auto; margin-bottom:24px; }
+        .rec-header-table {
+            width:100%; border-collapse:collapse; margin-bottom:0;
+            background: var(--red-primary); border-radius:8px 8px 0 0; overflow:hidden;
+        }
+        .rec-header-table th {
+            padding:8px 10px; font-size:11px; font-weight:700;
+            text-transform:uppercase; letter-spacing:.5px;
+            color:#fff; border:1px solid rgba(255,255,255,.2); text-align:center;
+        }
+        .rec-header-table td {
+            padding:8px 10px; font-size:13px; font-weight:600;
+            color:var(--text-primary); border:1px solid var(--border-color);
+            background:var(--bg-secondary); text-align:center;
+        }
+        .rec-body-table { width:100%; border-collapse:collapse; }
+        .rec-body-table th {
+            padding:7px 8px; font-size:10px; font-weight:700;
+            text-transform:uppercase; letter-spacing:.4px;
+            background:#1a1a2e; color:#D4AF37;
+            border:1px solid var(--border-color); text-align:center; white-space:nowrap;
+        }
+        .rec-body-table td {
+            padding:6px 8px; border:1px solid var(--border-color);
+            background:var(--bg-card); vertical-align:middle;
+        }
+        .rec-body-table td.locked {
+            background:var(--bg-secondary); color:var(--text-primary);
+            font-weight:600; text-align:center; font-size:13px;
+        }
+        .rec-input {
+            width:100%; border:1px solid var(--border-color); border-radius:6px;
+            padding:5px 8px; font-size:12px; background:var(--bg-secondary);
+            color:var(--text-primary); box-sizing:border-box;
+        }
+        .rec-input:focus { border-color:var(--red-primary); outline:none; }
+        .rec-total-row td {
+            background:#1a1a2e !important; font-weight:700;
+            color:#D4AF37; font-size:13px; border:1px solid var(--border-color);
+            padding:8px 10px;
+        }
+        .rec-total-row td.label { color:#fff; text-align:right; padding-right:12px; }
+        .rec-total-row td.value { color:#D4AF37; text-align:center; }
+        .rec-total-row td.faltam { color:var(--danger); }
+        .rec-total-row td.recebido { color:var(--success); }
+        .btn-confirmar-parc {
+            background:var(--red-primary); color:#fff; border:none;
+            border-radius:6px; padding:5px 10px; font-size:11px;
+            font-weight:700; cursor:pointer; white-space:nowrap;
+            transition:opacity .2s;
+        }
+        .btn-confirmar-parc:hover { opacity:.85; }
+        .parc-confirmada td { opacity:.6; }
+        .parc-confirmada td.locked { color:var(--success) !important; }
+    </style>`;
+
     try {
         const [contratos, eventos, artistas, todasParcelas] = await Promise.all([
             ContratosDB.listar(),
@@ -255,9 +313,9 @@ Pages.carregarRecebimentosAConfirmar = async function() {
             ParcelasDB.listar()
         ]);
 
-        // Apenas contratos assinados que possuem proposta vinculada
         const contratosAssinados = contratos.filter(c => c.status === 'Assinado');
-        const itens = [];
+        let blocos = '';
+        let algumItem = false;
 
         for (const contrato of contratosAssinados) {
             const evento = eventos.find(e => e.id === contrato.evento_id);
@@ -274,43 +332,119 @@ Pages.carregarRecebimentosAConfirmar = async function() {
                 cronograma = cond.cronograma || [];
             } catch(e) { continue; }
 
-            const artista = artistas.find(a => a.id === evento.artista_id);
-            const parcelasEvento = todasParcelas.filter(p => p.evento_id === evento.id);
+            if (!cronograma.length) continue;
+            algumItem = true;
+
+            const artista    = artistas.find(a => a.id === evento.artista_id);
+            const parcelasEv = todasParcelas.filter(p => p.evento_id === evento.id);
             const cacheBruto = proposta.cache_bruto || 0;
+            const totalAReceber = cronograma.reduce((s, item, idx) => {
+                const v = item.valor !== undefined ? item.valor : parseFloat((cacheBruto * (item.pct || 100) / 100).toFixed(2));
+                return s + v;
+            }, 0);
+            const totalRecebido = parcelasEv.filter(p => p.status === 'Pago').reduce((s, p) => s + (parseFloat(p.valor_recebido || p.valor) || 0), 0);
+            const faltam = totalAReceber - totalRecebido;
 
-            // Checar cada item do cronograma
-            cronograma.forEach((item, idx) => {
-                const numero = item.numero || (idx + 1);
-                // Já foi lançado se existe parcela com mesmo número
-                const jaLancado = parcelasEvento.some(p => p.numero_parcela === numero);
-                if (jaLancado) return;
-
-                const valor = item.valor !== undefined
-                    ? item.valor
-                    : parseFloat((cacheBruto * (item.pct || 100) / 100).toFixed(2));
-
-                let dataVenc = item.data_vencimento;
+            // Linhas do cronograma
+            const linhas = cronograma.map((item, idx) => {
+                const numero   = item.numero || (idx + 1);
+                const valor    = item.valor !== undefined ? item.valor : parseFloat((cacheBruto * (item.pct || 100) / 100).toFixed(2));
+                let dataVenc   = item.data_vencimento;
                 if (!dataVenc && item.dias_antes_show !== undefined && evento.data) {
                     const d = new Date(evento.data + 'T12:00:00');
                     d.setDate(d.getDate() + (item.dias_antes_show || 0));
                     dataVenc = d.toISOString().split('T')[0];
                 }
+                const descricao = item.descricao || `Parcela ${numero}`;
+                const parc      = parcelasEv.find(p => p.numero_parcela === numero);
+                const confirmada = !!parc;
+                const uid = `rec_${evento.id}_${numero}`;
 
-                itens.push({
-                    eventoId: evento.id,
-                    artistaNome: artista?.nome || '—',
-                    eventoLocal: evento.local || '—',
-                    eventoData: evento.data,
-                    descricao: item.descricao || `Parcela ${numero}`,
-                    valor,
-                    dataVenc,
-                    numero,
-                    tipo: item.tipo || 'parcela'
-                });
-            });
+                return `
+                <tr class="${confirmada ? 'parc-confirmada' : ''}">
+                    <td class="locked">${Utils.formatCurrency(valor)}</td>
+                    <td class="locked">${dataVenc ? Utils.formatDate(dataVenc) : '—'}</td>
+                    <td><input type="date" class="rec-input" id="${uid}_dtreceb" value="${parc?.data_recebimento || ''}" ${confirmada ? 'disabled' : ''}></td>
+                    <td><input type="number" step="0.01" class="rec-input" id="${uid}_vlrreceb" value="${parc?.valor_recebido || valor}" ${confirmada ? 'disabled' : ''}></td>
+                    <td>
+                        <select class="rec-input" id="${uid}_forma" ${confirmada ? 'disabled' : ''}>
+                            <option value="">—</option>
+                            <option value="PIX" ${parc?.forma_pagamento==='PIX'?'selected':''}>PIX</option>
+                            <option value="TED" ${parc?.forma_pagamento==='TED'?'selected':''}>TED</option>
+                            <option value="DOC" ${parc?.forma_pagamento==='DOC'?'selected':''}>DOC</option>
+                            <option value="Boleto" ${parc?.forma_pagamento==='Boleto'?'selected':''}>Boleto</option>
+                            <option value="Cheque" ${parc?.forma_pagamento==='Cheque'?'selected':''}>Cheque</option>
+                            <option value="Dinheiro" ${parc?.forma_pagamento==='Dinheiro'?'selected':''}>Dinheiro</option>
+                            <option value="Cartão" ${parc?.forma_pagamento==='Cartão'?'selected':''}>Cartão</option>
+                        </select>
+                    </td>
+                    <td><input type="text" class="rec-input" id="${uid}_origem" value="${parc?.origem || ''}" placeholder="Ex: Guiche Web" ${confirmada ? 'disabled' : ''}></td>
+                    <td><input type="text" class="rec-input" id="${uid}_inst" value="${parc?.instituicao || ''}" placeholder="Ex: Banco Itaú" ${confirmada ? 'disabled' : ''}></td>
+                    <td style="text-align:center;">
+                        ${confirmada
+                            ? `<span style="color:var(--success);font-weight:700;font-size:12px;"><i class="fas fa-check-circle"></i> Lançado</span>`
+                            : `<button class="btn-confirmar-parc" onclick="Pages.confirmarLancamentoParcela('${evento.id}',${numero},'${descricao}',${valor},'${dataVenc||''}','${uid}')">
+                                <i class="fas fa-check"></i> Confirmar
+                               </button>`
+                        }
+                    </td>
+                </tr>`;
+            }).join('');
+
+            blocos += `
+            <div class="rec-table-wrap">
+                <table class="rec-header-table">
+                    <tr>
+                        <th>Show</th><th>Data do Show</th><th>Valor do Show</th>
+                        <th>Responsável</th><th>Telefone</th><th>Local do Show</th>
+                    </tr>
+                    <tr>
+                        <td><strong>${artista?.nome || '—'}</strong></td>
+                        <td>${evento.data ? Utils.formatDate(evento.data) : '—'}</td>
+                        <td style="color:#D4AF37;">${Utils.formatCurrency(cacheBruto)}</td>
+                        <td>${proposta.contratante_nome || evento.contratante || '—'}</td>
+                        <td>${proposta.contratante_telefone || evento.telefone || '—'}</td>
+                        <td>${evento.local || '—'}</td>
+                    </tr>
+                </table>
+                <table class="rec-body-table">
+                    <thead>
+                        <tr>
+                            <th>Valor a Receber</th>
+                            <th>Data a Receber</th>
+                            <th>Data do Recebimento</th>
+                            <th>Valor Recebido</th>
+                            <th>Forma de Pagamento</th>
+                            <th>Origem</th>
+                            <th>Instituição</th>
+                            <th>Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${linhas}
+                    </tbody>
+                    <tfoot>
+                        <tr class="rec-total-row">
+                            <td colspan="3" class="label">TOTAL A RECEBER</td>
+                            <td class="value" colspan="4">${Utils.formatCurrency(totalAReceber)}</td>
+                            <td></td>
+                        </tr>
+                        <tr class="rec-total-row">
+                            <td colspan="3" class="label">TOTAL RECEBIDO</td>
+                            <td class="value recebido" colspan="4">${Utils.formatCurrency(totalRecebido)}</td>
+                            <td></td>
+                        </tr>
+                        <tr class="rec-total-row">
+                            <td colspan="3" class="label">FALTAM</td>
+                            <td class="value faltam" colspan="4">${Utils.formatCurrency(faltam)}</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>`;
         }
 
-        if (itens.length === 0) {
+        if (!algumItem) {
             el.innerHTML = `<p class="text-muted" style="text-align:center;padding:20px;font-size:13px;">
                 <i class="fas fa-check-circle" style="color:var(--success);margin-right:6px;"></i>
                 Nenhum recebimento pendente de confirmação.
@@ -318,77 +452,45 @@ Pages.carregarRecebimentosAConfirmar = async function() {
             return;
         }
 
-        // Ordenar por data de vencimento
-        itens.sort((a, b) => (a.dataVenc || '9999') < (b.dataVenc || '9999') ? -1 : 1);
+        el.innerHTML = estilos + blocos;
 
-        el.innerHTML = `
-            <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;background:rgba(212,175,55,0.08);border:1px solid rgba(212,175,55,0.25);border-radius:8px;padding:8px 12px;">
-                <i class="fas fa-info-circle" style="color:#D4AF37;"></i>
-                Estes valores vêm do cronograma da proposta. Clique em <strong>Confirmar Lançamento</strong> para registrar cada recebimento no financeiro.
-            </p>
-            <div style="display:flex;flex-direction:column;gap:8px;">
-                ${itens.map((it, i) => {
-                    const hoje = new Date();
-                    const venc = it.dataVenc ? new Date(it.dataVenc + 'T12:00:00') : null;
-                    const diff = venc ? Math.ceil((venc - hoje) / 86400000) : null;
-                    const badge = diff === null ? '' : diff < 0
-                        ? `<span style="font-size:11px;color:var(--danger);font-weight:600;">⚠️ Atrasado ${Math.abs(diff)}d</span>`
-                        : diff <= 7
-                        ? `<span style="font-size:11px;color:#F59E0B;font-weight:600;">🟡 Vence em ${diff}d</span>`
-                        : `<span style="font-size:11px;color:var(--text-muted);">Vence ${it.dataVenc ? Utils.formatDate(it.dataVenc) : '—'}</span>`;
-
-                    const dataJson = encodeURIComponent(JSON.stringify(it));
-                    return `
-                    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;
-                                padding:12px 14px;background:var(--bg-secondary);border-radius:8px;
-                                border:1px solid var(--border-color);">
-                        <div style="flex:1;min-width:0;">
-                            <div style="font-size:13px;font-weight:600;color:var(--text-primary);">
-                                ${it.artistaNome} — ${it.descricao}
-                            </div>
-                            <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">
-                                📍 ${it.eventoLocal} &nbsp;|&nbsp;
-                                🗓 ${it.eventoData ? Utils.formatDate(it.eventoData) : '—'} &nbsp;|&nbsp;
-                                ${badge}
-                            </div>
-                        </div>
-                        <div style="text-align:right;white-space:nowrap;">
-                            <div style="font-size:15px;font-weight:700;color:var(--success);">${Utils.formatCurrency(it.valor)}</div>
-                            <button class="btn-primary btn-sm" style="margin-top:6px;font-size:11px;"
-                                    onclick="Pages.confirmarLancamentoParcela('${it.eventoId}',${it.numero},'${it.descricao}',${it.valor},'${it.dataVenc || ''}')">
-                                <i class="fas fa-check"></i> Confirmar Lançamento
-                            </button>
-                        </div>
-                    </div>`;
-                }).join('')}
-            </div>`;
     } catch(e) {
         console.error('Erro ao carregar recebimentos a confirmar:', e);
         if (el) el.innerHTML = '<p class="text-muted" style="padding:16px;">Erro ao carregar recebimentos.</p>';
     }
 };
 
-Pages.confirmarLancamentoParcela = async function(eventoId, numero, descricao, valor, dataVenc) {
-    const ok = await Utils.confirm(`Confirmar lançamento no Financeiro?\n\n${descricao}: ${Utils.formatCurrency(valor)}\nVencimento: ${dataVenc ? Utils.formatDate(dataVenc) : '—'}`);
+Pages.confirmarLancamentoParcela = async function(eventoId, numero, descricao, valor, dataVenc, uid) {
+    const dtReceb  = document.getElementById(`${uid}_dtreceb`)?.value  || null;
+    const vlrReceb = parseFloat(document.getElementById(`${uid}_vlrreceb`)?.value) || parseFloat(valor);
+    const forma    = document.getElementById(`${uid}_forma`)?.value    || null;
+    const origem   = document.getElementById(`${uid}_origem`)?.value   || null;
+    const inst     = document.getElementById(`${uid}_inst`)?.value     || null;
+
+    const ok = await Utils.confirm(`Confirmar recebimento de ${Utils.formatCurrency(vlrReceb)} para "${descricao}"?`);
     if (!ok) return;
 
     Utils.showLoading();
     try {
         await ParcelasDB.criar({
-            evento_id:       eventoId,
-            numero_parcela:  numero,
-            valor:           parseFloat(valor),
-            data_vencimento: dataVenc || null,
-            status:          'Pendente',
-            descricao:       descricao,
+            evento_id:        eventoId,
+            numero_parcela:   numero,
+            valor:            parseFloat(valor),
+            valor_recebido:   vlrReceb,
+            data_vencimento:  dataVenc || null,
+            data_recebimento: dtReceb  || null,
+            forma_pagamento:  forma,
+            origem:           origem,
+            instituicao:      inst,
+            status:           'Pago',
+            descricao:        descricao,
         });
         Utils.hideLoading();
-        Utils.showToast(`✅ "${descricao}" lançada no Financeiro!`, 'success');
-        // Recarregar só a seção, sem recarregar a página toda
+        Utils.showToast(`✅ "${descricao}" confirmada no Financeiro!`, 'success');
         Pages.carregarRecebimentosAConfirmar();
     } catch(e) {
         Utils.hideLoading();
-        Utils.showToast('Erro ao confirmar lançamento: ' + e.message, 'error');
+        Utils.showToast('Erro ao confirmar: ' + e.message, 'error');
     }
 };
 
