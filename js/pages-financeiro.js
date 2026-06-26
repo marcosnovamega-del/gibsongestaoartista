@@ -249,60 +249,92 @@ Pages.carregarRecebimentosAConfirmar = async function() {
 
     const estilos = `
     <style>
-        .rec-table-wrap { overflow-x:auto; margin-bottom:24px; }
-        .rec-header-table {
-            width:100%; border-collapse:collapse; margin-bottom:0;
-            background: var(--red-primary); border-radius:8px 8px 0 0; overflow:hidden;
+        .rec-table-wrap {
+            overflow-x:auto; margin-bottom:28px;
+            border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,.15);
+            border:1px solid var(--border-color);
         }
-        .rec-header-table th {
-            padding:8px 10px; font-size:11px; font-weight:700;
-            text-transform:uppercase; letter-spacing:.5px;
-            color:#fff; border:1px solid rgba(255,255,255,.2); text-align:center;
+        /* Cabeçalho do show */
+        .rec-show-header {
+            display:grid;
+            grid-template-columns: 2fr 1.2fr 1.5fr 1.5fr 1.5fr 2fr;
+            background: linear-gradient(135deg, #D4AF37 0%, #b8962e 100%);
+            border-radius:11px 11px 0 0;
         }
-        .rec-header-table td {
-            padding:8px 10px; font-size:13px; font-weight:600;
-            color:var(--text-primary); border:1px solid var(--border-color);
-            background:var(--bg-secondary); text-align:center;
+        .rec-show-header .rsh-cell {
+            padding:0; text-align:center;
+            border-right:1px solid rgba(255,255,255,.2);
         }
+        .rec-show-header .rsh-cell:last-child { border-right:none; }
+        .rec-show-header .rsh-label {
+            display:block; font-size:10px; font-weight:700;
+            text-transform:uppercase; letter-spacing:.6px;
+            color:rgba(0,0,0,.55); padding:6px 10px 2px;
+        }
+        .rec-show-header .rsh-value {
+            display:block; font-size:14px; font-weight:800;
+            color:#000; padding:0 10px 8px;
+        }
+        /* Tabela de parcelas */
         .rec-body-table { width:100%; border-collapse:collapse; }
-        .rec-body-table th {
-            padding:7px 8px; font-size:10px; font-weight:700;
-            text-transform:uppercase; letter-spacing:.4px;
-            background:#1a1a2e; color:#D4AF37;
-            border:1px solid var(--border-color); text-align:center; white-space:nowrap;
+        .rec-body-table thead tr {
+            background:var(--bg-secondary);
+            border-top:1px solid var(--border-color);
         }
+        .rec-body-table th {
+            padding:9px 10px; font-size:10px; font-weight:700;
+            text-transform:uppercase; letter-spacing:.5px;
+            color:var(--text-secondary);
+            border-bottom:2px solid var(--border-color);
+            border-right:1px solid var(--border-color);
+            text-align:center; white-space:nowrap;
+        }
+        .rec-body-table th:last-child { border-right:none; }
         .rec-body-table td {
-            padding:6px 8px; border:1px solid var(--border-color);
+            padding:8px 10px; border-bottom:1px solid var(--border-color);
+            border-right:1px solid var(--border-color);
             background:var(--bg-card); vertical-align:middle;
         }
+        .rec-body-table td:last-child { border-right:none; }
+        .rec-body-table tbody tr:hover td { background:var(--bg-secondary); }
         .rec-body-table td.locked {
             background:var(--bg-secondary); color:var(--text-primary);
-            font-weight:600; text-align:center; font-size:13px;
+            font-weight:700; text-align:center; font-size:13px;
         }
+        .rec-body-table td.locked-green { color:var(--success) !important; }
         .rec-input {
             width:100%; border:1px solid var(--border-color); border-radius:6px;
-            padding:5px 8px; font-size:12px; background:var(--bg-secondary);
-            color:var(--text-primary); box-sizing:border-box;
+            padding:6px 9px; font-size:12px; background:var(--bg-primary);
+            color:var(--text-primary); box-sizing:border-box; transition:border .15s;
         }
-        .rec-input:focus { border-color:var(--red-primary); outline:none; }
-        .rec-total-row td {
-            background:#1a1a2e !important; font-weight:700;
-            color:#D4AF37; font-size:13px; border:1px solid var(--border-color);
-            padding:8px 10px;
+        .rec-input:focus { border-color:#D4AF37; outline:none; box-shadow:0 0 0 2px rgba(212,175,55,.15); }
+        /* Rodapé totais */
+        .rec-body-table tfoot tr { background:var(--bg-secondary); }
+        .rec-body-table tfoot td {
+            padding:9px 12px; font-weight:700; font-size:13px;
+            border-top:2px solid var(--border-color);
+            border-bottom:1px solid var(--border-color);
+            border-right:1px solid var(--border-color);
         }
-        .rec-total-row td.label { color:#fff; text-align:right; padding-right:12px; }
-        .rec-total-row td.value { color:#D4AF37; text-align:center; }
-        .rec-total-row td.faltam { color:var(--danger); }
-        .rec-total-row td.recebido { color:var(--success); }
+        .rec-body-table tfoot td:last-child { border-right:none; }
+        .rec-total-label { text-align:right; color:var(--text-secondary); font-size:11px; text-transform:uppercase; letter-spacing:.5px; }
+        .rec-total-val   { text-align:center; color:#D4AF37; font-size:14px; }
+        .rec-total-receb { color:var(--success) !important; }
+        .rec-total-falta { color:var(--danger)  !important; }
+        /* Botão confirmar */
         .btn-confirmar-parc {
-            background:var(--red-primary); color:#fff; border:none;
-            border-radius:6px; padding:5px 10px; font-size:11px;
-            font-weight:700; cursor:pointer; white-space:nowrap;
-            transition:opacity .2s;
+            background: linear-gradient(135deg, #D4AF37, #b8962e);
+            color:#000; border:none; border-radius:7px;
+            padding:6px 12px; font-size:11px; font-weight:800;
+            cursor:pointer; white-space:nowrap; transition:all .2s;
+            display:inline-flex; align-items:center; gap:5px;
         }
-        .btn-confirmar-parc:hover { opacity:.85; }
-        .parc-confirmada td { opacity:.6; }
-        .parc-confirmada td.locked { color:var(--success) !important; }
+        .btn-confirmar-parc:hover { transform:scale(1.04); box-shadow:0 3px 10px rgba(212,175,55,.4); }
+        .parc-confirmada td { opacity:.65; }
+        .tag-lançado {
+            display:inline-flex; align-items:center; gap:4px;
+            color:var(--success); font-size:12px; font-weight:700;
+        }
     </style>`;
 
     try {
@@ -365,7 +397,7 @@ Pages.carregarRecebimentosAConfirmar = async function() {
                     <td class="locked">${Utils.formatCurrency(valor)}</td>
                     <td class="locked">${dataVenc ? Utils.formatDate(dataVenc) : '—'}</td>
                     <td><input type="date" class="rec-input" id="${uid}_dtreceb" value="${parc?.data_recebimento || ''}" ${confirmada ? 'disabled' : ''}></td>
-                    <td><input type="number" step="0.01" class="rec-input" id="${uid}_vlrreceb" value="${parc?.valor_recebido || valor}" ${confirmada ? 'disabled' : ''}></td>
+                    <td><input type="number" step="0.01" class="rec-input" id="${uid}_vlrreceb" value="${confirmada ? (parc?.valor_recebido || valor) : (parc?.valor_recebido || '')}" placeholder="${Utils.formatCurrency(valor)}" ${confirmada ? 'disabled' : ''}></td>
                     <td>
                         <select class="rec-input" id="${uid}_forma" ${confirmada ? 'disabled' : ''}>
                             <option value="">—</option>
@@ -393,20 +425,32 @@ Pages.carregarRecebimentosAConfirmar = async function() {
 
             blocos += `
             <div class="rec-table-wrap">
-                <table class="rec-header-table">
-                    <tr>
-                        <th>Show</th><th>Data do Show</th><th>Valor do Show</th>
-                        <th>Responsável</th><th>Telefone</th><th>Local do Show</th>
-                    </tr>
-                    <tr>
-                        <td><strong>${artista?.nome || '—'}</strong></td>
-                        <td>${evento.data ? Utils.formatDate(evento.data) : '—'}</td>
-                        <td style="color:#D4AF37;">${Utils.formatCurrency(cacheBruto)}</td>
-                        <td>${proposta.contratante_nome || evento.contratante || '—'}</td>
-                        <td>${proposta.contratante_telefone || evento.telefone || '—'}</td>
-                        <td>${evento.local || '—'}</td>
-                    </tr>
-                </table>
+                <div class="rec-show-header">
+                    <div class="rsh-cell">
+                        <span class="rsh-label">Show</span>
+                        <span class="rsh-value">${artista?.nome || '—'}</span>
+                    </div>
+                    <div class="rsh-cell">
+                        <span class="rsh-label">Data do Show</span>
+                        <span class="rsh-value">${evento.data ? Utils.formatDate(evento.data) : '—'}</span>
+                    </div>
+                    <div class="rsh-cell">
+                        <span class="rsh-label">Valor do Show</span>
+                        <span class="rsh-value">${Utils.formatCurrency(cacheBruto)}</span>
+                    </div>
+                    <div class="rsh-cell">
+                        <span class="rsh-label">Responsável</span>
+                        <span class="rsh-value">${proposta.contratante_nome || evento.contratante || '—'}</span>
+                    </div>
+                    <div class="rsh-cell">
+                        <span class="rsh-label">Telefone</span>
+                        <span class="rsh-value">${proposta.contratante_telefone || evento.telefone || '—'}</span>
+                    </div>
+                    <div class="rsh-cell">
+                        <span class="rsh-label">Local do Show</span>
+                        <span class="rsh-value">${evento.local || '—'}</span>
+                    </div>
+                </div>
                 <table class="rec-body-table">
                     <thead>
                         <tr>
@@ -424,19 +468,19 @@ Pages.carregarRecebimentosAConfirmar = async function() {
                         ${linhas}
                     </tbody>
                     <tfoot>
-                        <tr class="rec-total-row">
-                            <td colspan="3" class="label">TOTAL A RECEBER</td>
-                            <td class="value" colspan="4">${Utils.formatCurrency(totalAReceber)}</td>
+                        <tr>
+                            <td colspan="3" class="rec-total-label">TOTAL A RECEBER</td>
+                            <td class="rec-total-val" colspan="4">${Utils.formatCurrency(totalAReceber)}</td>
                             <td></td>
                         </tr>
-                        <tr class="rec-total-row">
-                            <td colspan="3" class="label">TOTAL RECEBIDO</td>
-                            <td class="value recebido" colspan="4">${Utils.formatCurrency(totalRecebido)}</td>
+                        <tr>
+                            <td colspan="3" class="rec-total-label">TOTAL RECEBIDO</td>
+                            <td class="rec-total-val rec-total-receb" colspan="4">${Utils.formatCurrency(totalRecebido)}</td>
                             <td></td>
                         </tr>
-                        <tr class="rec-total-row">
-                            <td colspan="3" class="label">FALTAM</td>
-                            <td class="value faltam" colspan="4">${Utils.formatCurrency(faltam)}</td>
+                        <tr>
+                            <td colspan="3" class="rec-total-label">FALTAM</td>
+                            <td class="rec-total-val rec-total-falta" colspan="4">${Utils.formatCurrency(faltam)}</td>
                             <td></td>
                         </tr>
                     </tfoot>
