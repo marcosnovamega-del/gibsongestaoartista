@@ -786,19 +786,19 @@ Pages._exportarRecebimentosPDF = function() {
     const COR_HDRFG  = [30,  30,  46];
 
     const addPageHeader = () => {
-        // Faixa dourada do cabeçalho
-        doc.setFillColor(...COR_OURO);
+        // Faixa vermelha do cabeçalho principal
+        doc.setFillColor(...COR_VERM);
         doc.rect(0, 0, 297, 20, 'F');
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(15);
-        doc.setTextColor(...COR_PRETO);
-        doc.text('GIBSON MANAGER', 14, 9);
+        doc.setTextColor(...COR_BRANCO);
+        doc.text('GIBSON MANAGER', 8, 9);
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        doc.text(titulo, 14, 16);
+        doc.text(titulo, 8, 16);
         doc.setFontSize(9);
-        doc.setTextColor(60, 60, 60);
-        doc.text(`Gerado em: ${dataExport}`, 283, 16, { align: 'right' });
+        doc.setTextColor(255, 220, 220);
+        doc.text(`Gerado em: ${dataExport}`, 289, 16, { align: 'right' });
     };
 
     addPageHeader();
@@ -823,26 +823,30 @@ Pages._exportarRecebimentosPDF = function() {
             startY = 25;
         }
 
-        // ── Faixa vermelha do show ──────────────────────────────────
-        doc.setFillColor(...COR_VERM);
+        // ── Faixa branca do show ──────────────────────────────────
+        doc.setFillColor(255, 255, 255);
         doc.rect(0, startY, 297, 16, 'F');
+        // Borda vermelha lateral esquerda
+        doc.setFillColor(...COR_VERM);
+        doc.rect(0, startY, 4, 16, 'F');
 
         // Linha 1: SHOW nome + data + valor
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(10);
-        doc.setTextColor(...COR_BRANCO);
+        doc.setTextColor(...COR_VERM);
         doc.text(`SHOW: ${nomeArtista}`, 14, startY + 6);
 
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
-        doc.text(`Data: ${dataShow}`, 90, startY + 6);
-        doc.text(`Cachê: ${Utils.formatCurrency(cacheBruto)}`, 135, startY + 6);
-        doc.text(`Cidade: ${cidade}`, 185, startY + 6);
-        doc.text(`Resp.: ${responsavel}`, 230, startY + 6);
+        doc.setTextColor(...COR_PRETO);
+        doc.text(`Data: ${dataShow}`, 88, startY + 6);
+        doc.text(`Cachê: ${Utils.formatCurrency(cacheBruto)}`, 130, startY + 6);
+        doc.text(`Cidade: ${cidade}`, 178, startY + 6);
+        doc.text(`Resp.: ${responsavel}`, 222, startY + 6);
 
         // Linha 2: local
         doc.setFontSize(8.5);
-        doc.setTextColor(255, 230, 230);
+        doc.setTextColor(80, 80, 80);
         doc.text(`Local: ${local}`, 14, startY + 13);
 
         startY += 18;
@@ -884,7 +888,7 @@ Pages._exportarRecebimentosPDF = function() {
             foot: [
                 [
                     { content: 'TOTAL A RECEBER', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold', textColor: [60,60,60] } },
-                    { content: Utils.formatCurrency(totalAReceber), colSpan: 4, styles: { halign: 'center', textColor: COR_OURO, fontStyle: 'bold', fontSize: 9 } },
+                    { content: Utils.formatCurrency(totalAReceber), colSpan: 4, styles: { halign: 'center', textColor: COR_VERM, fontStyle: 'bold', fontSize: 9 } },
                     { content: '' }
                 ],
                 [
@@ -901,7 +905,7 @@ Pages._exportarRecebimentosPDF = function() {
             theme: 'grid',
             headStyles: {
                 fillColor: COR_HDRFG,
-                textColor: COR_OURO,
+                textColor: COR_BRANCO,
                 fontStyle: 'bold',
                 fontSize: 8.5,
                 cellPadding: 3,
@@ -920,17 +924,20 @@ Pages._exportarRecebimentosPDF = function() {
             },
             alternateRowStyles: { fillColor: COR_CINZA1 },
             rowStyles: { fillColor: COR_CINZA2 },
+            // Total colunas: 33+26+29+29+23+38+38+23 = 239mm
+            // Margem left 8 + right 8 = 281mm disponíveis → autoTable distribui o restante
             columnStyles: {
-                0: { cellWidth: 32, halign: 'right'  },
-                1: { cellWidth: 27, halign: 'center' },
-                2: { cellWidth: 30, halign: 'center' },
-                3: { cellWidth: 30, halign: 'right'  },
-                4: { cellWidth: 24, halign: 'center' },
-                5: { cellWidth: 36, halign: 'left'   },
-                6: { cellWidth: 36, halign: 'left'   },
-                7: { cellWidth: 24, halign: 'center' }
+                0: { cellWidth: 33, halign: 'right'  },  // Valor a Receber
+                1: { cellWidth: 26, halign: 'center' },  // Data a Receber
+                2: { cellWidth: 29, halign: 'center' },  // Data Recebimento
+                3: { cellWidth: 29, halign: 'right'  },  // Valor Recebido
+                4: { cellWidth: 23, halign: 'center' },  // Forma Pgto
+                5: { cellWidth: 'auto', halign: 'left'   },  // Origem  (expansível)
+                6: { cellWidth: 'auto', halign: 'left'   },  // Instituição (expansível)
+                7: { cellWidth: 23, halign: 'center' }   // Status
             },
-            margin: { left: 14, right: 14 },
+            tableWidth: 'auto',
+            margin: { left: 8, right: 8 },
             didParseCell: (data) => {
                 // Colorir status na tabela
                 if (data.section === 'body' && data.column.index === 7) {
@@ -951,12 +958,12 @@ Pages._exportarRecebimentosPDF = function() {
         doc.setPage(i);
         doc.setDrawColor(212, 175, 55);
         doc.setLineWidth(0.5);
-        doc.line(14, 203, 283, 203);
+        doc.line(8, 203, 289, 203);
         doc.setFontSize(8);
         doc.setTextColor(120, 120, 120);
         doc.setFont('helvetica', 'normal');
-        doc.text('Gibson Manager — Gestão Artística Profissional', 14, 207);
-        doc.text(`Página ${i} de ${totalPages}`, 283, 207, { align: 'right' });
+        doc.text('Gibson Manager — Gestão Artística Profissional', 8, 207);
+        doc.text(`Página ${i} de ${totalPages}`, 289, 207, { align: 'right' });
     }
 
     const fileName = cidadeFiltro
