@@ -131,6 +131,9 @@ const Pages = {
                 case 'equipe':
                     await this.renderEquipe();
                     break;
+                case 'cobrancas':
+                    if (typeof this.renderCobrancas === 'function') await this.renderCobrancas();
+                    break;
                 case 'alertas':
                     await this.renderAlertas();
                     break;

@@ -140,6 +140,7 @@ function renderDynamicMenu() {
         'Central de Turnê': '<a href="#" class="nav-item" data-page="turnes"><i class="fas fa-route"></i><span>Central de Turnê</span></a>',
         'Relatórios':    '<a href="#" class="nav-item" data-page="relatorios"><i class="fas fa-file-invoice-dollar"></i><span>Relatórios</span></a>',
         'Financeiro':    '<a href="#" class="nav-item" data-page="financeiro"><i class="fas fa-money-bill-wave"></i><span>Financeiro</span></a>',
+        'Cobrancas':     '<a href="#" class="nav-item" data-page="cobrancas"><i class="fas fa-hand-holding-usd"></i><span>Cobranças</span><span class="badge" id="cobrancasBadge" style="display:none;">0</span></a>',
         'Prestacao de Contas': '<a href="#" class="nav-item" data-page="prestacao"><i class="fas fa-receipt"></i><span>Prestação de Contas</span></a>',
         'Veiculos':      '<a href="#" class="nav-item" data-page="veiculos"><i class="fas fa-bus"></i><span>Gestão de Veículos</span></a>',
         'Comissao':      '<a href="#" class="nav-item" data-page="comissao"><i class="fas fa-hand-holding-usd"></i><span>Minhas Comissões</span></a>',
@@ -249,6 +250,7 @@ function mapPageToModule(page) {
         'turnes':       'Central de Turnê',
         'relatorios':   'Relatórios Consolidados',
         'financeiro':   'Financeiro',
+        'cobrancas':    'Cobrancas',
         'prestacao':    'Prestacao de Contas',
         'veiculos':     'Veiculos',
         'comissao':     'Comissao',
@@ -300,6 +302,12 @@ async function updateAlertBadges() {
         if (notificationBadge) {
             notificationBadge.textContent = totalAlertas;
             notificationBadge.style.display = totalAlertas > 0 ? 'inline-block' : 'none';
+        }
+        // Badge de cobranças: mostra só parcelas atrasadas
+        const cobrancasBadge = document.getElementById('cobrancasBadge');
+        if (cobrancasBadge) {
+            cobrancasBadge.textContent = parcelasAtrasadas;
+            cobrancasBadge.style.display = parcelasAtrasadas > 0 ? 'inline-block' : 'none';
         }
     } catch (error) {
         console.error('Erro ao atualizar alertas:', error);

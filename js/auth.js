@@ -187,9 +187,9 @@ const Auth = {
 
         const permissions = {
             'Admin Master':      ['all'],
-            'Manager':           ['Dashboard', 'Artistas', 'Eventos', 'Vendas', 'Propostas', 'Central de Turnê', 'Equipe', 'Contratos', 'Prestacao de Contas', 'Alertas'],
+            'Manager':           ['Dashboard', 'Artistas', 'Eventos', 'Vendas', 'Propostas', 'Central de Turnê', 'Equipe', 'Contratos', 'Cobrancas', 'Prestacao de Contas', 'Alertas'],
             'Produtor':          ['Dashboard', 'Eventos', 'Central de Turnê', 'Alertas'],
-            'Financeiro':        ['Dashboard', 'Financeiro', 'Prestacao de Contas', 'Eventos', 'Contratos', 'Alertas'],
+            'Financeiro':        ['Dashboard', 'Financeiro', 'Cobrancas', 'Prestacao de Contas', 'Eventos', 'Contratos', 'Alertas'],
             'Produção/Técnico':  ['Dashboard', 'Eventos', 'Central de Turnê', 'Equipe', 'Alertas'],
             'Vendedor':          ['Dashboard', 'Eventos', 'Propostas', 'Vendas', 'Alertas', 'Comissao']
         };
@@ -325,7 +325,7 @@ const Auth = {
         if (!this.currentUser) return [];
 
         if (this.isAdmin()) {
-            return ['Dashboard', 'Artistas', 'Eventos', 'Contratos', 'Vendas', 'Propostas', 'Central de Turnê', 'Financeiro', 'Prestacao de Contas', 'Veiculos', 'Equipe', 'Alertas', 'Usuarios', 'Configuracoes'];
+            return ['Dashboard', 'Artistas', 'Eventos', 'Contratos', 'Vendas', 'Propostas', 'Central de Turnê', 'Financeiro', 'Cobrancas', 'Prestacao de Contas', 'Veiculos', 'Equipe', 'Alertas', 'Usuarios', 'Configuracoes'];
         }
 
         const permissions = Array.isArray(this.currentUser.permissoes)
@@ -335,8 +335,8 @@ const Auth = {
         if (permissions.length === 0) {
             // Usar lógica antiga
             const defaultPermissions = {
-                'Manager':           ['Dashboard', 'Artistas', 'Eventos', 'Vendas', 'Propostas', 'Central de Turnê', 'Equipe', 'Contratos', 'Prestacao de Contas', 'Alertas'],
-                'Financeiro':        ['Dashboard', 'Financeiro', 'Prestacao de Contas', 'Eventos', 'Contratos', 'Alertas'],
+                'Manager':           ['Dashboard', 'Artistas', 'Eventos', 'Vendas', 'Propostas', 'Central de Turnê', 'Equipe', 'Contratos', 'Cobrancas', 'Prestacao de Contas', 'Alertas'],
+                'Financeiro':        ['Dashboard', 'Financeiro', 'Cobrancas', 'Prestacao de Contas', 'Eventos', 'Contratos', 'Alertas'],
                 'Produção/Técnico':  ['Dashboard', 'Eventos', 'Central de Turnê', 'Equipe', 'Alertas'],
                 'Artista':           ['Dashboard', 'Eventos', 'Contratos', 'Central de Turnê', 'Alertas'],
                 'Vendedor':          ['Dashboard', 'Eventos', 'Propostas', 'Vendas', 'Alertas', 'Comissao']
