@@ -626,7 +626,12 @@ Modals.showGerarPropostaPDF = async function(propostaId) {
 
     // Cronograma de pagamento
     let cronograma = [];
-    try { cronograma = JSON.parse(p.condicoes_pagamento || '[]'); } catch(e) {}
+    try {
+        var rawCp = p.condicoes_pagamento;
+        if (typeof rawCp === 'string') rawCp = JSON.parse(rawCp);
+        if (rawCp && Array.isArray(rawCp.cronograma)) cronograma = rawCp.cronograma;
+        else if (Array.isArray(rawCp)) cronograma = rawCp;
+    } catch(e) { cronograma = []; }
 
     const modal = document.createElement('div');
     modal.className = 'modal-overlay active';

@@ -314,11 +314,13 @@ Pages._renderKanbanCard = function(p, coluna) {
 // GERAR PDF DA PROPOSTA
 // ============================================================
 Pages.gerarPropostaPDF = function(proposta, dados) {
-    if (typeof window.jspdf === 'undefined' && typeof jsPDF === 'undefined') {
-        alert('Biblioteca jsPDF não encontrada. Recarregue a página e tente novamente.');
+    try {
+    const JsPDFCtor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+    if (!JsPDFCtor) {
+        alert('Biblioteca jsPDF não encontrada. Recarregue a página com Ctrl+Shift+R e tente novamente.');
         return;
     }
-    const { jsPDF } = window.jspdf || window;
+    const jsPDF = JsPDFCtor;
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
     // ─── Helpers ───────────────────────────────────────────────
@@ -369,8 +371,14 @@ Pages.gerarPropostaPDF = function(proposta, dados) {
 
     // Cronograma de pagamento
     let cronograma = [];
-    try { cronograma = JSON.parse(proposta.condicoes_pagamento || '[]'); } catch(e) {}
-    // Normalizar formato
+    try {
+        var rawCond = proposta.condicoes_pagamento;
+        if (typeof rawCond === 'string') rawCond = JSON.parse(rawCond);
+        // Formato salvo: { tipo, cronograma: [...] }
+        if (rawCond && Array.isArray(rawCond.cronograma)) cronograma = rawCond.cronograma;
+        else if (Array.isArray(rawCond)) cronograma = rawCond;
+    } catch(e) { cronograma = []; }
+    // Normalizar campos
     cronograma = cronograma.map(function(c) {
         return {
             desc:  c.desc || c.descricao || c.parcela || 'Parcela',
@@ -672,6 +680,10 @@ Pages.gerarPropostaPDF = function(proposta, dados) {
     const nomeCliente = ((proposta.razao_social || proposta.nome_contratante || 'proposta')).toUpperCase().replace(/\s+/g, '_');
     const nomeArquivo = `PROPOSTA_${artistaNome.replace(/\s+/g,'_')}_${nomeCliente}.pdf`;
     doc.save(nomeArquivo);
+    } catch(err) {
+        console.error('Erro ao gerar PDF:', err);
+        alert('Erro ao gerar PDF: ' + err.message + '\n\nAbra o console (F12) para mais detalhes.');
+    }
 };
 
 // ============================================================
