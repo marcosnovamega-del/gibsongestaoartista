@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proposta — Gibson Manager</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#e7e6e3; font-family:system-ui,sans-serif; display:flex; align-items:center; justify-content:center; min-height:100vh; }
+  .loading-box { text-align:center; padding:48px; }
+  .spinner { width:48px; height:48px; border:4px solid #e8261c33; border-top-color:#e8261c; border-radius:50%; animation:spin .8s linear infinite; margin:0 auto 20px; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .loading-box p { font-size:15px; color:#666; font-weight:600; }
+  .erro-box { background:#fff; border-radius:12px; padding:40px; max-width:400px; text-align:center; box-shadow:0 8px 30px rgba(0,0,0,.15); }
+  .erro-box h2 { color:#e8261c; font-size:20px; margin-bottom:12px; }
+  .erro-box p  { color:#666; font-size:14px; line-height:1.6; }
+</style>
+</head>
+<body>
+
+<div id="root">
+  <div class="loading-box">
+    <div class="spinner"></div>
+    <p>Carregando proposta…</p>
+  </div>
+</div>
+
+<!-- Supabase CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<!-- Config e template reutilizados do sistema -->
+<script src="js/config.js?v=1"></script>
+<script src="js/proposta-template.js?v=1.0"></script>
+
+<script>
+(async function () {
+  // ── 1. Parâmetro da URL ──────────────────────────────────
+  const token = new URLSearchParams(window.location.search).get('token');
+  if (!token) { mostrarErro('Link inválido', 'O link não contém um token de proposta válido.'); return; }
+
+  // ── 2. Supabase anon ─────────────────────────────────────
+  const sb = supabase.createClient(Config.SUPABASE_URL, Config.SUPABASE_KEY);
+
+  // ── 3. Buscar proposta pelo token ────────────────────────
+  let { data: proposta, error } = await sb
+    .from('propostas')
+    .select('*')
+    .eq('link_token', token)
+    .eq('link_ativo', true)
+    .maybeSingle();
+
+  if (error || !proposta) {
+    mostrarErro(
+      'Proposta não encontrada',
+      'Este link pode ter expirado ou sido desativado. Solicite um novo link ao responsável.'
+    );
+    return;
+  }
+
+  // ── 4. Buscar nome do artista ────────────────────────────
+  if (proposta.artista_id) {
+    const { data: art } = await sb
+      .from('artistas')
+      .select('nome')
+      .eq('id', proposta.artista_id)
+      .maybeSingle();
+    proposta._artistaNome = art?.nome || 'Artista';
+  }
+
+  // ── 5. Montar dados para o template ─────────────────────
+  let cronograma = [];
+  try {
+    let raw = proposta.condicoes_pagamento;
+    if (typeof raw === 'string') raw = JSON.parse(raw);
+    const arr = (raw && Array.isArray(raw.cronograma)) ? raw.cronograma : (Array.isArray(raw) ? raw : []);
+    cronograma = arr.map(c => ({
+      desc:  c.desc  || c.descricao  || 'Parcela',
+      valor: c.valor || c.amount     || 0,
+      venc:  c.venc  || c.data       || c.data_vencimento || '',
+    }));
+  } catch(e) {}
+
+  let itens = [];
+  try { itens = JSON.parse(proposta.itens_proposta || '[]'); } catch(e) {}
+
+  const tipo = (proposta.tipo_contratante === 'PJ' &&
+    ((proposta.razao_social || '').toLowerCase().includes('prefeitura') ||
+     (proposta.razao_social || '').toLowerCase().includes('municipio') ||
+     (proposta.razao_social || '').toLowerCase().includes('município')))
+    ? 'prefeitura' : 'particular';
+
+  const dados = {
+    tipo,
+    duracao:    proposta.duracao_show  || '90 min',
+    equipe:     proposta.equipe_pessoas || 20,
+    obrigacoes: proposta.obrigacoes_contratante || '',
+    validade:   proposta.validade_proposta || 15,
+    itens,
+    banco: {},   // usa defaults do template
+    cronograma,
+  };
+
+  // ── 6. Gerar HTML e exibir ───────────────────────────────
+  const html = tipo === 'prefeitura'
+    ? PropostaTemplate.gerarPrefeitura(proposta, dados)
+    : PropostaTemplate.gerarAutonomo(proposta, dados);
+
+  // Substituir o documento inteiro pelo HTML da proposta
+  // e ajustar o botão "Fechar" para voltar à página anterior
+  const htmlAdaptado = html
+    .replace(
+      /window\.close\(\)/g,
+      'history.length > 1 ? history.back() : window.close()'
+    )
+    .replace(
+      />\s*Fechar\s*</,
+      '>← Voltar<'
+    );
+
+  document.open();
+  document.write(htmlAdaptado);
+  document.close();
+
+})();
+
+function mostrarErro(titulo, msg) {
+  document.getElementById('root').innerHTML = `
+    <div class="erro-box">
+      <h2>⚠️ ${titulo}</h2>
+      <p>${msg}</p>
+    </div>`;
+}
+</script>
+</body>
+</html>

@@ -266,9 +266,12 @@ Pages._renderKanbanCard = function(p, coluna) {
                 ${vencida && !isFechado ? '<div style="color:var(--danger);font-size:10px;margin-top:4px;"><i class="fas fa-exclamation-triangle"></i> Validade vencida</div>' : ''}
             </div>
             <div class="kanban-card-actions">
-                <!-- Botão PDF disponível em todas as colunas -->
+                <!-- Botões disponíveis em todas as colunas -->
                 <button class="kanban-btn" onclick="Modals.showGerarPropostaPDF('${p.id}')" title="Gerar PDF da Proposta" style="color:#E0201B;">
                     <i class="fas fa-file-pdf"></i>
+                </button>
+                <button class="kanban-btn" onclick="Modals.showCompartilharProposta('${p.id}')" title="Compartilhar Proposta" style="color:#25D366;">
+                    <i class="fas fa-share-alt"></i>
                 </button>
                 ${coluna === 1 ? `
                     <button class="kanban-btn" onclick="Modals.showPropostaModal('${p.id}')" title="Editar">
