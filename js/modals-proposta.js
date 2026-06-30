@@ -834,7 +834,23 @@ Modals._submitGerarPDF = async function(propostaId) {
 
     document.getElementById('modalGerarPDF')?.remove();
 
-    Pages.gerarPropostaPDF(proposta, {
+    // Cronograma de pagamento da proposta
+    var cronogramaFinal = [];
+    try {
+        var rawCp = proposta.condicoes_pagamento;
+        if (typeof rawCp === 'string') rawCp = JSON.parse(rawCp);
+        var arr = (rawCp && Array.isArray(rawCp.cronograma)) ? rawCp.cronograma : (Array.isArray(rawCp) ? rawCp : []);
+        cronogramaFinal = arr.map(function(c) {
+            return {
+                desc:  c.desc || c.descricao || c.parcela || 'Parcela',
+                valor: c.valor || c.amount || 0,
+                venc:  c.venc || c.data || c.data_vencimento || '',
+            };
+        });
+    } catch(e) {}
+
+    // Usar template HTML (abre nova aba para impressão)
+    var htmlContent = PropostaTemplate.gerarAutonomo(proposta, {
         tipo,
         duracao,
         equipe,
@@ -842,6 +858,14 @@ Modals._submitGerarPDF = async function(propostaId) {
         validade,
         itens: itensList,
         banco: dadosBancarios,
+        cronograma: cronogramaFinal,
     });
+    var win = window.open('', '_blank');
+    if (win) {
+        win.document.write(htmlContent);
+        win.document.close();
+    } else {
+        alert('Popups bloqueados. Permita popups para este site e tente novamente.');
+    }
 };
 
