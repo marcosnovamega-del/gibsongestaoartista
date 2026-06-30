@@ -266,6 +266,10 @@ Pages._renderKanbanCard = function(p, coluna) {
                 ${vencida && !isFechado ? '<div style="color:var(--danger);font-size:10px;margin-top:4px;"><i class="fas fa-exclamation-triangle"></i> Validade vencida</div>' : ''}
             </div>
             <div class="kanban-card-actions">
+                <!-- Botão PDF disponível em todas as colunas -->
+                <button class="kanban-btn" onclick="Modals.showGerarPropostaPDF('${p.id}')" title="Gerar PDF da Proposta" style="color:#E0201B;">
+                    <i class="fas fa-file-pdf"></i>
+                </button>
                 ${coluna === 1 ? `
                     <button class="kanban-btn" onclick="Modals.showPropostaModal('${p.id}')" title="Editar">
                         <i class="fas fa-edit"></i>
@@ -304,6 +308,370 @@ Pages._renderKanbanCard = function(p, coluna) {
             </div>
         </div>
     `;
+};
+
+// ============================================================
+// GERAR PDF DA PROPOSTA
+// ============================================================
+Pages.gerarPropostaPDF = function(proposta, dados) {
+    if (typeof window.jspdf === 'undefined' && typeof jsPDF === 'undefined') {
+        alert('Biblioteca jsPDF não encontrada. Recarregue a página e tente novamente.');
+        return;
+    }
+    const { jsPDF } = window.jspdf || window;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+    // ─── Helpers ───────────────────────────────────────────────
+    const VERM  = [224, 32, 27];
+    const PRETO = [15, 15, 15];
+    const CINZA = [80, 80, 80];
+    const BEGE  = [248, 248, 248];
+    const W     = 210;
+    const MAR   = 18;
+    const CONT  = W - MAR * 2;
+
+    const MESES = ['JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO',
+                   'JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
+
+    function formatDataExtenso(str) {
+        if (!str) return '—';
+        const d = new Date(str + 'T12:00:00');
+        return `${String(d.getDate()).padStart(2,'0')} DE ${MESES[d.getMonth()]} DE ${d.getFullYear()}`;
+    }
+    function formatMoeda(v) {
+        return 'R$ ' + parseFloat(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    function wrapText(doc, text, x, maxW, lineH) {
+        const lines = doc.splitTextToSize(text, maxW);
+        let curY = 0;
+        lines.forEach(function(l, i) {
+            if (i > 0) curY += lineH;
+            doc.text(l, x, curY);
+        });
+        return curY;
+    }
+    function addPageFooter(pageNum, totalPages) {
+        doc.setDrawColor(...CINZA);
+        doc.setLineWidth(0.3);
+        doc.line(MAR, 284, W - MAR, 284);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(...CINZA);
+        doc.text(`Página ${pageNum} de ${totalPages}`, W / 2, 290, { align: 'center' });
+    }
+
+    const isPrefeitura = dados.tipo === 'prefeitura';
+    const artistaNome  = (proposta._artistaNome || '').toUpperCase();
+    const cidade       = (proposta.cidade_evento || '').toUpperCase();
+    const estado       = (proposta.estado_evento || '').toUpperCase();
+    const cache        = proposta.cache_bruto || 0;
+    const dataExtenso  = formatDataExtenso(proposta.data_evento);
+
+    // Cronograma de pagamento
+    let cronograma = [];
+    try { cronograma = JSON.parse(proposta.condicoes_pagamento || '[]'); } catch(e) {}
+    // Normalizar formato
+    cronograma = cronograma.map(function(c) {
+        return {
+            desc:  c.desc || c.descricao || c.parcela || 'Parcela',
+            valor: c.valor || c.amount || 0,
+            venc:  c.venc || c.data || c.data_vencimento || '',
+        };
+    });
+
+    // ─── PÁGINA 1 ──────────────────────────────────────────────
+    let y = 18;
+
+    // ── Cabeçalho vermelho ──
+    doc.setFillColor(...VERM);
+    doc.rect(0, 0, W, 28, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(255, 255, 255);
+    doc.text('PROPOSTA DE SERVIÇOS ARTÍSTICOS', W / 2, 11, { align: 'center' });
+    doc.setFontSize(12);
+    doc.text('— ' + artistaNome + ' —', W / 2, 21, { align: 'center' });
+
+    y = 36;
+
+    // ── Destinatário (só prefeitura) ──
+    if (isPrefeitura) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.setTextColor(...PRETO);
+        const prefNome = (proposta.razao_social || '').toUpperCase();
+        doc.text('À ' + prefNome, MAR, y);
+        y += 8;
+    }
+
+    // ── Parágrafo de abertura ──
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(...CINZA);
+    let paragrafo;
+    if (isPrefeitura) {
+        const prefCidade = (proposta.razao_social || cidade || '').replace(/prefeitura municipal de /i, '').trim().toUpperCase();
+        paragrafo = `Conforme solicitado pela Prefeitura Municipal de ${prefCidade}, segue abaixo orçamento para a realização de 1 (um) show com o cantor/a cantora ${artistaNome}, na Cidade de ${cidade}, ${estado}.`;
+    } else {
+        paragrafo = `Conforme solicitado, segue abaixo proposta para a realização de 1 (um) show com o cantor/a cantora ${artistaNome}, na Cidade de ${cidade}, ${estado}.`;
+    }
+    const paraLines = doc.splitTextToSize(paragrafo, CONT);
+    doc.text(paraLines, MAR, y);
+    y += paraLines.length * 5 + 6;
+
+    // ── Itens a/b/c/d ──
+    const lineH = 6;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(...PRETO);
+    const infoItems = [
+        { label: 'a) DURAÇÃO DO SHOW:', val: (dados.duracao || proposta.duracao_show || '90 min').toUpperCase() },
+        { label: 'b) DATA:', val: dataExtenso },
+        { label: 'c) LOCAL DO SHOW:', val: cidade + ' - ' + estado },
+    ];
+    if (isPrefeitura) infoItems.push({ label: 'd) VALOR DO SHOW:', val: formatMoeda(cache) });
+    infoItems.forEach(function(it) {
+        doc.setFont('helvetica', 'bold');
+        doc.text(it.label, MAR, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(' ' + it.val, MAR + doc.getTextWidth(it.label), y);
+        y += lineH;
+    });
+    y += 4;
+
+    // ── Subtítulo tabela ──
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...CINZA);
+    const subT = 'Pelo serviço indicado acima é apresentada a seguir a tabela com a formação do valor total do serviço:';
+    const subLines = doc.splitTextToSize(subT, CONT);
+    doc.text(subLines, MAR, y);
+    y += subLines.length * 5 + 4;
+
+    // ── Tabela de itens ──
+    const itens = dados.itens || [];
+    const totalItens = itens.reduce(function(s, i) { return s + (parseFloat(i.valor) || 0); }, 0) || cache;
+
+    if (typeof doc.autoTable === 'function') {
+        const colunas = isPrefeitura
+            ? [{ header: 'DESCRIÇÃO', dataKey: 'desc' }, { header: 'VALOR', dataKey: 'valor' }]
+            : [{ header: 'DESCRIÇÃO', dataKey: 'desc' }];
+
+        const linhas = itens.map(function(it) {
+            return isPrefeitura
+                ? { desc: it.desc, valor: it.valor ? formatMoeda(it.valor) : '' }
+                : { desc: it.desc };
+        });
+        linhas.push(isPrefeitura
+            ? { desc: 'TOTAL', valor: formatMoeda(totalItens) }
+            : { desc: 'TOTAL: ' + formatMoeda(totalItens) });
+
+        doc.autoTable({
+            startY: y,
+            columns: colunas,
+            body: linhas,
+            styles: { fontSize: 9, cellPadding: 3 },
+            headStyles: { fillColor: PRETO, textColor: [255,255,255], fontStyle: 'bold', fontSize: 9 },
+            bodyStyles: { textColor: PRETO },
+            alternateRowStyles: { fillColor: BEGE },
+            didParseCell: function(data) {
+                const isLast = data.row.index === linhas.length - 1;
+                if (isLast) {
+                    data.cell.styles.fontStyle = 'bold';
+                    data.cell.styles.fillColor = [240, 240, 240];
+                    data.cell.styles.textColor = VERM;
+                }
+            },
+            columnStyles: isPrefeitura ? { 1: { halign: 'right', cellWidth: 40 } } : {},
+            margin: { left: MAR, right: MAR },
+        });
+        y = doc.lastAutoTable.finalY + 6;
+    } else {
+        // Fallback sem autoTable
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(255,255,255);
+        doc.setFillColor(...PRETO);
+        doc.rect(MAR, y, CONT, 7, 'F');
+        doc.text('DESCRIÇÃO', MAR + 3, y + 5);
+        if (isPrefeitura) doc.text('VALOR', W - MAR - 3, y + 5, { align: 'right' });
+        y += 7;
+        itens.forEach(function(it, idx) {
+            if (idx % 2 === 0) { doc.setFillColor(...BEGE); doc.rect(MAR, y, CONT, 6, 'F'); }
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(...PRETO);
+            doc.text(it.desc, MAR + 3, y + 4.5);
+            if (isPrefeitura && it.valor) doc.text(formatMoeda(it.valor), W - MAR - 3, y + 4.5, { align: 'right' });
+            y += 6;
+        });
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...VERM);
+        doc.text('TOTAL: ' + formatMoeda(totalItens), W - MAR - 3, y + 4.5, { align: 'right' });
+        y += 8;
+    }
+
+    // ── Equipe ──
+    const equipeNum = dados.equipe || 20;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(...PRETO);
+    doc.text(`EQUIPE: ${equipeNum} PESSOAS (${equipeNum} ACOMPANHANTES)`, MAR, y);
+    y += 7;
+
+    // ── Obs. Nota Fiscal (só prefeitura) ──
+    if (isPrefeitura) {
+        doc.setFont('helvetica', 'bolditalic');
+        doc.setFontSize(9);
+        doc.setTextColor(...CINZA);
+        doc.text('Obs. Com Nota Fiscal', MAR, y);
+        y += 7;
+    }
+
+    // ── Obrigações do contratante ──
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(...PRETO);
+    doc.text('Ficará por conta do CONTRATANTE arcar com os seguintes itens:', MAR, y);
+    y += 6;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...CINZA);
+    const obgLinhas = (dados.obrigacoes || '').split('\n').filter(function(l) { return l.trim(); });
+    obgLinhas.forEach(function(linha) {
+        if (y > 270) { doc.addPage(); addPageFooter(doc.getNumberOfPages() - 1, 2); y = 20; }
+        const wrapped = doc.splitTextToSize('• ' + linha.trim(), CONT - 4);
+        doc.text(wrapped, MAR + 2, y);
+        y += wrapped.length * 5;
+    });
+
+    // Rodapé pág 1
+    addPageFooter(1, 2);
+
+    // ─── PÁGINA 2 ──────────────────────────────────────────────
+    doc.addPage();
+    y = 18;
+
+    // ── Cabeçalho vermelho pág 2 ──
+    doc.setFillColor(...VERM);
+    doc.rect(0, 0, W, 18, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(255, 255, 255);
+    doc.text('CONDIÇÕES DE PAGAMENTO — ' + artistaNome, W / 2, 12, { align: 'center' });
+    y = 28;
+
+    // ── Forma de pagamento ──
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(...PRETO);
+    doc.text('FORMA DE PAGAMENTO:', MAR, y);
+    y += 7;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...CINZA);
+    if (cronograma.length > 0) {
+        cronograma.forEach(function(c, i) {
+            const dataVenc = c.venc ? new Date(c.venc + 'T12:00:00').toLocaleDateString('pt-BR') : '';
+            const txt = `${i + 1}ª Parcela — ${c.desc || 'Parcela ' + (i+1)}: ${formatMoeda(c.valor)}${dataVenc ? ' — Vencimento: ' + dataVenc : ''}`;
+            const lines = doc.splitTextToSize(txt, CONT - 4);
+            doc.text('• ', MAR, y);
+            doc.text(lines, MAR + 4, y);
+            y += lines.length * 5;
+        });
+    } else {
+        doc.text('• A combinar conforme contrato.', MAR + 2, y);
+        y += 6;
+    }
+    y += 4;
+
+    // ── Observação pagamento ──
+    doc.setFont('helvetica', 'bolditalic');
+    doc.setFontSize(9);
+    doc.setTextColor(...CINZA);
+    const obs = 'OBSERVAÇÕES: A previsão da data do pagamento deve constar no contrato, o não cumprimento dos prazos acordados implica na suspensão do espetáculo e a empresa não assumirá nenhum prejuízo decorrente da não realização do mesmo.';
+    const obsLines = doc.splitTextToSize(obs, CONT);
+    doc.text(obsLines, MAR, y);
+    y += obsLines.length * 5 + 8;
+
+    // ── Dados bancários ──
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(...PRETO);
+    doc.text('DADOS PARA PAGAMENTO:', MAR, y);
+    y += 6;
+
+    const banco = dados.banco || {};
+    const dadosBanco = [
+        ['Razão Social', banco.razao || 'DFG PRODUÇÕES E EVENTOS LTDA'],
+        ['CNPJ', banco.cnpj || '24.483.999/0001-35'],
+        ['Banco', banco.banco || 'Banco Sicoob'],
+        ['Agência', banco.agencia || '3224'],
+        ['Conta C/C', banco.conta || '19.259-7'],
+        ['Chave PIX', banco.pix || '(34) 99902-0200 - SICOOB'],
+        ['Titular PIX', banco.pixTitular || 'Douglas Gomes Fonseca'],
+        ['CPF Titular', banco.pixCpf || '098.549.066-71'],
+    ];
+
+    if (typeof doc.autoTable === 'function') {
+        doc.autoTable({
+            startY: y,
+            head: [['Campo', 'Dados']],
+            body: dadosBanco,
+            styles: { fontSize: 9, cellPadding: 3 },
+            headStyles: { fillColor: PRETO, textColor: [255,255,255], fontStyle: 'bold' },
+            bodyStyles: { textColor: PRETO },
+            alternateRowStyles: { fillColor: BEGE },
+            columnStyles: { 0: { fontStyle: 'bold', cellWidth: 40 } },
+            margin: { left: MAR, right: MAR },
+        });
+        y = doc.lastAutoTable.finalY + 10;
+    } else {
+        dadosBanco.forEach(function(row) {
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...CINZA);
+            doc.text(row[0] + ':', MAR, y);
+            doc.setFont('helvetica', 'normal'); doc.setTextColor(...PRETO);
+            doc.text(row[1], MAR + 36, y);
+            y += 6;
+        });
+        y += 4;
+    }
+
+    // ── Validade ──
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(...VERM);
+    doc.text(`VALIDADE DA PROPOSTA: ${dados.validade || 10} DIAS CORRIDOS DA DATA DESTE ORÇAMENTO.`, MAR, y);
+    y += 12;
+
+    // ── Data e assinatura ──
+    const hoje = new Date();
+    const cidadeEmp = 'UBERLÂNDIA - MG';
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(...CINZA);
+    doc.text(`${cidadeEmp}, ${String(hoje.getDate()).padStart(2,'0')} DE ${MESES[hoje.getMonth()]} DE ${hoje.getFullYear()}.`, MAR, y);
+    y += 14;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(...PRETO);
+    doc.text('Atenciosamente,', MAR, y);
+    y += 7;
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...CINZA);
+    doc.text('DFG PRODUÇÕES E EVENTOS LTDA', MAR, y);
+    y += 5;
+    doc.text('CNPJ: 24.483.999/0001-35', MAR, y);
+    y += 5;
+    doc.text('Tel: (34) 99902-0200', MAR, y);
+
+    // Rodapé pág 2
+    addPageFooter(2, 2);
+
+    // ─── Download ──────────────────────────────────────────────
+    const nomeCliente = ((proposta.razao_social || proposta.nome_contratante || 'proposta')).toUpperCase().replace(/\s+/g, '_');
+    const nomeArquivo = `PROPOSTA_${artistaNome.replace(/\s+/g,'_')}_${nomeCliente}.pdf`;
+    doc.save(nomeArquivo);
 };
 
 // ============================================================

@@ -580,3 +580,263 @@ Modals.atualizarCronograma = function() {
     }).join('');
 };
 
+// ============================================================
+// MODAL: GERAR PDF DA PROPOSTA
+// ============================================================
+Modals.showGerarPropostaPDF = async function(propostaId) {
+    // Buscar proposta completa
+    const res = await sbClient.from('propostas').select('*').eq('id', propostaId).single();
+    if (res.error || !res.data) { alert('Erro ao carregar proposta.'); return; }
+    const p = res.data;
+
+    // Buscar artista
+    let artistaNome = '';
+    if (p.artista_id) {
+        const ar = await sbClient.from('artistas').select('nome').eq('id', p.artista_id).single();
+        if (ar.data) artistaNome = ar.data.nome;
+    }
+
+    const isPrefeitura = p.tipo_contratante === 'PJ' &&
+        ((p.razao_social || '').toLowerCase().includes('prefeitura') ||
+         (p.razao_social || '').toLowerCase().includes('municipio') ||
+         (p.razao_social || '').toLowerCase().includes('município'));
+
+    // Itens existentes ou defaults
+    let itensExistentes = [];
+    try { itensExistentes = JSON.parse(p.itens_proposta || '[]'); } catch(e) {}
+    if (!itensExistentes.length) {
+        itensExistentes = [
+            { desc: 'CACHÊ ARTÍSTICO DO CANTOR', valor: '' },
+            { desc: 'DIREITOS AUTORAIS E ECAD', valor: '' },
+            { desc: 'APOIO LOGÍSTICO – SOM, LUZ E PALCO PARA REALIZAÇÃO DO SHOW', valor: '' },
+        ];
+        if (!isPrefeitura) itensExistentes.push({ desc: 'JATINHO (IDA E VOLTA)', valor: '' });
+    }
+
+    // Obrigações default
+    const obgDefault = p.obrigacoes_contratante || [
+        'HOSPEDAGEM: 20 (VINTE) APARTAMENTOS DUPLOS COM CAFÉ DA MANHÃ NAS NOITES ANTERIORES E POSTERIORES AO SHOW;',
+        'ALIMENTAÇÃO: 20 (VINTE) REFEIÇÕES NO DIA DO SHOW;',
+        'TRANSPORTE: 02 (DOIS) VAN OU MICRO-ÔNIBUS;',
+        'CAMARIM: DEVIDAMENTE MONTADO COM BANHEIRO PRIVATIVO;',
+        'SEGURANÇA: PARA A BANDA E PARA O ARTISTA DURANTE TODO O SHOW.',
+    ].join('\n');
+
+    const validadeDias = p.validade_proposta || 10;
+
+    // Cronograma de pagamento
+    let cronograma = [];
+    try { cronograma = JSON.parse(p.condicoes_pagamento || '[]'); } catch(e) {}
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay active';
+    modal.id = 'modalGerarPDF';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width:680px;max-height:90vh;overflow-y:auto;">
+            <div class="modal-header" style="background:var(--brand-primary);color:#fff;padding:16px 20px;border-radius:12px 12px 0 0;">
+                <h3 style="margin:0;font-size:16px;"><i class="fas fa-file-pdf"></i> Gerar PDF da Proposta</h3>
+                <button onclick="document.getElementById('modalGerarPDF').remove()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;">×</button>
+            </div>
+            <div style="padding:20px;">
+
+                <!-- Info resumida -->
+                <div style="background:var(--bg-secondary);border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:13px;">
+                    <strong>${artistaNome}</strong> · ${p.cidade_evento || '—'}/${p.estado_evento || '—'} ·
+                    ${p.data_evento ? Utils.formatDate(p.data_evento) : '—'} ·
+                    <span style="color:var(--brand-primary);font-weight:600;">${Utils.formatCurrency(p.cache_bruto || 0)}</span>
+                </div>
+
+                <!-- Tipo de proposta -->
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="font-size:12px;font-weight:600;color:var(--text-muted);">TIPO DE PROPOSTA</label>
+                    <div style="display:flex;gap:10px;margin-top:6px;">
+                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+                            <input type="radio" name="pdf_tipo" value="particular" ${!isPrefeitura ? 'checked' : ''} onchange="Modals._pdfTipoChange(this.value)">
+                            Particular / Empresa Privada
+                        </label>
+                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+                            <input type="radio" name="pdf_tipo" value="prefeitura" ${isPrefeitura ? 'checked' : ''} onchange="Modals._pdfTipoChange(this.value)">
+                            Prefeitura Municipal
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Duração -->
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="font-size:12px;font-weight:600;color:var(--text-muted);">DURAÇÃO DO SHOW</label>
+                    <input type="text" id="pdf_duracao" class="form-control" style="margin-top:4px;"
+                        value="${p.duracao_show || '90 min (noventa minutos) – 1h30m'}" placeholder="Ex: 90 min (noventa minutos)">
+                </div>
+
+                <!-- Equipe -->
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="font-size:12px;font-weight:600;color:var(--text-muted);">NÚMERO DE PESSOAS NA EQUIPE</label>
+                    <input type="number" id="pdf_equipe" class="form-control" style="margin-top:4px;width:120px;"
+                        value="${p.equipe_pessoas || 20}" min="1">
+                </div>
+
+                <!-- Itens do preço -->
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="font-size:12px;font-weight:600;color:var(--text-muted);">COMPOSIÇÃO DO VALOR</label>
+                    <div id="pdf_itens" style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
+                        ${itensExistentes.map((it, i) => Modals._renderItemPDFRow(it, i, isPrefeitura)).join('')}
+                    </div>
+                    <button onclick="Modals._addItemPDFRow()" style="margin-top:8px;background:none;border:1px dashed var(--border-color);color:var(--text-muted);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;width:100%;">
+                        <i class="fas fa-plus"></i> Adicionar item
+                    </button>
+                </div>
+
+                <!-- Obrigações do contratante -->
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="font-size:12px;font-weight:600;color:var(--text-muted);">OBRIGAÇÕES DO CONTRATANTE (uma por linha)</label>
+                    <textarea id="pdf_obrigacoes" class="form-control" style="margin-top:4px;min-height:100px;font-size:12px;" rows="6">${obgDefault}</textarea>
+                </div>
+
+                <!-- Validade -->
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="font-size:12px;font-weight:600;color:var(--text-muted);">VALIDADE DA PROPOSTA (dias)</label>
+                    <input type="number" id="pdf_validade" class="form-control" style="margin-top:4px;width:120px;"
+                        value="${validadeDias}" min="1" max="365">
+                </div>
+
+                <!-- Dados para pagamento -->
+                <div style="background:var(--bg-secondary);border-radius:8px;padding:14px;margin-bottom:20px;">
+                    <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:10px;">DADOS PARA PAGAMENTO</label>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <div>
+                            <label style="font-size:11px;color:var(--text-muted);">Razão Social</label>
+                            <input type="text" id="pdf_banco_razao" class="form-control" style="font-size:12px;margin-top:2px;" value="DFG PRODUÇÕES E EVENTOS LTDA">
+                        </div>
+                        <div>
+                            <label style="font-size:11px;color:var(--text-muted);">CNPJ</label>
+                            <input type="text" id="pdf_banco_cnpj" class="form-control" style="font-size:12px;margin-top:2px;" value="24.483.999/0001-35">
+                        </div>
+                        <div>
+                            <label style="font-size:11px;color:var(--text-muted);">Banco</label>
+                            <input type="text" id="pdf_banco_nome" class="form-control" style="font-size:12px;margin-top:2px;" value="Banco Sicoob">
+                        </div>
+                        <div>
+                            <label style="font-size:11px;color:var(--text-muted);">Agência</label>
+                            <input type="text" id="pdf_banco_ag" class="form-control" style="font-size:12px;margin-top:2px;" value="3224">
+                        </div>
+                        <div>
+                            <label style="font-size:11px;color:var(--text-muted);">Conta C/C</label>
+                            <input type="text" id="pdf_banco_cc" class="form-control" style="font-size:12px;margin-top:2px;" value="19.259-7">
+                        </div>
+                        <div>
+                            <label style="font-size:11px;color:var(--text-muted);">Chave PIX</label>
+                            <input type="text" id="pdf_pix" class="form-control" style="font-size:12px;margin-top:2px;" value="(34) 99902-0200 - SICOOB">
+                        </div>
+                        <div>
+                            <label style="font-size:11px;color:var(--text-muted);">Titular PIX</label>
+                            <input type="text" id="pdf_pix_titular" class="form-control" style="font-size:12px;margin-top:2px;" value="Douglas Gomes Fonseca">
+                        </div>
+                        <div>
+                            <label style="font-size:11px;color:var(--text-muted);">CPF Titular</label>
+                            <input type="text" id="pdf_pix_cpf" class="form-control" style="font-size:12px;margin-top:2px;" value="098.549.066-71">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botões -->
+                <div style="display:flex;gap:10px;justify-content:flex-end;">
+                    <button onclick="document.getElementById('modalGerarPDF').remove()" class="btn-secondary">
+                        Cancelar
+                    </button>
+                    <button onclick="Modals._submitGerarPDF('${propostaId}')" class="btn-primary" style="background:var(--brand-primary);">
+                        <i class="fas fa-file-pdf"></i> Gerar PDF
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+};
+
+Modals._renderItemPDFRow = function(item, index, mostrarValor) {
+    return `
+        <div class="pdf-item-row" style="display:flex;gap:6px;align-items:center;" data-index="${index}">
+            <input type="text" class="form-control pdf-item-desc" style="flex:1;font-size:12px;"
+                placeholder="Descrição do item" value="${item.desc || ''}">
+            <input type="number" class="form-control pdf-item-valor"
+                style="width:130px;font-size:12px;display:${mostrarValor ? 'block' : 'none'};"
+                placeholder="Valor (R$)" value="${item.valor || ''}">
+            <button onclick="this.closest('.pdf-item-row').remove()" style="background:none;border:none;color:var(--danger);cursor:pointer;padding:4px;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+};
+
+Modals._addItemPDFRow = function() {
+    const tipo = document.querySelector('input[name="pdf_tipo"]:checked')?.value;
+    const mostrarValor = tipo === 'prefeitura';
+    const container = document.getElementById('pdf_itens');
+    const div = document.createElement('div');
+    div.innerHTML = Modals._renderItemPDFRow({ desc: '', valor: '' }, Date.now(), mostrarValor);
+    container.appendChild(div.firstElementChild);
+};
+
+Modals._pdfTipoChange = function(tipo) {
+    const isPrefeitura = tipo === 'prefeitura';
+    document.querySelectorAll('.pdf-item-valor').forEach(el => {
+        el.style.display = isPrefeitura ? 'block' : 'none';
+    });
+};
+
+Modals._submitGerarPDF = async function(propostaId) {
+    const tipo = document.querySelector('input[name="pdf_tipo"]:checked')?.value || 'particular';
+    const duracao = document.getElementById('pdf_duracao')?.value || '';
+    const equipe = parseInt(document.getElementById('pdf_equipe')?.value) || 20;
+    const obrigacoes = document.getElementById('pdf_obrigacoes')?.value || '';
+    const validade = parseInt(document.getElementById('pdf_validade')?.value) || 10;
+
+    // Coletar itens
+    const itensList = [];
+    document.querySelectorAll('.pdf-item-row').forEach(row => {
+        const desc = row.querySelector('.pdf-item-desc')?.value?.trim();
+        const valor = parseFloat(row.querySelector('.pdf-item-valor')?.value) || 0;
+        if (desc) itensList.push({ desc, valor });
+    });
+
+    const dadosBancarios = {
+        razao: document.getElementById('pdf_banco_razao')?.value || '',
+        cnpj: document.getElementById('pdf_banco_cnpj')?.value || '',
+        banco: document.getElementById('pdf_banco_nome')?.value || '',
+        agencia: document.getElementById('pdf_banco_ag')?.value || '',
+        conta: document.getElementById('pdf_banco_cc')?.value || '',
+        pix: document.getElementById('pdf_pix')?.value || '',
+        pixTitular: document.getElementById('pdf_pix_titular')?.value || '',
+        pixCpf: document.getElementById('pdf_pix_cpf')?.value || '',
+    };
+
+    // Salvar campos no banco
+    await sbClient.from('propostas').update({
+        duracao_show: duracao,
+        itens_proposta: JSON.stringify(itensList),
+        obrigacoes_contratante: obrigacoes,
+        validade_proposta: validade,
+    }).eq('id', propostaId);
+
+    // Buscar proposta atualizada com artista
+    const res = await sbClient.from('propostas').select('*').eq('id', propostaId).single();
+    let proposta = res.data || {};
+    if (proposta.artista_id) {
+        const ar = await sbClient.from('artistas').select('nome').eq('id', proposta.artista_id).single();
+        proposta._artistaNome = ar.data?.nome || '';
+    }
+
+    document.getElementById('modalGerarPDF')?.remove();
+
+    Pages.gerarPropostaPDF(proposta, {
+        tipo,
+        duracao,
+        equipe,
+        obrigacoes,
+        validade,
+        itens: itensList,
+        banco: dadosBancarios,
+    });
+};
+
