@@ -850,16 +850,10 @@ Modals._submitGerarPDF = async function(propostaId) {
     } catch(e) {}
 
     // Usar template HTML (abre nova aba para impressão)
-    var htmlContent = PropostaTemplate.gerarAutonomo(proposta, {
-        tipo,
-        duracao,
-        equipe,
-        obrigacoes,
-        validade,
-        itens: itensList,
-        banco: dadosBancarios,
-        cronograma: cronogramaFinal,
-    });
+    var dadosPDF = { tipo, duracao, equipe, obrigacoes, validade, itens: itensList, banco: dadosBancarios, cronograma: cronogramaFinal };
+    var htmlContent = tipo === 'prefeitura'
+        ? PropostaTemplate.gerarPrefeitura(proposta, dadosPDF)
+        : PropostaTemplate.gerarAutonomo(proposta, dadosPDF);
     var win = window.open('', '_blank');
     if (win) {
         win.document.write(htmlContent);
