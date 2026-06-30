@@ -51,9 +51,9 @@ PropostaTemplate.gerarAutonomo = function(proposta, dados) {
     var itensHtml = itens.map(function(it, i) {
         var bg = i % 2 === 0 ? 'background:#fbf9f4;' : '';
         var brd = i > 0 ? 'border-top:1px solid #ece7dd;' : '';
-        return '<div style="display:flex;align-items:center;gap:12px;padding:13px 18px;' + bg + brd + '">'
+        return '<div style="display:flex;align-items:center;gap:12px;padding:10px 18px;' + bg + brd + '">'
             + '<span style="width:6px;height:6px;background:#e8261c;transform:rotate(45deg);flex:none;"></span>'
-            + '<span style="font-size:13.5px;color:#3a3a3e;font-weight:600;">' + it.desc + '</span>'
+            + '<span style="font-size:12.5px;color:#3a3a3e;font-weight:600;">' + it.desc + '</span>'
             + '</div>';
     }).join('');
 
@@ -129,20 +129,56 @@ PropostaTemplate.gerarAutonomo = function(proposta, dados) {
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { background:#e7e6e3; -webkit-font-smoothing:antialiased; font-family:Archivo,system-ui,sans-serif; color:#1a1a1d; }
-.paginas { padding:44px 0 80px; display:flex; flex-direction:column; align-items:center; gap:40px; }
-.pagina { width:794px; min-height:1123px; background:#fff; box-shadow:0 24px 60px -22px rgba(0,0,0,.35); display:flex; flex-direction:column; }
+.barra-acoes { position:fixed; top:0; left:0; right:0; background:#1a1a1d; padding:12px 24px; display:flex; align-items:center; justify-content:space-between; z-index:999; box-shadow:0 2px 8px rgba(0,0,0,.3); }
+.paginas { padding:80px 0 80px; display:flex; flex-direction:column; align-items:center; gap:40px; }
+.pagina { width:794px; min-height:1123px; background:#fff; box-shadow:0 24px 60px -22px rgba(0,0,0,.35); display:flex; flex-direction:column; overflow:hidden; }
+
 @media print {
-  body { background:#fff; }
-  .paginas { padding:0; gap:0; }
-  .pagina { width:100%; min-height:100vh; box-shadow:none; page-break-after:always; }
-  .no-print { display:none !important; }
+  @page { size: A4 portrait; margin: 0; }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  html, body {
+    background: #fff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 210mm;
+  }
+
+  .barra-acoes { display: none !important; }
+
+  .paginas {
+    padding: 0 !important;
+    gap: 0 !important;
+    align-items: flex-start !important;
+    display: block !important;
+  }
+
+  .pagina {
+    width: 210mm !important;
+    height: 297mm !important;
+    min-height: 0 !important;
+    max-height: 297mm !important;
+    overflow: hidden !important;
+    box-shadow: none !important;
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+
+  .pagina:last-child {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
 }
 </style>
 </head>
 <body>
 
 <!-- Barra de ações (some ao imprimir) -->
-<div class="no-print" style="position:fixed;top:0;left:0;right:0;background:#1a1a1d;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;z-index:999;box-shadow:0 2px 8px rgba(0,0,0,.3);">
+<div class="barra-acoes">
   <span style="font-family:Anton,sans-serif;font-size:18px;color:#e8261c;letter-spacing:2px;">DFG PRODUÇÕES</span>
   <div style="display:flex;gap:10px;">
     <button onclick="window.print()" style="background:#e8261c;color:#fff;border:none;padding:9px 22px;font-family:Anton,sans-serif;font-size:14px;letter-spacing:1px;cursor:pointer;text-transform:uppercase;">⬇ Salvar / Imprimir PDF</button>
@@ -150,15 +186,15 @@ body { background:#e7e6e3; -webkit-font-smoothing:antialiased; font-family:Archi
   </div>
 </div>
 
-<div class="paginas" style="padding-top:80px;">
+<div class="paginas">
 
   <!-- ========== PÁGINA 1 ========== -->
   <div class="pagina">
 
     <!-- HEADER ticket -->
-    <div style="position:relative;height:300px;background:#f4efe5;overflow:hidden;display:flex;flex:none;">
+    <div style="position:relative;height:260px;background:#f4efe5;overflow:hidden;display:flex;flex:none;">
       <!-- bloco vermelho esquerdo -->
-      <div style="position:relative;width:188px;height:300px;flex:none;background:#e8261c;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+      <div style="position:relative;width:170px;height:260px;flex:none;background:#e8261c;overflow:hidden;display:flex;align-items:center;justify-content:center;">
         <div style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(255,255,255,.07) 0 2px,transparent 2px 18px);"></div>
         <div style="position:absolute;top:18px;left:0;right:0;display:flex;justify-content:center;gap:12px;">
           <span style="width:7px;height:7px;border-radius:50%;background:#fff;"></span>
@@ -204,60 +240,60 @@ body { background:#e7e6e3; -webkit-font-smoothing:antialiased; font-family:Archi
     </div>
 
     <!-- BODY pág 1 -->
-    <div style="flex:1;padding:38px 50px 28px;display:flex;flex-direction:column;">
+    <div style="flex:1;padding:26px 50px 20px;display:flex;flex-direction:column;">
 
-      <p style="margin:0 0 26px;font-size:14.5px;line-height:1.6;color:#3a3a3e;">${paragrafo}</p>
+      <p style="margin:0 0 18px;font-size:13.5px;line-height:1.55;color:#3a3a3e;">${paragrafo}</p>
 
       <!-- grade info show -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:30px;">
-        <div style="background:#f6f1e7;border-left:3px solid #e8261c;padding:16px 18px;">
-          <div style="font-size:10.5px;letter-spacing:2px;color:#9a937f;font-weight:700;text-transform:uppercase;margin-bottom:8px;">Duração</div>
-          <div style="font-family:Anton,sans-serif;font-size:26px;color:#1a1a1d;line-height:1;">${duracaoMin}</div>
-          <div style="font-size:11px;color:#8c8678;font-weight:600;margin-top:5px;">${duracaoText}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px;">
+        <div style="background:#f6f1e7;border-left:3px solid #e8261c;padding:12px 16px;">
+          <div style="font-size:10px;letter-spacing:2px;color:#9a937f;font-weight:700;text-transform:uppercase;margin-bottom:6px;">Duração</div>
+          <div style="font-family:Anton,sans-serif;font-size:22px;color:#1a1a1d;line-height:1;">${duracaoMin}</div>
+          <div style="font-size:10px;color:#8c8678;font-weight:600;margin-top:4px;">${duracaoText}</div>
         </div>
-        <div style="background:#f6f1e7;border-left:3px solid #e8261c;padding:16px 18px;">
-          <div style="font-size:10.5px;letter-spacing:2px;color:#9a937f;font-weight:700;text-transform:uppercase;margin-bottom:8px;">Data</div>
-          <div style="font-family:Anton,sans-serif;font-size:26px;color:#1a1a1d;line-height:1;">${diaMes}</div>
-          <div style="font-size:11px;color:#8c8678;font-weight:600;margin-top:5px;">${dataExt}</div>
+        <div style="background:#f6f1e7;border-left:3px solid #e8261c;padding:12px 16px;">
+          <div style="font-size:10px;letter-spacing:2px;color:#9a937f;font-weight:700;text-transform:uppercase;margin-bottom:6px;">Data</div>
+          <div style="font-family:Anton,sans-serif;font-size:22px;color:#1a1a1d;line-height:1;">${diaMes}</div>
+          <div style="font-size:10px;color:#8c8678;font-weight:600;margin-top:4px;">${dataExt}</div>
         </div>
-        <div style="background:#f6f1e7;border-left:3px solid #e8261c;padding:16px 18px;">
-          <div style="font-size:10.5px;letter-spacing:2px;color:#9a937f;font-weight:700;text-transform:uppercase;margin-bottom:8px;">Local</div>
-          <div style="font-family:Anton,sans-serif;font-size:26px;color:#1a1a1d;line-height:1;">${cidade.split(' ')[0]}</div>
-          <div style="font-size:11px;color:#8c8678;font-weight:600;margin-top:5px;">${cidade} — ${estado}</div>
+        <div style="background:#f6f1e7;border-left:3px solid #e8261c;padding:12px 16px;">
+          <div style="font-size:10px;letter-spacing:2px;color:#9a937f;font-weight:700;text-transform:uppercase;margin-bottom:6px;">Local</div>
+          <div style="font-family:Anton,sans-serif;font-size:22px;color:#1a1a1d;line-height:1;">${cidade.split(' ')[0]}</div>
+          <div style="font-size:10px;color:#8c8678;font-weight:600;margin-top:4px;">${cidade} — ${estado}</div>
         </div>
       </div>
 
       <!-- Investimento -->
-      <div style="display:flex;align-items:center;gap:11px;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:11px;margin-bottom:12px;">
         <span style="display:inline-block;width:12px;height:12px;background:#e8261c;transform:rotate(45deg);"></span>
-        <h2 style="margin:0;font-family:Anton,sans-serif;font-size:19px;letter-spacing:1.5px;color:#1a1a1d;text-transform:uppercase;">Investimento</h2>
+        <h2 style="margin:0;font-family:Anton,sans-serif;font-size:17px;letter-spacing:1.5px;color:#1a1a1d;text-transform:uppercase;">Investimento</h2>
         <span style="flex:1;border-top:2px dashed #d8cfbd;"></span>
       </div>
 
-      <div style="display:flex;flex-direction:column;gap:0;margin-bottom:18px;border:1px solid #ece7dd;">
+      <div style="display:flex;flex-direction:column;gap:0;margin-bottom:12px;border:1px solid #ece7dd;">
         ${itensHtml}
       </div>
 
       <!-- total -->
-      <div style="display:flex;align-items:center;justify-content:space-between;background:#1a1a1d;padding:18px 24px;margin-bottom:8px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;background:#1a1a1d;padding:14px 24px;margin-bottom:6px;">
         <div style="display:flex;align-items:baseline;gap:14px;">
           <span style="font-size:12px;letter-spacing:2.5px;color:#a8a7ac;font-weight:700;text-transform:uppercase;">Valor total</span>
           <span style="font-size:11px;color:#7a7980;font-weight:600;">Equipe: ${equipeText}</span>
         </div>
-        <div style="font-family:Anton,sans-serif;font-size:34px;color:#fff;letter-spacing:.5px;">${cacheFmt.replace(',', '<span style="color:#e8261c;">,').replace(/(\d{2})$/, '$1</span>')}</div>
+        <div style="font-family:Anton,sans-serif;font-size:30px;color:#fff;letter-spacing:.5px;">${cacheFmt.replace(',', '<span style="color:#e8261c;">,').replace(/(\d{2})$/, '$1</span>')}</div>
       </div>
 
       <!-- Por conta do contratante -->
-      <div style="display:flex;align-items:center;gap:11px;margin:26px 0 14px;">
+      <div style="display:flex;align-items:center;gap:11px;margin:16px 0 10px;">
         <span style="display:inline-block;width:12px;height:12px;background:#e8261c;transform:rotate(45deg);"></span>
-        <h2 style="margin:0;font-family:Anton,sans-serif;font-size:19px;letter-spacing:1.5px;color:#1a1a1d;text-transform:uppercase;">Por conta do contratante</h2>
+        <h2 style="margin:0;font-family:Anton,sans-serif;font-size:17px;letter-spacing:1.5px;color:#1a1a1d;text-transform:uppercase;">Por conta do contratante</h2>
         <span style="flex:1;border-top:2px dashed #d8cfbd;"></span>
       </div>
 
       ${obgGrid}
 
       <!-- rodapé pág 1 -->
-      <div style="margin-top:auto;padding-top:22px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid #ece7dd;">
+      <div style="margin-top:auto;padding-top:14px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid #ece7dd;">
         <span style="font-size:11px;letter-spacing:2px;color:#b3aa97;font-weight:700;text-transform:uppercase;">DFG Produções &amp; Eventos</span>
         <span style="font-size:11px;letter-spacing:2px;color:#b3aa97;font-weight:700;text-transform:uppercase;">Página 1 de 2</span>
       </div>
