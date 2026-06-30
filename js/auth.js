@@ -324,13 +324,16 @@ const Auth = {
     getAllowedModules() {
         if (!this.currentUser) return [];
 
-        if (this.isAdmin()) {
-            return ['Dashboard', 'Artistas', 'Eventos', 'Contratos', 'Vendas', 'Propostas', 'Central de Turnê', 'Financeiro', 'Cobrancas', 'Prestacao de Contas', 'Veiculos', 'Equipe', 'Alertas', 'Usuarios', 'Configuracoes'];
-        }
-
+        // Permissões customizadas têm prioridade — inclusive sobre Admin Master
         const permissions = Array.isArray(this.currentUser.permissoes)
             ? this.currentUser.permissoes
             : [];
+
+        if (permissions.length > 0) return permissions;
+
+        if (this.isAdmin()) {
+            return ['Dashboard', 'Artistas', 'Eventos', 'Contratos', 'Vendas', 'Propostas', 'Central de Turnê', 'Financeiro', 'Cobrancas', 'Prestacao de Contas', 'Veiculos', 'Equipe', 'Alertas', 'Usuarios', 'Configuracoes'];
+        }
 
         if (permissions.length === 0) {
             // Usar lógica antiga
