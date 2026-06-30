@@ -409,11 +409,8 @@ Pages.renderEscritorioDashboard = async function() {
 
                     <div class="turne-section">
                         <div class="section-title"><i class="fas fa-chart-pie"></i> Distribuição Operacional</div>
-                        <div id="officeChartPlaceholder" style="height: 300px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); border-radius: 12px;">
-                            <div style="text-align: center;">
-                                <i class="fas fa-chart-bar" style="font-size: 48px; opacity: 0.1; margin-bottom: 15px;"></i>
-                                <p style="color: var(--text-muted); font-size: 13px;">Gráficos estatísticos consolidados<br>em processamento...</p>
-                            </div>
+                        <div style="position:relative; height:280px; padding:10px 0;">
+                            <canvas id="officeDistChart"></canvas>
                         </div>
                     </div>
                 </div>
@@ -421,6 +418,69 @@ Pages.renderEscritorioDashboard = async function() {
         `;
 
         document.getElementById('pageContent').innerHTML = html;
+
+        // ── Gráfico de distribuição por artista ──────────────
+        setTimeout(() => {
+            const canvas = document.getElementById('officeDistChart');
+            if (!canvas) return;
+
+            const comFaturamento = dadosArtistas.filter(a => a.faturamento > 0);
+            if (!comFaturamento.length) {
+                canvas.parentElement.innerHTML = `
+                    <div style="height:280px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;opacity:.4;">
+                        <i class="fas fa-chart-pie" style="font-size:40px;"></i>
+                        <span style="font-size:13px;">Sem dados de faturamento</span>
+                    </div>`;
+                return;
+            }
+
+            const cores = ['#e8261c','#f59e0b','#22c55e','#3b82f6','#8b5cf6','#ec4899','#06b6d4','#84cc16'];
+            const labels = comFaturamento.map(a => a.nome);
+            const valores = comFaturamento.map(a => a.faturamento);
+            const bgCores = comFaturamento.map((_, i) => cores[i % cores.length]);
+
+            if (Pages._officeChartInst) { try { Pages._officeChartInst.destroy(); } catch(e){} }
+
+            Pages._officeChartInst = new Chart(canvas.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels,
+                    datasets: [{
+                        data: valores,
+                        backgroundColor: bgCores,
+                        borderColor: 'transparent',
+                        borderWidth: 0,
+                        hoverOffset: 8,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '62%',
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                color: '#ccc',
+                                font: { size: 12 },
+                                padding: 14,
+                                usePointStyle: true,
+                                pointStyleWidth: 10,
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) {
+                                    const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                    const pct = total > 0 ? ((ctx.parsed / total) * 100).toFixed(1) : 0;
+                                    return ' ' + new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(ctx.parsed) + '  (' + pct + '%)';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }, 80);
 
     } catch (err) {
         console.error('Erro ao carregar Dashboard do Escritório:', err);
