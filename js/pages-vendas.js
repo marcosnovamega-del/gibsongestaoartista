@@ -49,11 +49,28 @@ Pages.renderVendas = async function() {
         propostasRicas.push({ ...p, artista, eventoGerado, contratoAssinado });
     }
 
+    // ── Auto-expirar propostas vencidas ──────────────────────────────────────
+    const hojeExp = new Date(); hojeExp.setHours(0, 0, 0, 0);
+    const statusExpirar = ['Rascunho', 'Enviada'];
+    const expirarPromises = [];
+    for (const p of propostasRicas) {
+        if (statusExpirar.includes(p.status) && p.validade) {
+            const venc = new Date(p.validade + 'T12:00:00');
+            if (venc < hojeExp) {
+                expirarPromises.push(
+                    PropostasDB.atualizarStatus(p.id, 'Expirada').then(() => { p.status = 'Expirada'; })
+                );
+            }
+        }
+    }
+    if (expirarPromises.length > 0) await Promise.all(expirarPromises);
+
     // Separar por coluna do Kanban
     const col1 = propostasRicas.filter(p => p.status === 'Rascunho');
     const col2 = propostasRicas.filter(p => p.status === 'Enviada');
     const col3 = propostasRicas.filter(p => p.status === 'Aceita' && !p.contratoAssinado);
     const col4 = propostasRicas.filter(p => p.status === 'Aceita' && !!p.contratoAssinado);
+    const col5 = propostasRicas.filter(p => p.status === 'Expirada');
 
     // Shows assinados para rota (todos contratos assinados)
     const contratosAssinados = [];
@@ -186,6 +203,21 @@ Pages.renderVendas = async function() {
                         </div>
                     </div>
 
+                    <!-- Coluna 5: EXPIRADAS -->
+                    <div class="kanban-col">
+                        <div class="kanban-col-header" style="border-top:3px solid #6B7280;">
+                            <span class="kanban-col-title" style="color:var(--text-muted);">
+                                <i class="fas fa-clock"></i> Expiradas
+                            </span>
+                            <span class="kanban-count" style="background:rgba(107,114,128,0.15);color:#6B7280;">${col5.length}</span>
+                        </div>
+                        <div class="kanban-cards">
+                            ${col5.length > 0
+                                ? col5.map(p => Pages._renderKanbanCard(p, 5)).join('')
+                                : '<div class="kanban-empty" style="color:var(--text-muted);">Nenhuma proposta expirada</div>'}
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -235,11 +267,46 @@ Pages._renderKanbanCard = function(p, coluna) {
         ? (p.nome_contratante || '—')
         : (p.razao_social     || '—');
 
-    const vencida = p.validade && new Date(p.validade) < new Date();
-    const isFechado = coluna === 4;
+    const isFechado   = coluna === 4;
+    const isExpirada  = coluna === 5;
+
+    // Badge de validade (apenas colunas 1, 2 e 5)
+    let validadeBadge = '';
+    if (p.validade && !isFechado && coluna !== 3) {
+        const hoje = new Date(); hoje.setHours(0,0,0,0);
+        const venc = new Date(p.validade + 'T12:00:00');
+        const diasRestantes = Math.ceil((venc - hoje) / 86400000);
+        if (isExpirada) {
+            const diasAtras = Math.abs(diasRestantes);
+            validadeBadge = `<div style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;
+                color:#EF4444;background:rgba(239,68,68,0.12);border-radius:6px;padding:2px 7px;margin-top:4px;">
+                <i class="fas fa-clock"></i> Expirou há ${diasAtras}d
+            </div>`;
+        } else if (diasRestantes <= 0) {
+            validadeBadge = `<div style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;
+                color:#EF4444;background:rgba(239,68,68,0.12);border-radius:6px;padding:2px 7px;margin-top:4px;">
+                <i class="fas fa-exclamation-triangle"></i> Vencida hoje
+            </div>`;
+        } else if (diasRestantes <= 3) {
+            validadeBadge = `<div style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;
+                color:#F59E0B;background:rgba(245,158,11,0.12);border-radius:6px;padding:2px 7px;margin-top:4px;">
+                <i class="fas fa-clock"></i> Vence em ${diasRestantes}d
+            </div>`;
+        } else if (diasRestantes <= 7) {
+            validadeBadge = `<div style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;
+                color:#F59E0B;background:rgba(245,158,11,0.08);border-radius:6px;padding:2px 7px;margin-top:4px;">
+                <i class="fas fa-clock"></i> Vence em ${diasRestantes}d
+            </div>`;
+        } else {
+            validadeBadge = `<div style="display:inline-flex;align-items:center;gap:4px;font-size:10px;
+                color:#10B981;background:rgba(16,185,129,0.08);border-radius:6px;padding:2px 7px;margin-top:4px;">
+                <i class="fas fa-check-circle"></i> Válida por ${diasRestantes}d
+            </div>`;
+        }
+    }
 
     return `
-        <div class="kanban-card ${isFechado ? 'kanban-card-fechado' : ''}">
+        <div class="kanban-card ${isFechado ? 'kanban-card-fechado' : ''}" ${isExpirada ? 'style="opacity:0.75;"' : ''}>
             ${isFechado ? '<div class="kanban-fechado-glow"></div>' : ''}
             <div class="kanban-card-top">
                 <img src="${p.artista?.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.artista?.nome||'?')}&background=8B5CF6&color=fff&size=80`}"
@@ -249,6 +316,7 @@ Pages._renderKanbanCard = function(p, coluna) {
                     <div class="kanban-cliente"><i class="fas fa-user-tie"></i> ${nomeCliente}</div>
                 </div>
                 ${isFechado ? '<i class="fas fa-check-circle" style="color:#10B981;font-size:18px;"></i>' : ''}
+                ${isExpirada ? '<i class="fas fa-clock" style="color:#6B7280;font-size:16px;"></i>' : ''}
             </div>
             <div class="kanban-card-body">
                 <div class="kanban-meta">
@@ -259,11 +327,11 @@ Pages._renderKanbanCard = function(p, coluna) {
                     <i class="fas fa-calendar"></i>
                     ${p.data_evento ? Utils.formatDate(p.data_evento) : '—'}
                 </div>
-                <div class="kanban-meta" style="color:${isFechado ? '#10B981' : 'var(--success)'}; font-weight:600;">
+                <div class="kanban-meta" style="color:${isFechado ? '#10B981' : isExpirada ? '#6B7280' : 'var(--success)'}; font-weight:600;">
                     <i class="fas fa-dollar-sign"></i>
                     ${Utils.formatCurrency(p.cache_bruto || 0)}
                 </div>
-                ${vencida && !isFechado ? '<div style="color:var(--danger);font-size:10px;margin-top:4px;"><i class="fas fa-exclamation-triangle"></i> Validade vencida</div>' : ''}
+                ${validadeBadge}
             </div>
             <div class="kanban-card-actions">
                 <!-- Botões disponíveis em todas as colunas -->
@@ -308,9 +376,68 @@ Pages._renderKanbanCard = function(p, coluna) {
                         <i class="fas fa-route"></i> Ver Rota
                     </button>
                 ` : ''}
+                ${coluna === 5 ? `
+                    <button class="kanban-btn kanban-btn-success" onclick="Pages.renovarProposta('${p.id}')" title="Renovar proposta">
+                        <i class="fas fa-redo"></i> Renovar
+                    </button>
+                    <button class="kanban-btn" onclick="Modals.showPropostaModal('${p.id}')" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="kanban-btn kanban-btn-danger" onclick="Pages.deletarProposta('${p.id}')" title="Excluir">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                ` : ''}
             </div>
         </div>
     `;
+};
+
+// ============================================================
+// RENOVAR PROPOSTA EXPIRADA
+// ============================================================
+Pages.renovarProposta = async function(propostaId) {
+    const hoje = new Date();
+    const novaValidade = new Date(hoje);
+    novaValidade.setDate(novaValidade.getDate() + 10);
+    const dataStr = novaValidade.toISOString().split('T')[0];
+
+    const html = `
+        <div style="padding:8px 0;">
+            <p style="margin-bottom:16px;color:var(--text-muted);font-size:14px;">
+                Renove a validade da proposta. O status voltará para <strong>Enviada</strong> e a reserva na agenda será reativada.
+            </p>
+            <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Nova data de validade</label>
+            <input type="date" id="inputNovaValidade" value="${dataStr}"
+                   style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;
+                          background:var(--surface);color:var(--text-primary);font-size:14px;">
+        </div>`;
+
+    const confirmado = await Utils.confirm(html, 'Renovar Proposta');
+    if (!confirmado) return;
+
+    const novaData = document.getElementById('inputNovaValidade')?.value || dataStr;
+    if (!novaData) { Utils.showToast('Informe a nova validade', 'error'); return; }
+
+    Utils.showLoading();
+    try {
+        const { error } = await sbClient
+            .from('propostas')
+            .update({ status: 'Enviada', validade: novaData })
+            .eq('id', propostaId);
+
+        if (error) throw error;
+
+        // Rereserva o slot na agenda (mesmo fluxo do atualizarStatus)
+        await PropostasDB.atualizarStatus(propostaId, 'Enviada');
+
+        Utils.showToast('Proposta renovada com sucesso!', 'success');
+        await Pages.renderVendas();
+    } catch(e) {
+        console.error('Erro ao renovar proposta:', e);
+        Utils.showToast('Erro ao renovar proposta', 'error');
+    } finally {
+        Utils.hideLoading();
+    }
 };
 
 // ============================================================

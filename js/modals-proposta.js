@@ -62,7 +62,7 @@ Modals.showPropostaModal = async function(propostaId = null) {
                                 </div>
                                 <div class="form-group">
                                     <label>Validade da Proposta *</label>
-                                    <input type="date" name="validade" value="${proposta?.validade || ''}" required>
+                                    <input type="date" name="validade" value="${proposta?.validade || (() => { const d = new Date(); d.setDate(d.getDate() + 10); return d.toISOString().split('T')[0]; })()}" required>
                                 </div>
                                 <div class="form-group">
                                     <label>Observações Gerais</label>
