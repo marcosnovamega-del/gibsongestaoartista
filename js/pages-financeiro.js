@@ -433,7 +433,7 @@ Pages.carregarRecebimentosAConfirmar = async function() {
                     }
                     const descricao = item.descricao || `Parcela ${numero}`;
                     const parc      = parcelasEv.find(p => p.numero_parcela === numero);
-                    const confirmada = !!parc;
+                    const confirmada = !!(parc && parc.status === 'Pago');
                     const uid = `rec_${evento.id}_${numero}`;
 
                     return `
@@ -459,7 +459,7 @@ Pages.carregarRecebimentosAConfirmar = async function() {
                         <td style="text-align:center;">
                             ${confirmada
                                 ? `<span style="color:var(--success);font-weight:700;font-size:12px;"><i class="fas fa-check-circle"></i> Lançado</span>`
-                                : `<button class="btn-confirmar-parc" onclick="Pages.confirmarLancamentoParcela('${evento.id}',${numero},'${descricao}',${valor},'${dataVenc||''}','${uid}')">
+                                : `<button class="btn-confirmar-parc" onclick="Pages.confirmarLancamentoParcela('${evento.id}',${numero},'${descricao}',${valor},'${dataVenc||''}','${uid}','${parc?.id||''}')">
                                     <i class="fas fa-check"></i> Confirmar
                                    </button>`
                             }
@@ -1403,7 +1403,7 @@ Pages._registrarComissaoManual = async function() {
     };
 };
 
-Pages.confirmarLancamentoParcela = async function(eventoId, numero, descricao, valor, dataVenc, uid) {
+Pages.confirmarLancamentoParcela = async function(eventoId, numero, descricao, valor, dataVenc, uid, parcelaIdExistente) {
     const dtReceb  = document.getElementById(`${uid}_dtreceb`)?.value  || null;
     const vlrReceb = parseFloat(document.getElementById(`${uid}_vlrreceb`)?.value) || parseFloat(valor);
     const forma    = document.getElementById(`${uid}_forma`)?.value    || null;
@@ -1415,25 +1415,40 @@ Pages.confirmarLancamentoParcela = async function(eventoId, numero, descricao, v
 
     Utils.showLoading();
     try {
-        await ParcelasDB.criar({
-            evento_id:        eventoId,
-            numero_parcela:   numero,
-            valor:            parseFloat(valor),
+        const payload = {
             valor_recebido:   vlrReceb,
-            data_vencimento:  dataVenc || null,
             data_recebimento: dtReceb  || null,
-            forma_pagamento:  forma,
-            origem:           origem,
-            instituicao:      inst,
+            forma_pagamento:  forma    || null,
+            origem:           origem   || null,
+            instituicao:      inst     || null,
             status:           'Pago',
-            descricao:        descricao,
-        });
+            data_pagamento:   dtReceb  || new Date().toISOString().split('T')[0],
+        };
+
+        if (parcelaIdExistente) {
+            // Parcela auto-gerada existe — apenas atualiza
+            const { error } = await sbClient.from('parcelas').update(payload).eq('id', parcelaIdExistente);
+            if (error) throw error;
+        } else {
+            // Parcela não existe ainda — cria do zero
+            await ParcelasDB.criar({
+                evento_id:        eventoId,
+                numero_parcela:   numero,
+                valor:            parseFloat(valor),
+                data_vencimento:  dataVenc || null,
+                descricao:        descricao,
+                ...payload,
+            });
+        }
+
+        DB.cache = {}; // limpar cache
         Utils.hideLoading();
         Utils.showToast(`✅ "${descricao}" confirmada no Financeiro!`, 'success');
         Pages.carregarRecebimentosAConfirmar();
     } catch(e) {
         Utils.hideLoading();
-        Utils.showToast('Erro ao confirmar: ' + e.message, 'error');
+        console.error('Erro ao confirmar parcela:', e);
+        Utils.showToast('Erro ao confirmar: ' + (e.message || e), 'error');
     }
 };
 
