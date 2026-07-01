@@ -138,23 +138,6 @@ Pages.renderFinanceiro = async function() {
                 </div>
             </div>
 
-            ${Auth.isAdmin() ? `
-            <!-- COMISSÕES DE VENDEDORES -->
-            <div class="card mb-3" id="comissoes-vendedor-card">
-                <div class="card-header flex-between">
-                    <div style="display:flex;align-items:center;gap:10px;">
-                        <i class="fas fa-user-tie" style="color:var(--brand-primary);font-size:18px;"></i>
-                        <div>
-                            <h3 class="card-title" style="margin:0;">Comissões de Vendedores</h3>
-                            <small class="text-muted">Controle de pagamento por vendedor</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-body" id="comissoes-vendedor-body">
-                    <div class="loading-container"><div class="loading-spinner"></div></div>
-                </div>
-            </div>
-            ` : ''}
 
             ${Auth.isAdmin() ? `
             <!-- Modelos de Despesa Recorrente -->
@@ -261,9 +244,6 @@ Pages.renderFinanceiro = async function() {
 
     // Carregar recebimentos a confirmar (async, não bloqueia o render)
     Pages.carregarRecebimentosAConfirmar();
-
-    // Carregar comissões de vendedores
-    if (Auth.isAdmin()) Pages.carregarComissoesVendedores();
 };
 
 // ── Seção "Recebimentos a Confirmar" ─────────────────────────────────────────
