@@ -54,6 +54,48 @@ const Modals = {
                                 ${Storage.renderUploadInput('midia_kit_url', artista?.midia_kit_url || '', 'Mídia Kit (PDF)')}
                                 ${Storage.renderUploadInput('rider_tecnico_url', artista?.rider_tecnico_url || '', 'Rider Técnico (PDF)')}
                             </div>
+
+                            <!-- DADOS BANCÁRIOS DO ARTISTA -->
+                            <div style="background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:10px;padding:16px;margin-top:8px;">
+                                <label style="font-size:13px;font-weight:700;color:var(--text-primary);display:block;margin-bottom:12px;">
+                                    <i class="fas fa-university" style="color:var(--brand-primary)"></i> Dados para Pagamento (Proposta)
+                                    <span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px;">Pré-preenchido na geração da proposta</span>
+                                </label>
+                                <div class="grid grid-2">
+                                    <div class="form-group" style="margin-bottom:8px;">
+                                        <label style="font-size:11px;">Razão Social</label>
+                                        <input type="text" id="art_banco_razao" value="${(() => { try { const b = typeof artista?.dados_bancarios === 'string' ? JSON.parse(artista.dados_bancarios) : (artista?.dados_bancarios || {}); return b.razao || ''; } catch(e) { return ''; } })()}" placeholder="Razão social ou nome" style="font-size:12px;">
+                                    </div>
+                                    <div class="form-group" style="margin-bottom:8px;">
+                                        <label style="font-size:11px;">CNPJ / CPF</label>
+                                        <input type="text" id="art_banco_cnpj" value="${(() => { try { const b = typeof artista?.dados_bancarios === 'string' ? JSON.parse(artista.dados_bancarios) : (artista?.dados_bancarios || {}); return b.cnpj || ''; } catch(e) { return ''; } })()}" placeholder="CNPJ ou CPF" style="font-size:12px;">
+                                    </div>
+                                    <div class="form-group" style="margin-bottom:8px;">
+                                        <label style="font-size:11px;">Banco</label>
+                                        <input type="text" id="art_banco_nome" value="${(() => { try { const b = typeof artista?.dados_bancarios === 'string' ? JSON.parse(artista.dados_bancarios) : (artista?.dados_bancarios || {}); return b.banco || ''; } catch(e) { return ''; } })()}" placeholder="Nome do banco" style="font-size:12px;">
+                                    </div>
+                                    <div class="form-group" style="margin-bottom:8px;">
+                                        <label style="font-size:11px;">Agência</label>
+                                        <input type="text" id="art_banco_ag" value="${(() => { try { const b = typeof artista?.dados_bancarios === 'string' ? JSON.parse(artista.dados_bancarios) : (artista?.dados_bancarios || {}); return b.agencia || ''; } catch(e) { return ''; } })()}" placeholder="Agência" style="font-size:12px;">
+                                    </div>
+                                    <div class="form-group" style="margin-bottom:8px;">
+                                        <label style="font-size:11px;">Conta C/C</label>
+                                        <input type="text" id="art_banco_cc" value="${(() => { try { const b = typeof artista?.dados_bancarios === 'string' ? JSON.parse(artista.dados_bancarios) : (artista?.dados_bancarios || {}); return b.conta || ''; } catch(e) { return ''; } })()}" placeholder="Conta corrente" style="font-size:12px;">
+                                    </div>
+                                    <div class="form-group" style="margin-bottom:8px;">
+                                        <label style="font-size:11px;">Chave PIX</label>
+                                        <input type="text" id="art_banco_pix" value="${(() => { try { const b = typeof artista?.dados_bancarios === 'string' ? JSON.parse(artista.dados_bancarios) : (artista?.dados_bancarios || {}); return b.pix || ''; } catch(e) { return ''; } })()}" placeholder="Chave PIX" style="font-size:12px;">
+                                    </div>
+                                    <div class="form-group" style="margin-bottom:8px;">
+                                        <label style="font-size:11px;">Titular PIX</label>
+                                        <input type="text" id="art_banco_pix_titular" value="${(() => { try { const b = typeof artista?.dados_bancarios === 'string' ? JSON.parse(artista.dados_bancarios) : (artista?.dados_bancarios || {}); return b.pixTitular || ''; } catch(e) { return ''; } })()}" placeholder="Nome do titular" style="font-size:12px;">
+                                    </div>
+                                    <div class="form-group" style="margin-bottom:8px;">
+                                        <label style="font-size:11px;">CPF Titular</label>
+                                        <input type="text" id="art_banco_pix_cpf" value="${(() => { try { const b = typeof artista?.dados_bancarios === 'string' ? JSON.parse(artista.dados_bancarios) : (artista?.dados_bancarios || {}); return b.pixCpf || ''; } catch(e) { return ''; } })()}" placeholder="CPF do titular" style="font-size:12px;">
+                                    </div>
+                                </div>
+                            </div>
                         </form>
                     </div>
                     <div class="modal-footer">
@@ -80,7 +122,17 @@ const Modals = {
             midia_kit_url: document.getElementById('url-midia_kit_url')?.value || '',
             rider_tecnico_url: document.getElementById('url-rider_tecnico_url')?.value || '',
             status: formData.get('status'),
-            comissao_padrao: parseFloat(formData.get('comissao_padrao'))
+            comissao_padrao: parseFloat(formData.get('comissao_padrao')),
+            dados_bancarios: {
+                razao:       document.getElementById('art_banco_razao')?.value || '',
+                cnpj:        document.getElementById('art_banco_cnpj')?.value || '',
+                banco:       document.getElementById('art_banco_nome')?.value || '',
+                agencia:     document.getElementById('art_banco_ag')?.value || '',
+                conta:       document.getElementById('art_banco_cc')?.value || '',
+                pix:         document.getElementById('art_banco_pix')?.value || '',
+                pixTitular:  document.getElementById('art_banco_pix_titular')?.value || '',
+                pixCpf:      document.getElementById('art_banco_pix_cpf')?.value || '',
+            }
         };
 
         Utils.showLoading();

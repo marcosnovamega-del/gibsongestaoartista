@@ -780,11 +780,19 @@ Modals.showGerarPropostaPDF = async function(propostaId) {
     if (res.error || !res.data) { alert('Erro ao carregar proposta.'); return; }
     const p = res.data;
 
-    // Buscar artista
+    // Buscar artista (incluindo dados bancários)
     let artistaNome = '';
+    let artistaBanco = {};
     if (p.artista_id) {
-        const ar = await sbClient.from('artistas').select('nome').eq('id', p.artista_id).single();
-        if (ar.data) artistaNome = ar.data.nome;
+        const ar = await sbClient.from('artistas').select('nome,dados_bancarios').eq('id', p.artista_id).single();
+        if (ar.data) {
+            artistaNome = ar.data.nome;
+            try {
+                artistaBanco = (typeof ar.data.dados_bancarios === 'string'
+                    ? JSON.parse(ar.data.dados_bancarios)
+                    : ar.data.dados_bancarios) || {};
+            } catch(e) { artistaBanco = {}; }
+        }
     }
 
     const isPrefeitura = p.tipo_contratante === 'PJ' &&
@@ -901,35 +909,35 @@ Modals.showGerarPropostaPDF = async function(propostaId) {
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                         <div>
                             <label style="font-size:11px;color:var(--text-muted);">Razão Social</label>
-                            <input type="text" id="pdf_banco_razao" class="form-control" style="font-size:12px;margin-top:2px;" placeholder="Gibson Promoções">
+                            <input type="text" id="pdf_banco_razao" class="form-control" style="font-size:12px;margin-top:2px;" value="${artistaBanco.razao || ''}" placeholder="Razão Social">
                         </div>
                         <div>
                             <label style="font-size:11px;color:var(--text-muted);">CNPJ</label>
-                            <input type="text" id="pdf_banco_cnpj" class="form-control" style="font-size:12px;margin-top:2px;" placeholder="CNPJ do escritório">
+                            <input type="text" id="pdf_banco_cnpj" class="form-control" style="font-size:12px;margin-top:2px;" value="${artistaBanco.cnpj || ''}" placeholder="CNPJ">
                         </div>
                         <div>
                             <label style="font-size:11px;color:var(--text-muted);">Banco</label>
-                            <input type="text" id="pdf_banco_nome" class="form-control" style="font-size:12px;margin-top:2px;" placeholder="Banco">
+                            <input type="text" id="pdf_banco_nome" class="form-control" style="font-size:12px;margin-top:2px;" value="${artistaBanco.banco || ''}" placeholder="Banco">
                         </div>
                         <div>
                             <label style="font-size:11px;color:var(--text-muted);">Agência</label>
-                            <input type="text" id="pdf_banco_ag" class="form-control" style="font-size:12px;margin-top:2px;" placeholder="Agência">
+                            <input type="text" id="pdf_banco_ag" class="form-control" style="font-size:12px;margin-top:2px;" value="${artistaBanco.agencia || ''}" placeholder="Agência">
                         </div>
                         <div>
                             <label style="font-size:11px;color:var(--text-muted);">Conta C/C</label>
-                            <input type="text" id="pdf_banco_cc" class="form-control" style="font-size:12px;margin-top:2px;" placeholder="Conta">
+                            <input type="text" id="pdf_banco_cc" class="form-control" style="font-size:12px;margin-top:2px;" value="${artistaBanco.conta || ''}" placeholder="Conta">
                         </div>
                         <div>
                             <label style="font-size:11px;color:var(--text-muted);">Chave PIX</label>
-                            <input type="text" id="pdf_pix" class="form-control" style="font-size:12px;margin-top:2px;" placeholder="Chave PIX">
+                            <input type="text" id="pdf_pix" class="form-control" style="font-size:12px;margin-top:2px;" value="${artistaBanco.pix || ''}" placeholder="Chave PIX">
                         </div>
                         <div>
                             <label style="font-size:11px;color:var(--text-muted);">Titular PIX</label>
-                            <input type="text" id="pdf_pix_titular" class="form-control" style="font-size:12px;margin-top:2px;" placeholder="Nome do titular">
+                            <input type="text" id="pdf_pix_titular" class="form-control" style="font-size:12px;margin-top:2px;" value="${artistaBanco.pixTitular || ''}" placeholder="Nome do titular">
                         </div>
                         <div>
                             <label style="font-size:11px;color:var(--text-muted);">CPF Titular</label>
-                            <input type="text" id="pdf_pix_cpf" class="form-control" style="font-size:12px;margin-top:2px;" placeholder="CPF do titular">
+                            <input type="text" id="pdf_pix_cpf" class="form-control" style="font-size:12px;margin-top:2px;" value="${artistaBanco.pixCpf || ''}" placeholder="CPF do titular">
                         </div>
                     </div>
                 </div>
