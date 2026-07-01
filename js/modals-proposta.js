@@ -1012,4 +1012,13 @@ Modals._submitGerarPDF = async function(propostaId) {
     var dadosPDF = { tipo, duracao, equipe, obrigacoes, validade, itens: itensList, banco: dadosBancarios, cronograma: cronogramaFinal };
     var htmlContent = tipo === 'prefeitura'
         ? PropostaTemplate.gerarPrefeitura(proposta, dadosPDF)
-        : PropostaTemp
+        : PropostaTemplate.gerarAutonomo(proposta, dadosPDF);
+
+    const novaAba = window.open('', '_blank');
+    if (novaAba) {
+        novaAba.document.write(htmlContent);
+        novaAba.document.close();
+    } else {
+        Utils.showToast('Permita popups para gerar o PDF.', 'warning');
+    }
+};
