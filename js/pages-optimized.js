@@ -237,17 +237,21 @@ const Pages = {
             return d.getMonth() === mes && d.getFullYear() === ano;
         });
 
-        // Calcular totais do mês — apenas eventos com contrato assinado
+        // Calcular totais gerais do artista (todos os eventos, não só do mês)
         const _STATUS_OK = ['Confirmado', 'Realizado', 'Concluído', 'Encerrado', 'Finalizado'];
-        const eventosDoMesIds = new Set(eventosDoMes.map(e => e.id));
+        const todosEventosIds = new Set(eventos.map(e => e.id));
         let receita = 0;
         let despesas = 0;
-        for (const e of eventosDoMes) {
-            if (_STATUS_OK.includes(e.status)) receita += e.valor_liquido || 0;
+        for (const e of eventos) {
+            if (_STATUS_OK.includes(e.status)) receita += e.cache_bruto || e.valor_liquido || 0;
         }
         for (const d of todasDespesas) {
-            if (eventosDoMesIds.has(d.evento_id)) despesas += d.valor || 0;
+            if (todosEventosIds.has(d.evento_id)) despesas += d.valor || 0;
         }
+
+        // Shows do mês (apenas para o card de shows)
+        const showsDoMes = eventosDoMes.length;
+        const proximosShows = eventos.filter(e => new Date(e.data + 'T12:00:00') >= hoje).length;
 
         const lucro = receita - despesas;
         const margem = receita > 0 ? ((lucro / receita) * 100).toFixed(1) : 0;
@@ -313,7 +317,7 @@ const Pages = {
                             <i class="fas fa-calendar-check"></i>
                         </div>
                         <div class="stat-content">
-                            <h3>${eventosDoMes.length}</h3>
+                            <h3>${showsDoMes} <small style="font-size:14px;color:var(--text-muted);">/ ${proximosShows} próx.</small></h3>
                             <p>Shows do Mês</p>
                         </div>
                     </div>
@@ -324,7 +328,7 @@ const Pages = {
                         </div>
                         <div class="stat-content">
                             <h3>${Utils.formatCurrency(receita)}</h3>
-                            <p>Receita Total</p>
+                            <p>Cachê Total (todos shows)</p>
                         </div>
                     </div>
 
@@ -346,7 +350,7 @@ const Pages = {
                             <h3 class="${lucro >= 0 ? 'text-success' : 'text-danger'}">
                                 ${Utils.formatCurrency(lucro)}
                             </h3>
-                            <p>Lucro Líquido (${margem}%)</p>
+                            <p>Resultado Líquido (${margem}%)</p>
                         </div>
                     </div>
                 </div>
