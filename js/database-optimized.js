@@ -601,10 +601,12 @@ const ContratosDB = {
                 if (evento?.proposta_id) {
                     const proposta = await PropostasDB.buscarPorId(evento.proposta_id);
                     if (proposta) {
-                        // Apaga parcelas anteriores do evento (evita duplicatas)
-                        const parcelasExist = await DB.search('parcelas', { evento_id: contrato.evento_id });
-                        for (const p of parcelasExist) {
-                            await DB.delete('parcelas', p.id);
+                        // Apaga parcelas anteriores do evento (delete direto — sem filtro escritorio_id para garantir limpeza total)
+                        try {
+                            await sbClient.from('parcelas').delete().eq('evento_id', contrato.evento_id);
+                            DB.invalidateCache('parcelas');
+                        } catch(delErr) {
+                            console.warn('Aviso ao limpar parcelas anteriores:', delErr.message);
                         }
                         await PropostasDB._gerarParcelasDoEvento(proposta, contrato.evento_id);
                         console.log('✅ Parcelas geradas do cronograma da proposta.');
@@ -854,6 +856,16 @@ const PropostasDB = {
     async converterParaEvento(propostaId) {
         const proposta = await this.buscarPorId(propostaId);
         if (!proposta) return null;
+
+        // Guard: se a proposta já foi aceita, retorna o evento existente sem criar duplicata
+        if (proposta.status === 'Aceita') {
+            const todosEventos = await EventosDB.listar();
+            const eventoJaExiste = todosEventos.find(e => e.proposta_id === propostaId);
+            if (eventoJaExiste) {
+                console.warn('[converterParaEvento] Proposta já aceita — retornando evento existente:', eventoJaExiste.id);
+                return eventoJaExiste;
+            }
+        }
 
         const eventoData = {
             proposta_id:          proposta.id,
