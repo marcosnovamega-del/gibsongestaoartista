@@ -233,7 +233,7 @@ const Pages = {
 
         // Filtrar eventos do mês
         const eventosDoMes = eventos.filter(e => {
-            const d = new Date(e.data);
+            const d = new Date(e.data + 'T12:00:00');
             return d.getMonth() === mes && d.getFullYear() === ano;
         });
 
@@ -457,7 +457,7 @@ const Pages = {
             
             // Filtrar eventos do mês (e por artista se Manager) — tudo em memória
             const eventosMes = eventosAll.filter(e => {
-                const d = new Date(e.data);
+                const d = new Date(e.data + 'T12:00:00');
                 const mesOk = d.getMonth() === mesAtual && d.getFullYear() === a;
                 if (!mesOk) return false;
                 if (artistaId) return e.artista_id === artistaId;

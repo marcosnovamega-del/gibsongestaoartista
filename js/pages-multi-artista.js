@@ -328,7 +328,7 @@ Pages.renderEscritorioDashboard = async function() {
             const _stok = ['Confirmado','Realizado','Concluído','Encerrado','Finalizado'];
             const faturamentoArt = eventosArt.reduce((acc, e) => acc + (_stok.includes(e.status) ? (e.valor_liquido || 0) : 0), 0);
             const showsMesArt = eventosArt.filter(e => {
-                const d = new Date(e.data);
+                const d = new Date(e.data + 'T12:00:00');
                 return d.getMonth() === mesAtual && d.getFullYear() === anoAtual;
             }).length;
 

@@ -22,7 +22,7 @@ Pages.renderBalancoMensal = async function(mesParam, anoParam) {
 
     // Filtrar eventos do mês
     const eventosMes = eventos.filter(e => {
-        const d = new Date(e.data);
+        const d = new Date(e.data + 'T12:00:00');
         return d.getMonth() === mes && d.getFullYear() === ano;
     });
 

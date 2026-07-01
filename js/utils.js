@@ -46,21 +46,30 @@ const Utils = {
     },
 
     // Formatar data
+    // Parseia string de data sem bug de fuso (YYYY-MM-DD → T12:00:00 local)
+    _parseDate(date) {
+        if (!date) return null;
+        if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+            return new Date(date + 'T12:00:00');
+        }
+        return new Date(date);
+    },
+
     formatDate(date) {
         if (!date) return '-';
-        return new Date(date).toLocaleDateString('pt-BR');
+        return this._parseDate(date).toLocaleDateString('pt-BR');
     },
 
     // Formatar data e hora
     formatDateTime(date) {
         if (!date) return '-';
-        return new Date(date).toLocaleString('pt-BR');
+        return this._parseDate(date).toLocaleString('pt-BR');
     },
 
     // Formatar data para input
     formatDateInput(date) {
         if (!date) return '';
-        const d = new Date(date);
+        const d = this._parseDate(date);
         const year = d.getFullYear();
         const month = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');
@@ -467,7 +476,7 @@ const Utils = {
                         <div>
                             <h1 class="title">RIDER ${tipo === 'TECNICO' ? 'TÉCNICO E MAPA DE PALCO' : 'DE CAMARIM E ESTRUTURA'}</h1>
                             <div class="subtitle">Artista: <strong>${artista?.nome || 'Não definido'}</strong></div>
-                            <div class="subtitle">Show: ${evento?.cidade || 'Não definido'} - ${evento?.data ? new Date(evento.data).toLocaleDateString('pt-BR') : 'Data Indefinida'}</div>
+                            <div class="subtitle">Show: ${evento?.cidade || 'Não definido'} - ${evento?.data ? Utils.formatDate(evento.data) : 'Data Indefinida'}</div>
                         </div>
                         <img src="${artista?.foto || ''}" class="logo" style="border-radius: 8px;">
                     </div>

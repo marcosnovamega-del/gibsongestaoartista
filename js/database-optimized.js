@@ -430,7 +430,7 @@ _______________________________        _______________________________
     async buscarPorMes(mes, ano) {
         const eventos = await this.listar();
         return eventos.filter(e => {
-            const data = new Date(e.data);
+            const data = new Date(e.data + 'T12:00:00');
             return data.getMonth() === mes && data.getFullYear() === ano;
         });
     }
@@ -678,7 +678,7 @@ const ParcelasDB = {
 
         return parcelas.filter(p => {
             if (p.status === 'Pago') return false;
-            const vencimento = new Date(p.data_vencimento);
+            const vencimento = new Date(p.data_vencimento + 'T12:00:00');
             return vencimento < hoje;
         });
     }

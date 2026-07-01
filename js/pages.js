@@ -28,7 +28,7 @@ const Pages = {
         artistas.forEach(a => { artMap[a.id] = a.nome; });
 
         const eventosDoMes = eventos.filter(e => {
-            const d = new Date(e.data);
+            const d = new Date(e.data + 'T12:00:00');
             return d.getMonth() === mes && d.getFullYear() === ano;
         });
 
@@ -132,7 +132,7 @@ const Pages = {
                         <div class="card-body" style="padding:8px 0;">
                             ${data.proximosEventos.length > 0 ?
                                 data.proximosEventos.map(e => {
-                                    const dataEvento = new Date(e.data + 'T00:00:00');
+                                    const dataEvento = new Date(e.data + 'T12:00:00');
                                     const hoje2 = new Date(); hoje2.setHours(0,0,0,0);
                                     const diffMs = dataEvento - hoje2;
                                     const diffDias = Math.ceil(diffMs / (1000 * 60 * 60 * 24));

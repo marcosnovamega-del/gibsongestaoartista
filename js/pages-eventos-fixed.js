@@ -240,7 +240,7 @@ Pages.renderCalendario = async function(eventos, mes, ano) {
     // Dias do mês
     for (let dia = 1; dia <= ultimoDia; dia++) {
         const eventosNoDia = eventos.filter(e => {
-            const dataEvento = new Date(e.data);
+            const dataEvento = new Date(e.data + 'T12:00:00');
             return dataEvento.getDate() === dia &&
                    dataEvento.getMonth() === mes &&
                    dataEvento.getFullYear() === ano;
@@ -368,7 +368,7 @@ Pages.renderProximosEventosLista = async function(eventos) {
                     <div>
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
                             <span style="font-size: 28px; font-weight: 900; color: var(--red-primary);">
-                                ${new Date(evento.data).getDate()}
+                                ${new Date(evento.data + 'T12:00:00').getDate()}
                             </span>
                             <div>
                                 <p style="margin: 0; color: var(--text-secondary); font-size: 12px;">
