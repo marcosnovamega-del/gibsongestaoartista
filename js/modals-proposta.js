@@ -76,7 +76,7 @@ Modals.showPropostaModal = async function(propostaId = null) {
                             <div style="padding:24px;">
                                 <h4 class="etapa-title"><i class="fas fa-user-tie"></i> Dados do Contratante</h4>
                                 <div class="form-group">
-                                    <label>Tipo de Contratante *</label>
+                                    <label>Tipo de Contratante</label>
                                     <select name="tipo_contratante" id="p_tipo_contratante" onchange="Modals.togglePropostaPJ()" required>
                                         <option value="PJ" ${proposta?.tipo_contratante !== 'PF' ? 'selected' : ''}>Pessoa Jurídica (PJ)</option>
                                         <option value="PF" ${proposta?.tipo_contratante === 'PF' ? 'selected' : ''}>Pessoa Física (PF)</option>
@@ -85,7 +85,7 @@ Modals.showPropostaModal = async function(propostaId = null) {
                                 <div id="p_campos_pj">
                                     <div class="grid grid-2">
                                         <div class="form-group">
-                                            <label>Razão Social *</label>
+                                            <label>Razão Social</label>
                                             <input type="text" name="razao_social" value="${proposta?.razao_social || ''}" placeholder="Empresa Ltda" id="p_razao_social">
                                         </div>
                                         <div class="form-group">
@@ -94,7 +94,7 @@ Modals.showPropostaModal = async function(propostaId = null) {
                                         </div>
                                     </div>
                                     <div class="form-group">
-                                        <label>CNPJ *</label>
+                                        <label>CNPJ</label>
                                         <input type="text" name="cnpj" value="${proposta?.cnpj || ''}" placeholder="00.000.000/0000-00" id="p_cnpj"
                                                oninput="Utils.maskCNPJ(this)">
                                     </div>
@@ -102,42 +102,42 @@ Modals.showPropostaModal = async function(propostaId = null) {
                                 <div id="p_campos_pf" style="display:none;">
                                     <div class="grid grid-2">
                                         <div class="form-group">
-                                            <label>Nome Completo *</label>
+                                            <label>Nome Completo</label>
                                             <input type="text" name="nome_contratante" value="${proposta?.nome_contratante || ''}" id="p_nome_contratante">
                                         </div>
                                         <div class="form-group">
-                                            <label>CPF *</label>
+                                            <label>CPF</label>
                                             <input type="text" name="cpf_contratante" value="${proposta?.cpf_contratante || ''}" placeholder="000.000.000-00"
                                                    oninput="Utils.maskCPF(this)">
                                         </div>
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label>Responsável pelo Contrato *</label>
+                                    <label>Responsável pelo Contrato</label>
                                     <input type="text" name="responsavel" value="${proposta?.responsavel || ''}" required placeholder="Nome do responsável">
                                 </div>
                                 <div class="grid grid-2">
                                     <div class="form-group">
-                                        <label>Telefone / WhatsApp *</label>
+                                        <label>Telefone / WhatsApp</label>
                                         <input type="text" name="telefone" value="${proposta?.telefone || ''}" required placeholder="(00) 00000-0000"
                                                oninput="Utils.maskPhone(this)">
                                     </div>
                                     <div class="form-group">
-                                        <label>E-mail *</label>
+                                        <label>E-mail</label>
                                         <input type="email" name="email" value="${proposta?.email || ''}" required placeholder="contato@empresa.com">
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label>Endereço Completo *</label>
+                                    <label>Endereço Completo</label>
                                     <input type="text" name="endereco" value="${proposta?.endereco || ''}" required placeholder="Rua, número, bairro">
                                 </div>
                                 <div class="grid grid-3">
                                     <div class="form-group">
-                                        <label>Cidade *</label>
+                                        <label>Cidade</label>
                                         <input type="text" name="cidade_contratante" value="${proposta?.cidade_contratante || ''}" required>
                                     </div>
                                     <div class="form-group">
-                                        <label>Estado *</label>
+                                        <label>Estado</label>
                                         <input type="text" name="estado_contratante" value="${proposta?.estado_contratante || ''}" required maxlength="2" placeholder="UF" style="text-transform:uppercase">
                                     </div>
                                     <div class="form-group">
