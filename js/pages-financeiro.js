@@ -655,7 +655,15 @@ Pages.renderComissoesVendedores = async function(filtroVendedor) {
             };
         });
 
-        // ── Filtro ─────────────────────────────────────────────────────
+        // ── Filtro por artista selecionado globalmente ─────────────────
+        var artistaFiltroId = (DB && DB.getArtistaFiltroId) ? DB.getArtistaFiltroId() : null;
+        if (artistaFiltroId) {
+            items = items.filter(function(i) {
+                return i.evento && i.evento.artista_id === artistaFiltroId;
+            });
+        }
+
+        // ── Filtro por vendedor ────────────────────────────────────────
         var todosVendedores = [];
         items.forEach(function(i) { if (todosVendedores.indexOf(i.vendedor) === -1) todosVendedores.push(i.vendedor); });
         todosVendedores.sort();
@@ -765,7 +773,10 @@ Pages.renderComissoesVendedores = async function(filtroVendedor) {
                     : '<span style="padding:2px 8px;border-radius:12px;background:rgba(245,158,11,.15);color:var(--warning);font-size:11px;font-weight:600;">Pendente</span>';
                 var acoes;
                 if (item.status === 'Pago') {
-                    acoes = '<span style="color:var(--success);font-size:11px;"><i class="fas fa-check-circle"></i> ' + (item.dataPagamento ? Utils.formatDate(item.dataPagamento) : '') + '</span>';
+                    acoes = '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">' +
+                        '<span style="color:var(--success);font-size:11px;"><i class="fas fa-check-circle"></i> ' + (item.dataPagamento ? Utils.formatDate(item.dataPagamento) : 'Pago') + '</span>' +
+                        (item.despesaId ? '<button onclick="Pages._desfazerComissao(\'' + item.despesaId + '\',\'renderComissoesVendedores\')" style="padding:2px 7px;font-size:11px;border-radius:6px;border:1px solid #F59E0B;background:transparent;color:#F59E0B;cursor:pointer;"><i class="fas fa-undo"></i> Desfazer</button>' : '') +
+                        '</div>';
                 } else if (item.despesaId) {
                     acoes = '<div style="display:flex;gap:4px;flex-wrap:wrap;">' +
                         '<button onclick="Pages._pagarComissao(\'' + item.despesaId + '\',\'renderComissoesVendedores\')" style="padding:3px 9px;font-size:11px;border-radius:6px;border:1px solid var(--success);background:transparent;color:var(--success);cursor:pointer;white-space:nowrap;"><i class="fas fa-check"></i> Pagar</button>' +
@@ -1009,7 +1020,15 @@ Pages.carregarComissoesVendedores = async function(filtroVendedor) {
             };
         });
 
-        // ── 4. Lista de vendedores únicos para filtro ────────────────────────
+        // ── 4. Filtro por artista selecionado globalmente ────────────────────
+        var artistaFiltroId = (DB && DB.getArtistaFiltroId) ? DB.getArtistaFiltroId() : null;
+        if (artistaFiltroId) {
+            items = items.filter(function(i) {
+                return i.evento && i.evento.artista_id === artistaFiltroId;
+            });
+        }
+
+        // ── 5. Lista de vendedores únicos para filtro ────────────────────────
         var todosVendedores = [];
         items.forEach(function(i) { if (todosVendedores.indexOf(i.vendedor) === -1) todosVendedores.push(i.vendedor); });
         todosVendedores.sort();
@@ -1096,7 +1115,10 @@ Pages.carregarComissoesVendedores = async function(filtroVendedor) {
                     : '<span style="display:inline-block;padding:2px 8px;border-radius:12px;background:rgba(245,158,11,.15);color:var(--warning);font-size:11px;font-weight:600;">Pendente</span>';
                 var acoes;
                 if (item.status === 'Pago') {
-                    acoes = '<span style="color:var(--success);font-size:11px;"><i class="fas fa-check-circle"></i> ' + (item.dataPagamento ? Utils.formatDate(item.dataPagamento) : '') + '</span>';
+                    acoes = '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">' +
+                        '<span style="color:var(--success);font-size:11px;"><i class="fas fa-check-circle"></i> ' + (item.dataPagamento ? Utils.formatDate(item.dataPagamento) : 'Pago') + '</span>' +
+                        (item.despesaId ? '<button onclick="Pages._desfazerComissao(\'' + item.despesaId + '\',\'carregarComissoesVendedores\')" style="padding:2px 7px;font-size:11px;border-radius:6px;border:1px solid #F59E0B;background:transparent;color:#F59E0B;cursor:pointer;"><i class="fas fa-undo"></i> Desfazer</button>' : '') +
+                        '</div>';
                 } else if (item.despesaId) {
                     acoes = '<div style="display:flex;gap:4px;flex-wrap:wrap;">' +
                         '<button onclick="Pages._pagarComissao(\'' + item.despesaId + '\')" style="padding:3px 9px;font-size:11px;border-radius:6px;border:1px solid var(--success);background:transparent;color:var(--success);cursor:pointer;white-space:nowrap;"><i class="fas fa-check"></i> Pagar</button>' +
@@ -1221,6 +1243,23 @@ Pages._pagarComissao = function(despesaId, paginaCallback) {
             Utils.showToast('Erro: ' + (e.message || e), 'error');
         }
     };
+};
+
+Pages._desfazerComissao = async function(despesaId, paginaCallback) {
+    var ok = await Utils.confirm('Desfazer pagamento desta comissão? Voltará para Pendente.');
+    if (!ok) return;
+    Utils.showLoading();
+    var res = await sbClient.from('despesas')
+        .update({ status: 'Pendente', data_pagamento: null })
+        .eq('id', despesaId);
+    Utils.hideLoading();
+    if (res.error) {
+        Utils.showToast('Erro ao desfazer: ' + res.error.message, 'error');
+    } else {
+        Utils.showToast('Pagamento desfeito!', 'success');
+        if (paginaCallback && typeof Pages[paginaCallback] === 'function') Pages[paginaCallback]();
+        else Pages.renderComissoesVendedores();
+    }
 };
 
 Pages._agendarComissao = function(despesaId, paginaCallback) {
@@ -1721,7 +1760,12 @@ Pages.renderParcelasTable = async function(parcelas) {
                                             <i class="fas fa-check"></i> Marcar Pago
                                         </button>
                                     ` : p.status === 'Pago' ? `
-                                        <small class="text-muted">Pago em ${Utils.formatDate(p.data_pagamento)}</small>
+                                        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                                            <small class="text-muted"><i class="fas fa-check-circle" style="color:var(--success);"></i> ${p.data_pagamento ? Utils.formatDate(p.data_pagamento) : 'Pago'}</small>
+                                            <button class="btn-secondary btn-sm" style="color:#F59E0B;font-size:11px;padding:2px 7px;" onclick="Pages.desfazerPagamentoParcela('${p.id}','renderFinanceiro')" title="Desfazer recebimento">
+                                                <i class="fas fa-undo"></i> Desfazer
+                                            </button>
+                                        </div>
                                     ` : ''}
                                 </td>
                             </tr>

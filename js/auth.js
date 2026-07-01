@@ -187,6 +187,7 @@ const Auth = {
 
         const permissions = {
             'Admin Master':      ['all'],
+            'Admin Financeiro':  ['all'],
             'Manager':           ['Dashboard', 'Artistas', 'Eventos', 'Vendas', 'Propostas', 'Central de Turnê', 'Equipe', 'Contratos', 'Cobrancas', 'Prestacao de Contas', 'Alertas'],
             'Produtor':          ['Dashboard', 'Eventos', 'Central de Turnê', 'Alertas'],
             'Financeiro':        ['Dashboard', 'Financeiro', 'Cobrancas', 'Prestacao de Contas', 'Eventos', 'Contratos', 'Alertas'],
@@ -200,8 +201,13 @@ const Auth = {
         return userPermissions.includes(permission);
     },
 
-    // Verificar se usuário é admin
+    // Verificar se usuário é admin (Admin Master = dono do sistema / Admin Financeiro = acesso total exceto gerenciar dev)
     isAdmin() {
+        return this.currentUser && ['Admin Master', 'Admin Financeiro'].includes(this.currentUser.nivel);
+    },
+
+    // Verificar se é o Admin Master puro (único que pode gerenciar contas de desenvolvedor)
+    isAdminMaster() {
         return this.currentUser && this.currentUser.nivel === 'Admin Master';
     },
 

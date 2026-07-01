@@ -244,11 +244,14 @@ Pages._renderParcelaRow = function(p) {
                 ${pago ? 'Pago' : 'Pendente'}
             </span>
         </td>
-        <td>
+        <td style="white-space:nowrap;">
             ${!pago ? `
             <button class="btn-primary btn-sm" onclick="Pages.marcarParcelaPaga('${p.id}')">
                 <i class="fas fa-check"></i> Recebido
-            </button>` : ''}
+            </button>` : `
+            <button class="btn-secondary btn-sm" style="color:#F59E0B;font-size:11px;" onclick="Pages.desfazerPagamentoParcela('${p.id}')" title="Desfazer recebimento">
+                <i class="fas fa-undo"></i> Desfazer
+            </button>`}
             ${(!pago && p.evento?.artista_id) ? `
             <button class="btn-secondary btn-sm" style="color:#25D366;margin-top:2px;"
                     onclick="Pages.alertaWhatsApp('${p.id}')">
@@ -268,6 +271,29 @@ Pages.marcarParcelaPaga = async function(parcelaId) {
         await AuditDB.registrar({ acao: 'EDITAR', modulo: 'financeiro', registroId: parcelaId, descricao: 'Parcela marcada como paga' });
         Utils.showToast('Pagamento registrado!', 'success');
         Pages.renderRecebimentos();
+    }
+};
+
+Pages.desfazerPagamentoParcela = async function(parcelaId, callbackNome) {
+    const ok = await Utils.confirm('Desfazer recebimento? A parcela voltará para Pendente.');
+    if (!ok) return;
+    Utils.showLoading();
+    const { error } = await sbClient
+        .from('parcelas')
+        .update({ status: 'Pendente', data_pagamento: null })
+        .eq('id', parcelaId);
+    Utils.hideLoading();
+    if (error) {
+        Utils.showToast('Erro ao desfazer pagamento', 'error');
+        console.error(error);
+    } else {
+        await AuditDB.registrar({ acao: 'EDITAR', modulo: 'financeiro', registroId: parcelaId, descricao: 'Recebimento desfeito — voltou para Pendente' });
+        Utils.showToast('Recebimento desfeito!', 'success');
+        if (callbackNome && typeof Pages[callbackNome] === 'function') {
+            Pages[callbackNome]();
+        } else {
+            Pages.renderRecebimentos();
+        }
     }
 };
 
