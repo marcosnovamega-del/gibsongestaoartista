@@ -3,7 +3,7 @@
    Relatório poderoso de fechamento mensal
 ======================================== */
 
-Pages.renderBalancoMensal = async function(mesParam, anoParam) {
+Pages.renderBalancoMensal = async function(mesParam, anoParam, artistaFiltroParam) {
     document.getElementById('pageContent').innerHTML =
         '<div class="loading-container"><div class="loading-spinner"></div></div>';
 
@@ -11,14 +11,35 @@ Pages.renderBalancoMensal = async function(mesParam, anoParam) {
     const mes  = mesParam ?? hoje.getMonth();
     const ano  = anoParam ?? hoje.getFullYear();
 
-    // Buscar todos os dados necessários
-    const [parcelas, eventos, artistas, despesas, contratos] = await Promise.all([
-        ParcelasDB.listar(true),
-        EventosDB.listar(true),
-        ArtistasDB.listar(),
-        DespesasDB.listar(true),
-        ContratosDB.listar()
+    // artistaFiltro: ID específico ou 'todos' (padrão)
+    const artistaFiltro = artistaFiltroParam ?? 'todos';
+
+    // Carregar TODOS os dados sem filtro de artista (via Supabase direto)
+    const escritorioId = window.Auth?.currentUser?.escritorio_id || null;
+    const buildQuery = (table) => {
+        let q = sbClient.from(table).select('*');
+        if (escritorioId) q = q.eq('escritorio_id', escritorioId);
+        return q;
+    };
+
+    const [
+        { data: parcelas  = [] },
+        { data: todosEvts = [] },
+        { data: artistas  = [] },
+        { data: despesas  = [] },
+        { data: contratos = [] }
+    ] = await Promise.all([
+        buildQuery('parcelas'),
+        buildQuery('eventos'),
+        buildQuery('artistas'),
+        buildQuery('despesas'),
+        buildQuery('contratos')
     ]);
+
+    // Filtrar por artista selecionado (cliente-side)
+    const eventos = artistaFiltro && artistaFiltro !== 'todos'
+        ? todosEvts.filter(e => e.artista_id === artistaFiltro)
+        : todosEvts;
 
     // Filtrar eventos do mês
     const eventosMes = eventos.filter(e => {
@@ -61,7 +82,7 @@ Pages.renderBalancoMensal = async function(mesParam, anoParam) {
         };
         porArtista[nomeArt].shows++;
         porArtista[nomeArt].bruto    += e.cache_bruto || 0;
-        porArtista[nomeArt].liquido  += (e.cache_bruto || 0) - ((e.cache_bruto || 0) * (e.comissao || 0) / 100);
+        porArtista[nomeArt].liquido  += (e.cache_bruto || 0) - (e.comissao || 0);
         porArtista[nomeArt].pago     += e.pgPago;
         porArtista[nomeArt].pendente += e.pgPendente;
     });
@@ -90,6 +111,11 @@ Pages.renderBalancoMensal = async function(mesParam, anoParam) {
                 <p class="text-muted">Relatório completo · ${nomeMes} ${ano}</p>
             </div>
             <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                <!-- Seletor de artista -->
+                <select class="balanco-select" id="balArtista" onchange="Pages.mudarMesBalanco()">
+                    <option value="todos" ${artistaFiltro === 'todos' ? 'selected' : ''}>Todos os Artistas</option>
+                    ${artistas.map(a => `<option value="${a.id}" ${artistaFiltro === a.id ? 'selected' : ''}>${a.nome}</option>`).join('')}
+                </select>
                 <!-- Seletor de mês/ano -->
                 <select class="balanco-select" id="balMes" onchange="Pages.mudarMesBalanco()">
                     ${meses.map((m, i) => `<option value="${i}" ${i === mes ? 'selected' : ''}>${m}</option>`).join('')}
@@ -219,7 +245,7 @@ Pages.renderBalancoMensal = async function(mesParam, anoParam) {
                         </thead>
                         <tbody>
                             ${eventosRicos.map(e => {
-                                const comissao = (e.cache_bruto || 0) * (e.comissao || 0) / 100;
+                                const comissao = e.comissao || 0;
                                 const liquido  = (e.cache_bruto || 0) - comissao;
                                 const statusCor = e.status === 'Realizado' ? '#10B981' : e.status === 'Confirmado' ? '#3B82F6' : '#F59E0B';
                                 return `<tr>
@@ -394,9 +420,10 @@ Pages.renderBalancoMensal = async function(mesParam, anoParam) {
 };
 
 Pages.mudarMesBalanco = function() {
-    const mes = parseInt(document.getElementById('balMes')?.value ?? new Date().getMonth());
-    const ano = parseInt(document.getElementById('balAno')?.value ?? new Date().getFullYear());
-    Pages.renderBalancoMensal(mes, ano);
+    const mes      = parseInt(document.getElementById('balMes')?.value ?? new Date().getMonth());
+    const ano      = parseInt(document.getElementById('balAno')?.value ?? new Date().getFullYear());
+    const artista  = document.getElementById('balArtista')?.value ?? 'todos';
+    Pages.renderBalancoMensal(mes, ano, artista);
 };
 
 Pages.imprimirBalanco = function() {
