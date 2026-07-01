@@ -19,20 +19,26 @@ PropostasDB._gerarParcelasDoEvento = async function(proposta, eventoId) {
 
         const showDate   = new Date(proposta.data_evento + 'T12:00:00');
         const cacheBruto = proposta.cache_bruto || 0;
-        const comissao   = proposta.comissao    || 10;
-        const liquido    = cacheBruto - (cacheBruto * comissao / 100);
-        const total      = cronograma.length;
+        // Comissão agora é R$ fixo (não %)
+        const comissaoEsc = proposta.comissao || 0;
+        const liquido     = cacheBruto - comissaoEsc;
+        const total       = cronograma.length;
 
         for (let i = 0; i < cronograma.length; i++) {
             const c    = cronograma[i];
-            const dias = c.dias_antes_show || 0;
+            const dias = c.dias_antes_show !== undefined ? c.dias_antes_show : 0;
             const venc = new Date(showDate);
             venc.setDate(venc.getDate() + dias);
+
+            // Usar valor fixo do cronograma se disponível; fallback para % do cachê bruto
+            const valorParcela = c.valor !== undefined
+                ? parseFloat(c.valor)
+                : parseFloat((cacheBruto * (c.pct || 100) / 100).toFixed(2));
 
             await sbClient.from('parcelas').insert({
                 evento_id:       eventoId,
                 proposta_id:     proposta.id,
-                valor:           liquido * (c.pct || 100) / 100,
+                valor:           valorParcela,
                 data_vencimento: venc.toISOString().split('T')[0],
                 status:          'Pendente',
                 descricao:       c.descricao || `Parcela ${i+1}`,
@@ -46,30 +52,31 @@ PropostasDB._gerarParcelasDoEvento = async function(proposta, eventoId) {
         // --- GERAR DESPESAS DE COMISSÃO AUTOMATICAMENTE ---
         const vendedorComissao = parseFloat(proposta.vendedor_comissao_valor) || 0;
         if (vendedorComissao > 0) {
+            const nomeVendedor = proposta.vendedor_nome || proposta.vendedor_nome_fin || 'N/A';
             await sbClient.from('despesas').insert({
-                evento_id: eventoId,
-                descricao: `Comissão Vendedor: ${proposta.vendedor_nome || 'N/A'}`,
-                categoria: 'comissoes',
-                valor: vendedorComissao,
-                status: 'Pendente',
-                data_vencimento: null, // Agendamento manual pelo financeiro
-                observacoes: 'Gerado automaticamente da venda.'
+                evento_id:       eventoId,
+                descricao:       `Comissão Vendedor – ${nomeVendedor}`,
+                categoria:       'Comissão',
+                valor:           vendedorComissao,
+                status:          'Pendente',
+                data_vencimento: proposta.data_evento || null,
+                observacoes:     'Gerado automaticamente da venda.',
             });
-            console.log(`✅ Despesa gerada para Comissão do Vendedor`);
+            console.log(`✅ Despesa de comissão gerada para vendedor: ${nomeVendedor}`);
         }
 
         const parceiroComissao = parseFloat(proposta.parceiro_comissao_valor) || 0;
         if (proposta.parceiro_nome && parceiroComissao > 0) {
             await sbClient.from('despesas').insert({
-                evento_id: eventoId,
-                descricao: `Comissão Parceiro: ${proposta.parceiro_nome}`,
-                categoria: 'comissoes',
-                valor: parceiroComissao,
-                status: 'Aprovação Pendente',
-                data_vencimento: null, // Agendamento manual pelo financeiro
-                observacoes: 'Aguardando aprovação.'
+                evento_id:       eventoId,
+                descricao:       `Comissão Vendedor – ${proposta.parceiro_nome}`,
+                categoria:       'Comissão',
+                valor:           parceiroComissao,
+                status:          'Pendente',
+                data_vencimento: proposta.data_evento || null,
+                observacoes:     'Comissão de parceiro — aguardando aprovação.',
             });
-            console.log(`✅ Despesa gerada para Comissão do Parceiro (Aprovação Pendente)`);
+            console.log(`✅ Despesa de comissão gerada para parceiro: ${proposta.parceiro_nome}`);
         }
 
         DB.cache = {}; // limpar cache

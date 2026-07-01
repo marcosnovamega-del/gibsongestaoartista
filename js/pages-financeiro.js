@@ -580,7 +580,11 @@ Pages.carregarComissoesVendedores = async function() {
         const todas = despesas || [];
 
         if (todas.length === 0) {
-            el.innerHTML = '<p class="text-muted" style="padding:8px 0;">Nenhuma comissão de vendedor registrada ainda.</p>';
+            el.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0 16px;flex-wrap:wrap;gap:10px;">' +
+                '<p class="text-muted" style="margin:0;">Nenhuma comissão registrada ainda. Use o botão para registrar manualmente.</p>' +
+                '<button onclick="Pages._registrarComissaoManual()" style="padding:7px 16px;font-size:12px;border:none;border-radius:8px;background:var(--brand-primary);color:#000;font-weight:600;cursor:pointer;">' +
+                '<i class="fas fa-plus"></i> Registrar Comissão</button>' +
+                '</div>';
             return;
         }
 
@@ -616,7 +620,10 @@ Pages.carregarComissoesVendedores = async function() {
                     ? '<span class="badge badge-success" style="font-size:11px;">Pago</span>'
                     : '<span class="badge badge-warning" style="font-size:11px;">Pendente</span>';
                 var btnPagar = d.status !== 'Pago'
-                    ? '<button class="btn-secondary btn-sm" onclick="Pages._pagarComissao(\'' + d.id + '\')" style="padding:3px 10px;font-size:11px;"><i class="fas fa-check" style="color:var(--success)"></i> Pagar</button>'
+                    ? '<div style="display:flex;gap:4px;flex-wrap:wrap;">' +
+                      '<button onclick="Pages._pagarComissao(\'' + d.id + '\')" style="padding:3px 9px;font-size:11px;border-radius:6px;border:1px solid var(--success);background:transparent;color:var(--success);cursor:pointer;white-space:nowrap;"><i class="fas fa-check"></i> Pagar</button>' +
+                      '<button onclick="Pages._agendarComissao(\'' + d.id + '\')" style="padding:3px 9px;font-size:11px;border-radius:6px;border:1px solid var(--brand-primary);background:transparent;color:var(--brand-primary);cursor:pointer;white-space:nowrap;"><i class="fas fa-calendar"></i> Agendar</button>' +
+                      '</div>'
                     : '<span style="color:var(--success);font-size:11px;"><i class="fas fa-check-circle"></i> ' + (d.data_pagamento ? Utils.formatDate(d.data_pagamento) : '') + '</span>';
                 return '<tr style="font-size:13px;">' +
                     '<td style="padding:8px 10px;">' + dtEvento + '</td>' +
@@ -689,7 +696,10 @@ Pages.carregarComissoesVendedores = async function() {
             '</div>' +
         '</div>';
 
-        el.innerHTML = cardsHtml + footerHtml;
+        var headerBar = '<div style="display:flex;justify-content:flex-end;margin-bottom:10px;">' +
+            '<button onclick="Pages._registrarComissaoManual()" style="padding:7px 16px;font-size:12px;border:none;border-radius:8px;background:var(--brand-primary);color:#000;font-weight:600;cursor:pointer;">' +
+            '<i class="fas fa-plus"></i> Registrar Comissão</button></div>';
+        el.innerHTML = headerBar + cardsHtml + footerHtml;
 
     } catch(e) {
         console.error('Erro comissões vendedores:', e);
@@ -697,20 +707,180 @@ Pages.carregarComissoesVendedores = async function() {
     }
 };
 
-Pages._pagarComissao = async function(despesaId) {
-    if (!confirm('Confirmar pagamento desta comissão?')) return;
-    Utils.showLoading();
+Pages._pagarComissao = function(despesaId) {
+    var hoje = new Date().toISOString().split('T')[0];
+    var modal = document.createElement('div');
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.65);z-index:10000;display:flex;align-items:center;justify-content:center;';
+    modal.innerHTML = '<div style="background:var(--bg-primary);border-radius:16px;padding:24px;width:320px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,.5);">' +
+        '<h3 style="margin:0 0 16px;font-size:16px;"><i class="fas fa-check-circle" style="color:var(--success)"></i> Confirmar Pagamento</h3>' +
+        '<div style="margin-bottom:16px;">' +
+            '<label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">Data do Pagamento</label>' +
+            '<input type="date" id="_pagarDataInput" value="' + hoje + '" style="width:100%;padding:10px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-secondary);color:var(--text-primary);font-size:14px;box-sizing:border-box;">' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;">' +
+            '<button id="_pagarCancelar" style="flex:1;padding:10px;border:1px solid var(--border-color);border-radius:8px;background:transparent;color:var(--text-secondary);cursor:pointer;font-size:13px;">Cancelar</button>' +
+            '<button id="_pagarConfirmar" style="flex:1;padding:10px;border:none;border-radius:8px;background:var(--success);color:#fff;font-weight:600;cursor:pointer;font-size:13px;"><i class="fas fa-check"></i> Confirmar</button>' +
+        '</div>' +
+    '</div>';
+    document.body.appendChild(modal);
+
+    modal.querySelector('#_pagarCancelar').onclick = function() { document.body.removeChild(modal); };
+    modal.querySelector('#_pagarConfirmar').onclick = async function() {
+        var data = modal.querySelector('#_pagarDataInput').value;
+        document.body.removeChild(modal);
+        if (!data) return;
+        Utils.showLoading();
+        try {
+            var res = await sbClient.from('despesas').update({ status: 'Pago', data_pagamento: data }).eq('id', despesaId);
+            if (res.error) throw res.error;
+            Utils.hideLoading();
+            Utils.showToast('Comissão marcada como paga!', 'success');
+            Pages.carregarComissoesVendedores();
+        } catch(e) {
+            Utils.hideLoading();
+            Utils.showToast('Erro: ' + (e.message || e), 'error');
+        }
+    };
+};
+
+Pages._agendarComissao = function(despesaId) {
+    var proxSemana = new Date();
+    proxSemana.setDate(proxSemana.getDate() + 7);
+    var defaultDate = proxSemana.toISOString().split('T')[0];
+
+    var modal = document.createElement('div');
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.65);z-index:10000;display:flex;align-items:center;justify-content:center;';
+    modal.innerHTML = '<div style="background:var(--bg-primary);border-radius:16px;padding:24px;width:320px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,.5);">' +
+        '<h3 style="margin:0 0 8px;font-size:16px;"><i class="fas fa-calendar-alt" style="color:var(--brand-primary)"></i> Programar Pagamento</h3>' +
+        '<p style="font-size:12px;color:var(--text-muted);margin:0 0 16px;">Define uma data prevista para pagar esta comissão. O status continua Pendente.</p>' +
+        '<div style="margin-bottom:16px;">' +
+            '<label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">Data Prevista</label>' +
+            '<input type="date" id="_agendarDataInput" value="' + defaultDate + '" style="width:100%;padding:10px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-secondary);color:var(--text-primary);font-size:14px;box-sizing:border-box;">' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;">' +
+            '<button id="_agendarCancelar" style="flex:1;padding:10px;border:1px solid var(--border-color);border-radius:8px;background:transparent;color:var(--text-secondary);cursor:pointer;font-size:13px;">Cancelar</button>' +
+            '<button id="_agendarConfirmar" style="flex:1;padding:10px;border:none;border-radius:8px;background:var(--brand-primary);color:#000;font-weight:600;cursor:pointer;font-size:13px;"><i class="fas fa-calendar-check"></i> Programar</button>' +
+        '</div>' +
+    '</div>';
+    document.body.appendChild(modal);
+
+    modal.querySelector('#_agendarCancelar').onclick = function() { document.body.removeChild(modal); };
+    modal.querySelector('#_agendarConfirmar').onclick = async function() {
+        var data = modal.querySelector('#_agendarDataInput').value;
+        document.body.removeChild(modal);
+        if (!data) return;
+        Utils.showLoading();
+        try {
+            var res = await sbClient.from('despesas').update({ data_vencimento: data }).eq('id', despesaId);
+            if (res.error) throw res.error;
+            Utils.hideLoading();
+            Utils.showToast('Pagamento programado para ' + Utils.formatDate(data), 'success');
+            Pages.carregarComissoesVendedores();
+        } catch(e) {
+            Utils.hideLoading();
+            Utils.showToast('Erro: ' + (e.message || e), 'error');
+        }
+    };
+};
+
+Pages._registrarComissaoManual = async function() {
+    var escId = Auth.currentUser && Auth.currentUser.escritorio_id;
+    var vendedores = [];
     try {
-        var hoje = new Date().toISOString().split('T')[0];
-        var res = await sbClient.from('despesas').update({ status: 'Pago', data_pagamento: hoje }).eq('id', despesaId);
-        if (res.error) throw res.error;
-        Utils.hideLoading();
-        Utils.showToast('Comissão marcada como paga!', 'success');
-        Pages.carregarComissoesVendedores();
-    } catch(e) {
-        Utils.hideLoading();
-        Utils.showToast('Erro: ' + (e.message || e), 'error');
+        var q = sbClient.from('usuarios').select('id,nome').eq('nivel', 'Vendedor');
+        if (escId) q = q.eq('escritorio_id', escId);
+        var { data: vData } = await q;
+        vendedores = vData || [];
+    } catch(e) {}
+
+    var vendOptions = vendedores.map(function(v) {
+        return '<option value="' + v.nome + '">' + v.nome + '</option>';
+    }).join('');
+
+    var hoje = new Date().toISOString().split('T')[0];
+    var modal = document.createElement('div');
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.65);z-index:10000;display:flex;align-items:center;justify-content:center;';
+    modal.innerHTML = '<div style="background:var(--bg-primary);border-radius:16px;padding:24px;width:400px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.5);">' +
+        '<h3 style="margin:0 0 16px;font-size:16px;"><i class="fas fa-user-tie" style="color:var(--brand-primary)"></i> Registrar Comissão de Vendedor</h3>' +
+        '<div style="margin-bottom:12px;">' +
+            '<label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px;">Vendedor *</label>' +
+            (vendedores.length > 0
+                ? '<select id="_cmVendedorSel" style="width:100%;padding:10px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-secondary);color:var(--text-primary);font-size:14px;box-sizing:border-box;">' +
+                  '<option value="">Selecionar...</option>' + vendOptions + '<option value="__outro__">Outro (digitar)</option>' +
+                  '</select>'
+                : '<input type="text" id="_cmVendedorText" placeholder="Nome do vendedor" style="width:100%;padding:10px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-secondary);color:var(--text-primary);font-size:14px;box-sizing:border-box;">') +
+        '</div>' +
+        '<div id="_cmOutroDiv" style="display:none;margin-bottom:12px;">' +
+            '<label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px;">Nome do Vendedor</label>' +
+            '<input type="text" id="_cmVendedorCustom" placeholder="Digite o nome" style="width:100%;padding:10px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-secondary);color:var(--text-primary);font-size:14px;box-sizing:border-box;">' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">' +
+            '<div>' +
+                '<label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px;">Valor (R$) *</label>' +
+                '<input type="number" id="_cmValor" min="0" step="0.01" placeholder="0,00" style="width:100%;padding:10px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-secondary);color:var(--text-primary);font-size:14px;box-sizing:border-box;">' +
+            '</div>' +
+            '<div>' +
+                '<label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px;">Data Vencimento</label>' +
+                '<input type="date" id="_cmVencimento" value="' + hoje + '" style="width:100%;padding:10px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-secondary);color:var(--text-primary);font-size:14px;box-sizing:border-box;">' +
+            '</div>' +
+        '</div>' +
+        '<div style="margin-bottom:16px;">' +
+            '<label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px;">Show / Evento (opcional)</label>' +
+            '<input type="text" id="_cmDescricao" placeholder="Ex: Show em São Paulo – 15/07/2026" style="width:100%;padding:10px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-secondary);color:var(--text-primary);font-size:14px;box-sizing:border-box;">' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;">' +
+            '<button id="_cmCancelar" style="flex:1;padding:10px;border:1px solid var(--border-color);border-radius:8px;background:transparent;color:var(--text-secondary);cursor:pointer;font-size:13px;">Cancelar</button>' +
+            '<button id="_cmSalvar" style="flex:1;padding:10px;border:none;border-radius:8px;background:var(--brand-primary);color:#000;font-weight:600;cursor:pointer;font-size:13px;"><i class="fas fa-save"></i> Salvar</button>' +
+        '</div>' +
+    '</div>';
+    document.body.appendChild(modal);
+
+    var sel = modal.querySelector('#_cmVendedorSel');
+    if (sel) {
+        sel.onchange = function() {
+            modal.querySelector('#_cmOutroDiv').style.display = (this.value === '__outro__') ? 'block' : 'none';
+        };
     }
+
+    modal.querySelector('#_cmCancelar').onclick = function() { document.body.removeChild(modal); };
+    modal.querySelector('#_cmSalvar').onclick = async function() {
+        var nomeVendedor = '';
+        var selEl = modal.querySelector('#_cmVendedorSel');
+        var textEl = modal.querySelector('#_cmVendedorText');
+        if (selEl) {
+            nomeVendedor = selEl.value === '__outro__'
+                ? (modal.querySelector('#_cmVendedorCustom')?.value?.trim() || '')
+                : selEl.value;
+        } else if (textEl) {
+            nomeVendedor = textEl.value.trim();
+        }
+        var valor     = parseFloat(modal.querySelector('#_cmValor')?.value) || 0;
+        var vencimento = modal.querySelector('#_cmVencimento')?.value || null;
+        var descBase  = modal.querySelector('#_cmDescricao')?.value?.trim() || '';
+
+        if (!nomeVendedor || valor <= 0) {
+            Utils.showToast('Informe o vendedor e o valor.', 'error');
+            return;
+        }
+        var descricao = 'Comissão Vendedor – ' + nomeVendedor + (descBase ? ' (' + descBase + ')' : '');
+        document.body.removeChild(modal);
+        Utils.showLoading();
+        try {
+            await DespesasDB.criar({
+                descricao:        descricao,
+                categoria:        'Comissão',
+                valor:            valor,
+                data_vencimento:  vencimento || null,
+                status:           'Pendente',
+            });
+            Utils.hideLoading();
+            Utils.showToast('Comissão registrada com sucesso!', 'success');
+            Pages.carregarComissoesVendedores();
+        } catch(e) {
+            Utils.hideLoading();
+            Utils.showToast('Erro ao salvar: ' + (e.message || e), 'error');
+        }
+    };
 };
 
 Pages.confirmarLancamentoParcela = async function(eventoId, numero, descricao, valor, dataVenc, uid) {

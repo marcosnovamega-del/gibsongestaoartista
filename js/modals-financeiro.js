@@ -276,9 +276,11 @@ Modals.salvarModelo = async function() {
     if (r) {
         Utils.showToast('Modelo criado! Use "Gerar" para criar a despesa do mês.', 'success');
         Modals.close();
-        // Recarregar a página atual (Configurações ou Gestão Financeira)
+        // Recarregar a página atual (Configurações, Financeiro ou Gestão Financeira)
         if (typeof Pages.renderConfiguracoes === 'function' && document.querySelector('.configuracoes-container')) {
             Pages.renderConfiguracoes();
+        } else if (typeof Pages.renderFinanceiro === 'function' && document.querySelector('.financeiro-container')) {
+            Pages.renderFinanceiro();
         } else if (typeof Pages.renderGestaoFinanceira === 'function') {
             Pages.renderGestaoFinanceira();
         }
