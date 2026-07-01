@@ -336,6 +336,22 @@ body { background:#e7e6e3; -webkit-font-smoothing:antialiased; font-family:Archi
         <p style="margin:0;font-size:12.5px;line-height:1.6;color:#5c574d;">A previsão da data do pagamento deve constar no contrato. O não cumprimento dos prazos acordados implica na suspensão do espetáculo, e a empresa não assumirá nenhum prejuízo decorrente da não realização do mesmo.</p>
       </div>
 
+      <!-- Dados para pagamento -->
+      <div style="display:flex;align-items:center;gap:11px;margin-bottom:16px;">
+        <span style="display:inline-block;width:12px;height:12px;background:#e8261c;transform:rotate(45deg);"></span>
+        <h2 style="margin:0;font-family:Anton,sans-serif;font-size:19px;letter-spacing:1.5px;color:#1a1a1d;text-transform:uppercase;">Dados para Pagamento</h2>
+        <span style="flex:1;border-top:2px dashed #d8cfbd;"></span>
+      </div>
+      <div style="border:1px solid #ece7dd;margin-bottom:30px;">
+        ${PropostaTemplate._rowBanco('Razão Social', dados.banco && dados.banco.razao || '', true)}
+        ${PropostaTemplate._rowBanco('CNPJ',         dados.banco && dados.banco.cnpj  || '')}
+        ${PropostaTemplate._rowBanco('Banco',        dados.banco && dados.banco.banco || '', true)}
+        ${PropostaTemplate._rowBanco('Agência',      dados.banco && dados.banco.agencia || '')}
+        ${PropostaTemplate._rowBanco('Conta C/C',    dados.banco && dados.banco.conta  || '', true)}
+        ${PropostaTemplate._rowBanco('Chave PIX',    dados.banco && dados.banco.pix    || '')}
+        ${PropostaTemplate._rowBanco('Titular PIX',  dados.banco && dados.banco.pixTitular || '', true)}
+      </div>
+
       <!-- Validade + assinatura -->
       <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:auto;padding-top:24px;">
         <div>
@@ -671,6 +687,22 @@ body { background:#e7e6e3; -webkit-font-smoothing:antialiased; font-family:Archi
       </div>
       <div style="background:#f6f1e7;border-left:3px solid #e8261c;padding:14px 18px;margin-bottom:24px;">
         <p style="margin:0;font-size:12.5px;line-height:1.6;color:#5c574d;">A previsão da data do pagamento deve constar no contrato. O não cumprimento dos prazos acordados implica na suspensão do espetáculo, e a empresa não assumirá nenhum prejuízo decorrente da não realização do mesmo.</p>
+      </div>
+
+      <!-- Dados para pagamento -->
+      <div style="display:flex;align-items:center;gap:11px;margin-bottom:14px;">
+        <span style="display:inline-block;width:12px;height:12px;background:#e8261c;transform:rotate(45deg);"></span>
+        <h2 style="margin:0;font-family:Anton,sans-serif;font-size:18px;letter-spacing:1.5px;color:#1a1a1d;text-transform:uppercase;">Dados para Pagamento</h2>
+        <span style="flex:1;border-top:2px dashed #d8cfbd;"></span>
+      </div>
+      <div style="border:1px solid #ece7dd;margin-bottom:24px;">
+        ${PropostaTemplate._rowBanco('Razão Social', banco.razao || '', true)}
+        ${PropostaTemplate._rowBanco('CNPJ',         banco.cnpj  || '')}
+        ${PropostaTemplate._rowBanco('Banco',        banco.banco || '', true)}
+        ${PropostaTemplate._rowBanco('Agência',      banco.agencia || '')}
+        ${PropostaTemplate._rowBanco('Conta C/C',    banco.conta  || '', true)}
+        ${PropostaTemplate._rowBanco('Chave PIX',    banco.pix    || '')}
+        ${PropostaTemplate._rowBanco('Titular PIX',  banco.pixTitular || '', true)}
       </div>
 
       <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:auto;padding-top:20px;">

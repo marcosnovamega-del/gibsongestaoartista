@@ -903,6 +903,41 @@ Modals.showGerarPropostaPDF = async function(propostaId) {
                         value="${validadeDias}" min="1" max="365">
                 </div>
 
+                <!-- Dados para pagamento -->
+                <div style="background:var(--bg-secondary);border-radius:8px;padding:14px;margin-bottom:20px;">
+                    <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:10px;">DADOS PARA PAGAMENTO</label>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <div>
+                            <label style="font-size:11px;color:var(--text-muted);">Razão Social</label>
+                            <input type="text" id="pdf_banco_razao" class="form-control" style="font-size:12px;margin-top:2px;" value="${artistaBanco.razao || ''}" placeholder="Razão Social">
+                        </div>
+                        <div>
+                            <label style="font-size:11px;color:var(--text-muted);">CNPJ</label>
+                            <input type="text" id="pdf_banco_cnpj" class="form-control" style="font-size:12px;margin-top:2px;" value="${artistaBanco.cnpj || ''}" placeholder="CNPJ">
+                        </div>
+                        <div>
+                            <label style="font-size:11px;color:var(--text-muted);">Banco</label>
+                            <input type="text" id="pdf_banco_nome" class="form-control" style="font-size:12px;margin-top:2px;" value="${artistaBanco.banco || ''}" placeholder="Banco">
+                        </div>
+                        <div>
+                            <label style="font-size:11px;color:var(--text-muted);">Agência</label>
+                            <input type="text" id="pdf_banco_ag" class="form-control" style="font-size:12px;margin-top:2px;" value="${artistaBanco.agencia || ''}" placeholder="Agência">
+                        </div>
+                        <div>
+                            <label style="font-size:11px;color:var(--text-muted);">Conta C/C</label>
+                            <input type="text" id="pdf_banco_cc" class="form-control" style="font-size:12px;margin-top:2px;" value="${artistaBanco.conta || ''}" placeholder="Conta">
+                        </div>
+                        <div>
+                            <label style="font-size:11px;color:var(--text-muted);">Chave PIX</label>
+                            <input type="text" id="pdf_pix" class="form-control" style="font-size:12px;margin-top:2px;" value="${artistaBanco.pix || ''}" placeholder="Chave PIX">
+                        </div>
+                        <div>
+                            <label style="font-size:11px;color:var(--text-muted);">Titular PIX</label>
+                            <input type="text" id="pdf_pix_titular" class="form-control" style="font-size:12px;margin-top:2px;" value="${artistaBanco.pixTitular || ''}" placeholder="Nome do titular">
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Botões -->
                 <div style="display:flex;gap:10px;justify-content:flex-end;">
                     <button onclick="document.getElementById('modalGerarPDF').remove()" class="btn-secondary">
@@ -955,70 +990,49 @@ Modals._submitGerarPDF = async function(propostaId) {
     const duracao = document.getElementById('pdf_duracao')?.value || '';
     const equipe = parseInt(document.getElementById('pdf_equipe')?.value) || 20;
     const obrigacoes = document.getElementById('pdf_obrigacoes')?.value || '';
-    const validade = parseInt(document.getElementById('pdf_validade')?.value) || 10;
+    const validade   = parseInt(document.getElementById('pdf_validade')?.value) || 10;
+    const itens = Array.from(document.querySelectorAll('#pdf_itens .pdf-item-row')).map(function(row) {
+        return {
+            desc:  row.querySelector('.pdf-item-desc')?.value  || '',
+            valor: parseFloat(row.querySelector('.pdf-item-valor')?.value) || 0
+        };
+    }).filter(function(it) { return it.desc; });
 
-    // Coletar itens
-    const itensList = [];
-    document.querySelectorAll('.pdf-item-row').forEach(row => {
-        const desc = row.querySelector('.pdf-item-desc')?.value?.trim();
-        const valor = parseFloat(row.querySelector('.pdf-item-valor')?.value) || 0;
-        if (desc) itensList.push({ desc, valor });
-    });
-
-    const dadosBancarios = {
-        razao: document.getElementById('pdf_banco_razao')?.value || '',
-        cnpj: document.getElementById('pdf_banco_cnpj')?.value || '',
-        banco: document.getElementById('pdf_banco_nome')?.value || '',
-        agencia: document.getElementById('pdf_banco_ag')?.value || '',
-        conta: document.getElementById('pdf_banco_cc')?.value || '',
-        pix: document.getElementById('pdf_pix')?.value || '',
-        pixTitular: document.getElementById('pdf_pix_titular')?.value || '',
+    const banco = {
+        razao:      document.getElementById('pdf_banco_razao')?.value    || '',
+        cnpj:       document.getElementById('pdf_banco_cnpj')?.value     || '',
+        banco:      document.getElementById('pdf_banco_nome')?.value     || '',
+        agencia:    document.getElementById('pdf_banco_ag')?.value       || '',
+        conta:      document.getElementById('pdf_banco_cc')?.value       || '',
+        pix:        document.getElementById('pdf_pix')?.value            || '',
+        pixTitular: document.getElementById('pdf_pix_titular')?.value    || '',
     };
 
-    // Salvar campos no banco
-    await sbClient.from('propostas').update({
-        duracao_show: duracao,
-        itens_proposta: JSON.stringify(itensList),
-        obrigacoes_contratante: obrigacoes,
-        validade_proposta: validade,
-    }).eq('id', propostaId);
+    const dadosPDF = { duracao, equipe, itens, obrigacoes, validade, banco };
 
-    // Buscar proposta atualizada com artista
-    const res = await sbClient.from('propostas').select('*').eq('id', propostaId).single();
-    let proposta = res.data || {};
-    if (proposta.artista_id) {
-        const ar = await sbClient.from('artistas').select('nome').eq('id', proposta.artista_id).single();
-        proposta._artistaNome = ar.data?.nome || '';
-    }
-
-    document.getElementById('modalGerarPDF')?.remove();
-
-    // Cronograma de pagamento da proposta
-    var cronogramaFinal = [];
     try {
-        var rawCp = proposta.condicoes_pagamento;
-        if (typeof rawCp === 'string') rawCp = JSON.parse(rawCp);
-        var arr = (rawCp && Array.isArray(rawCp.cronograma)) ? rawCp.cronograma : (Array.isArray(rawCp) ? rawCp : []);
-        cronogramaFinal = arr.map(function(c) {
-            return {
-                desc:  c.desc || c.descricao || c.parcela || 'Parcela',
-                valor: c.valor || c.amount || 0,
-                venc:  c.venc || c.data || c.data_vencimento || '',
-            };
-        });
-    } catch(e) {}
+        const p = await PropostasDB.buscarPorId(propostaId);
+        if (!p) { alert('Proposta nao encontrada.'); return; }
 
-    // Usar template HTML (abre nova aba para impressão)
-    var dadosPDF = { tipo, duracao, equipe, obrigacoes, validade, itens: itensList, banco: dadosBancarios, cronograma: cronogramaFinal };
-    var htmlContent = tipo === 'prefeitura'
-        ? PropostaTemplate.gerarPrefeitura(proposta, dadosPDF)
-        : PropostaTemplate.gerarAutonomo(proposta, dadosPDF);
+        let html;
+        if (tipo === 'prefeitura') {
+            html = PropostaTemplate.gerarPrefeitura(p, dadosPDF);
+        } else {
+            html = PropostaTemplate.gerarAutonomo(p, dadosPDF);
+        }
 
-    const novaAba = window.open('', '_blank');
-    if (novaAba) {
-        novaAba.document.write(htmlContent);
-        novaAba.document.close();
-    } else {
-        Utils.showToast('Permita popups para gerar o PDF.', 'warning');
+        const w = window.open('', '_blank');
+        if (w) {
+            w.document.write(html);
+            w.document.close();
+        } else {
+            alert('Pop-up bloqueado. Permita pop-ups para este site e tente novamente.');
+        }
+
+        const modal = document.getElementById('modalGerarPDF');
+        if (modal) modal.remove();
+    } catch(err) {
+        console.error('Erro ao gerar PDF:', err);
+        alert('Erro ao gerar proposta. Tente novamente.');
     }
 };
