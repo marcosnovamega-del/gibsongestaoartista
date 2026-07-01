@@ -901,35 +901,35 @@ Modals.showGerarPropostaPDF = async function(propostaId) {
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                         <div>
                             <label style="font-size:11px;color:var(--text-muted);">Razão Social</label>
-                            <input type="text" id="pdf_banco_razao" class="form-control" style="font-size:12px;margin-top:2px;" value="DFG PRODUÇÕES E EVENTOS LTDA">
+                            <input type="text" id="pdf_banco_razao" class="form-control" style="font-size:12px;margin-top:2px;" placeholder="Gibson Promoções">
                         </div>
                         <div>
                             <label style="font-size:11px;color:var(--text-muted);">CNPJ</label>
-                            <input type="text" id="pdf_banco_cnpj" class="form-control" style="font-size:12px;margin-top:2px;" value="24.483.999/0001-35">
+                            <input type="text" id="pdf_banco_cnpj" class="form-control" style="font-size:12px;margin-top:2px;" placeholder="CNPJ do escritório">
                         </div>
                         <div>
                             <label style="font-size:11px;color:var(--text-muted);">Banco</label>
-                            <input type="text" id="pdf_banco_nome" class="form-control" style="font-size:12px;margin-top:2px;" value="Banco Sicoob">
+                            <input type="text" id="pdf_banco_nome" class="form-control" style="font-size:12px;margin-top:2px;" placeholder="Banco">
                         </div>
                         <div>
                             <label style="font-size:11px;color:var(--text-muted);">Agência</label>
-                            <input type="text" id="pdf_banco_ag" class="form-control" style="font-size:12px;margin-top:2px;" value="3224">
+                            <input type="text" id="pdf_banco_ag" class="form-control" style="font-size:12px;margin-top:2px;" placeholder="Agência">
                         </div>
                         <div>
                             <label style="font-size:11px;color:var(--text-muted);">Conta C/C</label>
-                            <input type="text" id="pdf_banco_cc" class="form-control" style="font-size:12px;margin-top:2px;" value="19.259-7">
+                            <input type="text" id="pdf_banco_cc" class="form-control" style="font-size:12px;margin-top:2px;" placeholder="Conta">
                         </div>
                         <div>
                             <label style="font-size:11px;color:var(--text-muted);">Chave PIX</label>
-                            <input type="text" id="pdf_pix" class="form-control" style="font-size:12px;margin-top:2px;" value="(34) 99902-0200 - SICOOB">
+                            <input type="text" id="pdf_pix" class="form-control" style="font-size:12px;margin-top:2px;" placeholder="Chave PIX">
                         </div>
                         <div>
                             <label style="font-size:11px;color:var(--text-muted);">Titular PIX</label>
-                            <input type="text" id="pdf_pix_titular" class="form-control" style="font-size:12px;margin-top:2px;" value="Douglas Gomes Fonseca">
+                            <input type="text" id="pdf_pix_titular" class="form-control" style="font-size:12px;margin-top:2px;" placeholder="Nome do titular">
                         </div>
                         <div>
                             <label style="font-size:11px;color:var(--text-muted);">CPF Titular</label>
-                            <input type="text" id="pdf_pix_cpf" class="form-control" style="font-size:12px;margin-top:2px;" value="098.549.066-71">
+                            <input type="text" id="pdf_pix_cpf" class="form-control" style="font-size:12px;margin-top:2px;" placeholder="CPF do titular">
                         </div>
                     </div>
                 </div>

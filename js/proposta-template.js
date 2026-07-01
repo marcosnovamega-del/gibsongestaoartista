@@ -179,7 +179,7 @@ body { background:#e7e6e3; -webkit-font-smoothing:antialiased; font-family:Archi
 
 <!-- Barra de ações (some ao imprimir) -->
 <div class="barra-acoes">
-  <span style="font-family:Anton,sans-serif;font-size:18px;color:#e8261c;letter-spacing:2px;">DFG PRODUÇÕES</span>
+  <span style="font-family:Anton,sans-serif;font-size:18px;color:#e8261c;letter-spacing:2px;">GIBSON PROMOÇÕES</span>
   <div style="display:flex;gap:10px;">
     <button onclick="window.print()" style="background:#e8261c;color:#fff;border:none;padding:9px 22px;font-family:Anton,sans-serif;font-size:14px;letter-spacing:1px;cursor:pointer;text-transform:uppercase;">⬇ Salvar / Imprimir PDF</button>
     <button onclick="window.close()" style="background:none;color:#b3aa97;border:1px solid #444;padding:9px 16px;font-size:13px;cursor:pointer;">Fechar</button>
@@ -217,7 +217,7 @@ body { background:#e7e6e3; -webkit-font-smoothing:antialiased; font-family:Archi
 
         <div style="margin-top:24px;display:flex;align-items:center;gap:10px;">
           <span style="display:inline-block;width:26px;height:3px;background:#1a1a1d;"></span>
-          <span style="font-size:12px;letter-spacing:3px;font-weight:700;color:#1a1a1d;text-transform:uppercase;">DFG Produções &amp; Eventos</span>
+          <span style="font-size:12px;letter-spacing:3px;font-weight:700;color:#1a1a1d;text-transform:uppercase;">Gibson Promoções</span>
         </div>
 
         <div>
@@ -294,7 +294,7 @@ body { background:#e7e6e3; -webkit-font-smoothing:antialiased; font-family:Archi
 
       <!-- rodapé pág 1 -->
       <div style="margin-top:auto;padding-top:14px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid #ece7dd;">
-        <span style="font-size:11px;letter-spacing:2px;color:#b3aa97;font-weight:700;text-transform:uppercase;">DFG Produções &amp; Eventos</span>
+        <span style="font-size:11px;letter-spacing:2px;color:#b3aa97;font-weight:700;text-transform:uppercase;">Gibson Promoções</span>
         <span style="font-size:11px;letter-spacing:2px;color:#b3aa97;font-weight:700;text-transform:uppercase;">Página 1 de 2</span>
       </div>
 
@@ -316,7 +316,7 @@ body { background:#e7e6e3; -webkit-font-smoothing:antialiased; font-family:Archi
         <span style="font-family:Anton,sans-serif;font-size:46px;color:#fff;letter-spacing:1px;text-transform:uppercase;line-height:1;">${artistaNome}</span>
         <span style="font-family:Anton,sans-serif;font-size:18px;color:rgba(255,255,255,.85);letter-spacing:2px;text-transform:uppercase;">Condições de Pagamento</span>
       </div>
-      <span style="position:absolute;right:50px;bottom:16px;font-size:11px;letter-spacing:2px;color:rgba(255,255,255,.7);font-weight:700;text-transform:uppercase;">DFG Produções &amp; Eventos</span>
+      <span style="position:absolute;right:50px;bottom:16px;font-size:11px;letter-spacing:2px;color:rgba(255,255,255,.7);font-weight:700;text-transform:uppercase;">Gibson Promoções</span>
     </div>
 
     <!-- BODY pág 2 -->
@@ -344,14 +344,14 @@ body { background:#e7e6e3; -webkit-font-smoothing:antialiased; font-family:Archi
       </div>
 
       <div style="border:1px solid #ece7dd;margin-bottom:30px;">
-        ${PropostaTemplate._rowBanco('Razão Social', dados.banco && dados.banco.razao || 'DFG Produções e Eventos LTDA', true)}
-        ${PropostaTemplate._rowBanco('CNPJ',         dados.banco && dados.banco.cnpj  || '24.483.999/0001-35')}
-        ${PropostaTemplate._rowBanco('Banco',        dados.banco && dados.banco.banco || 'Banco Sicoob', true)}
-        ${PropostaTemplate._rowBanco('Agência',      dados.banco && dados.banco.agencia || '3224')}
-        ${PropostaTemplate._rowBanco('Conta C/C',    dados.banco && dados.banco.conta  || '19.259-7', true)}
-        ${PropostaTemplate._rowBanco('Chave PIX',    dados.banco && dados.banco.pix    || '(34) 99902-0200 — SICOOB')}
-        ${PropostaTemplate._rowBanco('Titular PIX',  dados.banco && dados.banco.pixTitular || 'Douglas Gomes Fonseca', true)}
-        ${PropostaTemplate._rowBanco('CPF Titular',  dados.banco && dados.banco.pixCpf || '098.549.066-71', false, true)}
+        ${PropostaTemplate._rowBanco('Razão Social', dados.banco && dados.banco.razao || 'Gibson Promoções', true)}
+        ${PropostaTemplate._rowBanco('CNPJ',         dados.banco && dados.banco.cnpj  || '')}
+        ${PropostaTemplate._rowBanco('Banco',        dados.banco && dados.banco.banco || '', true)}
+        ${PropostaTemplate._rowBanco('Agência',      dados.banco && dados.banco.agencia || '')}
+        ${PropostaTemplate._rowBanco('Conta C/C',    dados.banco && dados.banco.conta  || '', true)}
+        ${PropostaTemplate._rowBanco('Chave PIX',    dados.banco && dados.banco.pix    || '')}
+        ${PropostaTemplate._rowBanco('Titular PIX',  dados.banco && dados.banco.pixTitular || '', true)}
+        ${PropostaTemplate._rowBanco('CPF Titular',  dados.banco && dados.banco.pixCpf || '', false, true)}
       </div>
 
       <!-- Validade + assinatura -->
@@ -364,14 +364,14 @@ body { background:#e7e6e3; -webkit-font-smoothing:antialiased; font-family:Archi
         </div>
         <div style="text-align:right;">
           <div style="font-size:12px;color:#8c8678;margin-bottom:10px;">Atenciosamente,</div>
-          <div style="font-family:Anton,sans-serif;font-size:20px;color:#1a1a1d;text-transform:uppercase;letter-spacing:.5px;">DFG Produções e Eventos LTDA</div>
-          <div style="font-size:11.5px;color:#8c8678;font-weight:600;margin-top:6px;">CNPJ: 24.483.999/0001-35 · Tel: (34) 99902-0200</div>
+          <div style="font-family:Anton,sans-serif;font-size:20px;color:#1a1a1d;text-transform:uppercase;letter-spacing:.5px;">Gibson Promoções</div>
+          <div style="font-size:11.5px;color:#8c8678;font-weight:600;margin-top:6px;">Gibson Promoções</div>
         </div>
       </div>
 
       <!-- rodapé pág 2 -->
       <div style="margin-top:22px;padding-top:18px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid #ece7dd;">
-        <span style="font-size:11px;letter-spacing:2px;color:#b3aa97;font-weight:700;text-transform:uppercase;">DFG Produções &amp; Eventos</span>
+        <span style="font-size:11px;letter-spacing:2px;color:#b3aa97;font-weight:700;text-transform:uppercase;">Gibson Promoções</span>
         <span style="font-size:11px;letter-spacing:2px;color:#b3aa97;font-weight:700;text-transform:uppercase;">Página 2 de 2</span>
       </div>
 
@@ -524,7 +524,7 @@ body { background:#e7e6e3; -webkit-font-smoothing:antialiased; font-family:Archi
 <body>
 
 <div class="barra-acoes">
-  <span style="font-family:Anton,sans-serif;font-size:18px;color:#e8261c;letter-spacing:2px;">DFG PRODUÇÕES</span>
+  <span style="font-family:Anton,sans-serif;font-size:18px;color:#e8261c;letter-spacing:2px;">GIBSON PROMOÇÕES</span>
   <div style="display:flex;gap:10px;">
     <button onclick="window.print()" style="background:#e8261c;color:#fff;border:none;padding:9px 22px;font-family:Anton,sans-serif;font-size:14px;letter-spacing:1px;cursor:pointer;text-transform:uppercase;">⬇ Salvar / Imprimir PDF</button>
     <button onclick="window.close()" style="background:none;color:#b3aa97;border:1px solid #444;padding:9px 16px;font-size:13px;cursor:pointer;">Fechar</button>
@@ -558,7 +558,7 @@ body { background:#e7e6e3; -webkit-font-smoothing:antialiased; font-family:Archi
         </div>
         <div style="margin-top:22px;display:flex;align-items:center;gap:10px;">
           <span style="display:inline-block;width:26px;height:3px;background:#1a1a1d;"></span>
-          <span style="font-size:12px;letter-spacing:3px;font-weight:700;color:#1a1a1d;text-transform:uppercase;">DFG Produções &amp; Eventos</span>
+          <span style="font-size:12px;letter-spacing:3px;font-weight:700;color:#1a1a1d;text-transform:uppercase;">Gibson Promoções</span>
         </div>
         <div>
           <div style="font-family:Anton,sans-serif;font-size:${nomeSize}px;line-height:.82;color:#e8261c;text-transform:uppercase;letter-spacing:1px;">${artistaNome}</div>
@@ -648,7 +648,7 @@ body { background:#e7e6e3; -webkit-font-smoothing:antialiased; font-family:Archi
       ${obgGrid}
 
       <div style="margin-top:auto;padding-top:14px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid #ece7dd;">
-        <span style="font-size:11px;letter-spacing:2px;color:#b3aa97;font-weight:700;text-transform:uppercase;">DFG Produções &amp; Eventos</span>
+        <span style="font-size:11px;letter-spacing:2px;color:#b3aa97;font-weight:700;text-transform:uppercase;">Gibson Promoções</span>
         <span style="font-size:11px;letter-spacing:2px;color:#b3aa97;font-weight:700;text-transform:uppercase;">Página 1 de 2</span>
       </div>
     </div>
@@ -668,7 +668,7 @@ body { background:#e7e6e3; -webkit-font-smoothing:antialiased; font-family:Archi
         <span style="font-family:Anton,sans-serif;font-size:${nomeSizeP2}px;color:#fff;letter-spacing:1px;text-transform:uppercase;line-height:1;">${artistaNome}</span>
         <span style="font-family:Anton,sans-serif;font-size:17px;color:rgba(255,255,255,.85);letter-spacing:2px;text-transform:uppercase;">Condições de Pagamento</span>
       </div>
-      <span style="position:absolute;right:50px;bottom:16px;font-size:11px;letter-spacing:2px;color:rgba(255,255,255,.7);font-weight:700;text-transform:uppercase;">DFG Produções &amp; Eventos</span>
+      <span style="position:absolute;right:50px;bottom:16px;font-size:11px;letter-spacing:2px;color:rgba(255,255,255,.7);font-weight:700;text-transform:uppercase;">Gibson Promoções</span>
     </div>
 
     <div style="flex:1;padding:36px 50px 26px;display:flex;flex-direction:column;">
@@ -699,14 +699,14 @@ body { background:#e7e6e3; -webkit-font-smoothing:antialiased; font-family:Archi
       </div>
 
       <div style="border:1px solid #ece7dd;margin-bottom:24px;">
-        ${PropostaTemplate._rowBanco('Razão Social', banco.razao || 'DFG Produções e Eventos LTDA', true)}
-        ${PropostaTemplate._rowBanco('CNPJ',         banco.cnpj  || '24.483.999/0001-35')}
-        ${PropostaTemplate._rowBanco('Banco',        banco.banco || 'Banco Sicoob', true)}
-        ${PropostaTemplate._rowBanco('Agência',      banco.agencia || '3224')}
-        ${PropostaTemplate._rowBanco('Conta C/C',    banco.conta  || '19.259-7', true)}
-        ${PropostaTemplate._rowBanco('Chave PIX',    banco.pix    || '(34) 99902-0200 — SICOOB')}
-        ${PropostaTemplate._rowBanco('Titular PIX',  banco.pixTitular || 'Douglas Gomes Fonseca', true)}
-        ${PropostaTemplate._rowBanco('CPF Titular',  banco.pixCpf || '098.549.066-71', false, true)}
+        ${PropostaTemplate._rowBanco('Razão Social', banco.razao || 'Gibson Promoções', true)}
+        ${PropostaTemplate._rowBanco('CNPJ',         banco.cnpj  || '')}
+        ${PropostaTemplate._rowBanco('Banco',        banco.banco || '', true)}
+        ${PropostaTemplate._rowBanco('Agência',      banco.agencia || '')}
+        ${PropostaTemplate._rowBanco('Conta C/C',    banco.conta  || '', true)}
+        ${PropostaTemplate._rowBanco('Chave PIX',    banco.pix    || '')}
+        ${PropostaTemplate._rowBanco('Titular PIX',  banco.pixTitular || '', true)}
+        ${PropostaTemplate._rowBanco('CPF Titular',  banco.pixCpf || '', false, true)}
       </div>
 
       <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:auto;padding-top:20px;">
@@ -718,13 +718,13 @@ body { background:#e7e6e3; -webkit-font-smoothing:antialiased; font-family:Archi
         </div>
         <div style="text-align:right;">
           <div style="font-size:12px;color:#8c8678;margin-bottom:10px;">Atenciosamente,</div>
-          <div style="font-family:Anton,sans-serif;font-size:20px;color:#1a1a1d;text-transform:uppercase;letter-spacing:.5px;">DFG Produções e Eventos LTDA</div>
-          <div style="font-size:11.5px;color:#8c8678;font-weight:600;margin-top:6px;">CNPJ: 24.483.999/0001-35 · Tel: (34) 99902-0200</div>
+          <div style="font-family:Anton,sans-serif;font-size:20px;color:#1a1a1d;text-transform:uppercase;letter-spacing:.5px;">Gibson Promoções</div>
+          <div style="font-size:11.5px;color:#8c8678;font-weight:600;margin-top:6px;">Gibson Promoções</div>
         </div>
       </div>
 
       <div style="margin-top:20px;padding-top:16px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid #ece7dd;">
-        <span style="font-size:11px;letter-spacing:2px;color:#b3aa97;font-weight:700;text-transform:uppercase;">DFG Produções &amp; Eventos</span>
+        <span style="font-size:11px;letter-spacing:2px;color:#b3aa97;font-weight:700;text-transform:uppercase;">Gibson Promoções</span>
         <span style="font-size:11px;letter-spacing:2px;color:#b3aa97;font-weight:700;text-transform:uppercase;">Página 2 de 2</span>
       </div>
     </div>
