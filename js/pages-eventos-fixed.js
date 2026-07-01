@@ -9,18 +9,25 @@ let currentYear = new Date().getFullYear();
 
 // Renderizar módulo de Eventos com Agenda
 Pages.renderEventos = async function() {
-    let eventos = await EventosDB.listar();
-    eventos = await Auth.filterByPermissions(eventos, 'eventos');
+    let todosEventos = await EventosDB.listar();
+    todosEventos = await Auth.filterByPermissions(todosEventos, 'eventos');
 
-    // Filtrar por termo de busca
+    // Separar reservas (para o calendário) dos eventos reais (para lista e próximos)
+    const reservas = todosEventos.filter(e => e.status === 'Reserva' || e.status === 'Reserva Alt.');
+    let eventos = todosEventos.filter(e => e.status !== 'Reserva' && e.status !== 'Reserva Alt.');
+
+    // Filtrar por termo de busca (só eventos reais)
     if (Pages.currentSearchTerm) {
-        eventos = eventos.filter(e => 
-            e.local.toLowerCase().includes(Pages.currentSearchTerm) ||
-            e.cidade.toLowerCase().includes(Pages.currentSearchTerm) ||
+        eventos = eventos.filter(e =>
+            e.local?.toLowerCase().includes(Pages.currentSearchTerm) ||
+            e.cidade?.toLowerCase().includes(Pages.currentSearchTerm) ||
             e.razao_social?.toLowerCase().includes(Pages.currentSearchTerm) ||
             e.nome_contratante?.toLowerCase().includes(Pages.currentSearchTerm)
         );
     }
+
+    // Para o calendário usamos todos (inclui reservas como bloqueio visual)
+    const eventosCalendario = todosEventos;
 
     const html = `
         <div class="eventos-container">
@@ -55,7 +62,7 @@ Pages.renderEventos = async function() {
 
                 <!-- Tab: Agenda -->
                 <div class="tab-pane active" id="tab-agenda">
-                    ${await this.renderAgendaView(eventos)}
+                    ${await this.renderAgendaView(eventosCalendario)}
                 </div>
 
                 <!-- Tab: Lista -->
@@ -366,7 +373,7 @@ Pages.showEventosDoDay = async function(data) {
 Pages.renderProximosEventosLista = async function(eventos) {
     const hoje = new Date();
     const proximos = eventos
-        .filter(e => new Date(e.data) >= hoje)
+        .filter(e => new Date(e.data) >= hoje && e.status !== 'Reserva' && e.status !== 'Reserva Alt.')
         .sort((a, b) => new Date(a.data) - new Date(b.data))
         .slice(0, 5);
 
