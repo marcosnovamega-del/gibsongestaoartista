@@ -528,8 +528,10 @@ const Modals = {
 
     async gerarContratoEvento(eventoId, artistaId) {
         try {
-            const artista = await ArtistasDB.buscarPorId(artistaId);
-            const evento  = await EventosDB.buscarPorId(eventoId);
+            const artista  = await ArtistasDB.buscarPorId(artistaId);
+            const evento   = await EventosDB.buscarPorId(eventoId);
+            // Buscar proposta para usar dados de contrato com entidade diferente
+            const proposta = evento?.proposta_id ? await PropostasDB.buscarPorId(evento.proposta_id) : null;
 
             if (!artista || !evento) {
                 console.error('gerarContratoEvento: artista ou evento não encontrado', { artistaId, eventoId });
@@ -540,13 +542,28 @@ const Modals = {
             const existente = await ContratosDB.buscarPorEvento(eventoId);
             if (existente) return existente;
 
+            // Determinar dados do contratante para o contrato
+            const usarEntidadeDiferente = proposta?.contrato_entidade_diferente;
+            const nomeContrato = usarEntidadeDiferente
+                ? (proposta.contrato_tipo === 'PF' ? proposta.contrato_nome : proposta.contrato_razao_social) || evento.razao_social || evento.nome_contratante || ''
+                : (evento.razao_social || evento.nome_contratante || '');
+            const cnpjContrato = usarEntidadeDiferente
+                ? (proposta.contrato_tipo === 'PF' ? proposta.contrato_cpf : proposta.contrato_cnpj) || evento.cnpj || evento.cpf_contratante || ''
+                : (evento.cnpj || evento.cpf_contratante || '');
+            const representanteContrato = usarEntidadeDiferente && proposta.contrato_representante
+                ? `\nRepresentante: ${proposta.contrato_representante}${proposta.contrato_cargo ? ' (' + proposta.contrato_cargo + ')' : ''}`
+                : '';
+            const enderecoContrato = usarEntidadeDiferente && proposta.contrato_endereco
+                ? `\nEndereço: ${proposta.contrato_endereco}, ${proposta.contrato_cidade || ''}/${proposta.contrato_estado || ''}`
+                : '';
+
             let conteudo = artista.modelo_contrato ||
 `CONTRATO DE PRESTAÇÃO DE SERVIÇOS ARTÍSTICOS
 
 Pelo presente instrumento, as partes:
 
 CONTRATANTE: {{razao_social}}
-CNPJ/CPF: {{cnpj_cpf}}
+CNPJ/CPF: {{cnpj_cpf}}{{representante}}{{endereco_contrato}}
 
 CONTRATADO: {{nome_artista}}
 
@@ -562,13 +579,15 @@ Acordam o seguinte:
 _______________________________        _______________________________
        CONTRATANTE                              CONTRATADO`;
 
-            conteudo = conteudo.replace(/{{razao_social}}/g,  evento.razao_social  || evento.nome_contratante || '');
-            conteudo = conteudo.replace(/{{cnpj_cpf}}/g,      evento.cnpj           || evento.cpf_contratante  || '');
-            conteudo = conteudo.replace(/{{nome_artista}}/g,  artista.nome);
-            conteudo = conteudo.replace(/{{data_evento}}/g,   Utils.formatDate(evento.data));
-            conteudo = conteudo.replace(/{{local_evento}}/g,  evento.local  || '');
-            conteudo = conteudo.replace(/{{cidade_evento}}/g, `${evento.cidade || ''}/${evento.estado || ''}`);
-            conteudo = conteudo.replace(/{{valor_total}}/g,   Utils.formatCurrency(evento.cache_bruto || 0));
+            conteudo = conteudo.replace(/{{razao_social}}/g,       nomeContrato);
+            conteudo = conteudo.replace(/{{cnpj_cpf}}/g,           cnpjContrato);
+            conteudo = conteudo.replace(/{{representante}}/g,       representanteContrato);
+            conteudo = conteudo.replace(/{{endereco_contrato}}/g,   enderecoContrato);
+            conteudo = conteudo.replace(/{{nome_artista}}/g,        artista.nome);
+            conteudo = conteudo.replace(/{{data_evento}}/g,         Utils.formatDate(evento.data));
+            conteudo = conteudo.replace(/{{local_evento}}/g,        evento.local  || '');
+            conteudo = conteudo.replace(/{{cidade_evento}}/g,       `${evento.cidade || ''}/${evento.estado || ''}`);
+            conteudo = conteudo.replace(/{{valor_total}}/g,         Utils.formatCurrency(evento.cache_bruto || 0));
 
             const result = await ContratosDB.criar({
                 evento_id:     eventoId,

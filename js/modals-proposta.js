@@ -146,6 +146,85 @@ Modals.showPropostaModal = async function(propostaId = null) {
                                                oninput="Utils.maskCEP(this)">
                                     </div>
                                 </div>
+
+                                <!-- TOGGLE: Contrato com entidade diferente -->
+                                <div style="margin-top:20px;padding:16px;border:1.5px dashed var(--border-color);border-radius:12px;background:var(--bg-secondary);">
+                                    <label style="display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none;">
+                                        <input type="checkbox" id="p_contrato_diferente" name="contrato_entidade_diferente"
+                                               ${proposta?.contrato_entidade_diferente ? 'checked' : ''}
+                                               style="width:18px;height:18px;accent-color:var(--brand-primary);cursor:pointer;flex-shrink:0;"
+                                               onchange="Modals.toggleContratoEntidade()">
+                                        <div>
+                                            <div style="font-weight:700;font-size:13px;">O contrato será assinado por entidade diferente?</div>
+                                            <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Ex: Prefeitura, empresa terceirizada, produtora intermediária</div>
+                                        </div>
+                                    </label>
+
+                                    <div id="p_contrato_entidade_campos" style="display:${proposta?.contrato_entidade_diferente ? 'block' : 'none'};margin-top:18px;border-top:1px solid var(--border-color);padding-top:16px;">
+                                        <h5 style="margin:0 0 14px;font-size:13px;color:var(--brand-primary);text-transform:uppercase;letter-spacing:.5px;">
+                                            <i class="fas fa-file-signature"></i> Dados para o Contrato
+                                        </h5>
+                                        <div class="form-group">
+                                            <label>Tipo</label>
+                                            <select name="contrato_tipo" id="p_contrato_tipo" onchange="Modals.toggleContratoTipo()">
+                                                <option value="PJ" ${(proposta?.contrato_tipo||'PJ')==='PJ'?'selected':''}>Pessoa Jurídica (PJ)</option>
+                                                <option value="PF" ${proposta?.contrato_tipo==='PF'?'selected':''}>Pessoa Física (PF)</option>
+                                            </select>
+                                        </div>
+                                        <div id="p_contrato_campos_pj" style="display:${proposta?.contrato_tipo==='PF'?'none':'block'};">
+                                            <div class="grid grid-2">
+                                                <div class="form-group">
+                                                    <label>Razão Social</label>
+                                                    <input type="text" name="contrato_razao_social" value="${proposta?.contrato_razao_social||''}" placeholder="Ex: Prefeitura Municipal de...">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>CNPJ</label>
+                                                    <input type="text" name="contrato_cnpj" value="${proposta?.contrato_cnpj||''}" placeholder="00.000.000/0000-00" oninput="Utils.maskCNPJ(this)">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div id="p_contrato_campos_pf" style="display:${proposta?.contrato_tipo==='PF'?'block':'none'};">
+                                            <div class="grid grid-2">
+                                                <div class="form-group">
+                                                    <label>Nome Completo</label>
+                                                    <input type="text" name="contrato_nome" value="${proposta?.contrato_nome||''}">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>CPF</label>
+                                                    <input type="text" name="contrato_cpf" value="${proposta?.contrato_cpf||''}" placeholder="000.000.000-00" oninput="Utils.maskCPF(this)">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="grid grid-2">
+                                            <div class="form-group">
+                                                <label>Representante Legal</label>
+                                                <input type="text" name="contrato_representante" value="${proposta?.contrato_representante||''}" placeholder="Nome de quem assina">
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Cargo</label>
+                                                <input type="text" name="contrato_cargo" value="${proposta?.contrato_cargo||''}" placeholder="Ex: Prefeito, Diretor...">
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Endereço</label>
+                                            <input type="text" name="contrato_endereco" value="${proposta?.contrato_endereco||''}" placeholder="Rua, número, bairro">
+                                        </div>
+                                        <div class="grid grid-3">
+                                            <div class="form-group">
+                                                <label>Cidade</label>
+                                                <input type="text" name="contrato_cidade" value="${proposta?.contrato_cidade||''}">
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Estado</label>
+                                                <input type="text" name="contrato_estado" value="${proposta?.contrato_estado||''}" maxlength="2" placeholder="UF" style="text-transform:uppercase">
+                                            </div>
+                                            <div class="form-group">
+                                                <label>CEP</label>
+                                                <input type="text" name="contrato_cep" value="${proposta?.contrato_cep||''}" placeholder="00000-000" oninput="Utils.maskCEP(this)">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -377,6 +456,20 @@ Modals.togglePropostaPJ = function() {
     pfEl.style.display = tipo === 'PF' ? 'block' : 'none';
 };
 
+Modals.toggleContratoEntidade = function() {
+    const checked = document.getElementById('p_contrato_diferente')?.checked;
+    const campos  = document.getElementById('p_contrato_entidade_campos');
+    if (campos) campos.style.display = checked ? 'block' : 'none';
+};
+
+Modals.toggleContratoTipo = function() {
+    const tipo = document.getElementById('p_contrato_tipo')?.value;
+    const pj   = document.getElementById('p_contrato_campos_pj');
+    const pf   = document.getElementById('p_contrato_campos_pf');
+    if (pj) pj.style.display = tipo === 'PJ' ? 'block' : 'none';
+    if (pf) pf.style.display = tipo === 'PF' ? 'block' : 'none';
+};
+
 Modals.calcPropostaLiquido = function() {
     // Mantido por compatibilidade — sem dedução de produtora
     Modals.atualizarCronograma();
@@ -455,6 +548,19 @@ Modals.submitProposta = async function(propostaId) {
         parceiro_nome: null,
         parceiro_comissao_valor: 0,
         condicoes_pagamento: JSON.stringify({ tipo: pagTipo, cronograma }),
+        // Dados de entidade diferente para contrato
+        contrato_entidade_diferente: document.getElementById('p_contrato_diferente')?.checked || false,
+        contrato_tipo:            get('contrato_tipo')            || 'PJ',
+        contrato_razao_social:    get('contrato_razao_social')    || null,
+        contrato_cnpj:            get('contrato_cnpj')            || null,
+        contrato_nome:            get('contrato_nome')            || null,
+        contrato_cpf:             get('contrato_cpf')             || null,
+        contrato_representante:   get('contrato_representante')   || null,
+        contrato_cargo:           get('contrato_cargo')           || null,
+        contrato_endereco:        get('contrato_endereco')        || null,
+        contrato_cidade:          get('contrato_cidade')          || null,
+        contrato_estado:          (get('contrato_estado') || '').toUpperCase() || null,
+        contrato_cep:             get('contrato_cep')             || null,
     };
 
     // ── Verificar conflito de data/artista antes de criar ─────────
