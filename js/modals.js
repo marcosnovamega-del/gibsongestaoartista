@@ -90,10 +90,6 @@ const Modals = {
                                         <label style="font-size:11px;">Titular PIX</label>
                                         <input type="text" id="art_banco_pix_titular" value="${(() => { try { const b = typeof artista?.dados_bancarios === 'string' ? JSON.parse(artista.dados_bancarios) : (artista?.dados_bancarios || {}); return b.pixTitular || ''; } catch(e) { return ''; } })()}" placeholder="Nome do titular" style="font-size:12px;">
                                     </div>
-                                    <div class="form-group" style="margin-bottom:8px;">
-                                        <label style="font-size:11px;">CPF Titular</label>
-                                        <input type="text" id="art_banco_pix_cpf" value="${(() => { try { const b = typeof artista?.dados_bancarios === 'string' ? JSON.parse(artista.dados_bancarios) : (artista?.dados_bancarios || {}); return b.pixCpf || ''; } catch(e) { return ''; } })()}" placeholder="CPF do titular" style="font-size:12px;">
-                                    </div>
                                 </div>
                             </div>
                         </form>
@@ -131,7 +127,6 @@ const Modals = {
                 conta:       document.getElementById('art_banco_cc')?.value || '',
                 pix:         document.getElementById('art_banco_pix')?.value || '',
                 pixTitular:  document.getElementById('art_banco_pix_titular')?.value || '',
-                pixCpf:      document.getElementById('art_banco_pix_cpf')?.value || '',
             }
         };
 

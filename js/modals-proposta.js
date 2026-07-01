@@ -903,45 +903,6 @@ Modals.showGerarPropostaPDF = async function(propostaId) {
                         value="${validadeDias}" min="1" max="365">
                 </div>
 
-                <!-- Dados para pagamento -->
-                <div style="background:var(--bg-secondary);border-radius:8px;padding:14px;margin-bottom:20px;">
-                    <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:10px;">DADOS PARA PAGAMENTO</label>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                        <div>
-                            <label style="font-size:11px;color:var(--text-muted);">Razão Social</label>
-                            <input type="text" id="pdf_banco_razao" class="form-control" style="font-size:12px;margin-top:2px;" value="${artistaBanco.razao || ''}" placeholder="Razão Social">
-                        </div>
-                        <div>
-                            <label style="font-size:11px;color:var(--text-muted);">CNPJ</label>
-                            <input type="text" id="pdf_banco_cnpj" class="form-control" style="font-size:12px;margin-top:2px;" value="${artistaBanco.cnpj || ''}" placeholder="CNPJ">
-                        </div>
-                        <div>
-                            <label style="font-size:11px;color:var(--text-muted);">Banco</label>
-                            <input type="text" id="pdf_banco_nome" class="form-control" style="font-size:12px;margin-top:2px;" value="${artistaBanco.banco || ''}" placeholder="Banco">
-                        </div>
-                        <div>
-                            <label style="font-size:11px;color:var(--text-muted);">Agência</label>
-                            <input type="text" id="pdf_banco_ag" class="form-control" style="font-size:12px;margin-top:2px;" value="${artistaBanco.agencia || ''}" placeholder="Agência">
-                        </div>
-                        <div>
-                            <label style="font-size:11px;color:var(--text-muted);">Conta C/C</label>
-                            <input type="text" id="pdf_banco_cc" class="form-control" style="font-size:12px;margin-top:2px;" value="${artistaBanco.conta || ''}" placeholder="Conta">
-                        </div>
-                        <div>
-                            <label style="font-size:11px;color:var(--text-muted);">Chave PIX</label>
-                            <input type="text" id="pdf_pix" class="form-control" style="font-size:12px;margin-top:2px;" value="${artistaBanco.pix || ''}" placeholder="Chave PIX">
-                        </div>
-                        <div>
-                            <label style="font-size:11px;color:var(--text-muted);">Titular PIX</label>
-                            <input type="text" id="pdf_pix_titular" class="form-control" style="font-size:12px;margin-top:2px;" value="${artistaBanco.pixTitular || ''}" placeholder="Nome do titular">
-                        </div>
-                        <div>
-                            <label style="font-size:11px;color:var(--text-muted);">CPF Titular</label>
-                            <input type="text" id="pdf_pix_cpf" class="form-control" style="font-size:12px;margin-top:2px;" value="${artistaBanco.pixCpf || ''}" placeholder="CPF do titular">
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Botões -->
                 <div style="display:flex;gap:10px;justify-content:flex-end;">
                     <button onclick="document.getElementById('modalGerarPDF').remove()" class="btn-secondary">
@@ -1012,7 +973,6 @@ Modals._submitGerarPDF = async function(propostaId) {
         conta: document.getElementById('pdf_banco_cc')?.value || '',
         pix: document.getElementById('pdf_pix')?.value || '',
         pixTitular: document.getElementById('pdf_pix_titular')?.value || '',
-        pixCpf: document.getElementById('pdf_pix_cpf')?.value || '',
     };
 
     // Salvar campos no banco
@@ -1052,13 +1012,4 @@ Modals._submitGerarPDF = async function(propostaId) {
     var dadosPDF = { tipo, duracao, equipe, obrigacoes, validade, itens: itensList, banco: dadosBancarios, cronograma: cronogramaFinal };
     var htmlContent = tipo === 'prefeitura'
         ? PropostaTemplate.gerarPrefeitura(proposta, dadosPDF)
-        : PropostaTemplate.gerarAutonomo(proposta, dadosPDF);
-    var win = window.open('', '_blank');
-    if (win) {
-        win.document.write(htmlContent);
-        win.document.close();
-    } else {
-        alert('Popups bloqueados. Permita popups para este site e tente novamente.');
-    }
-};
-
+        : PropostaTemp
