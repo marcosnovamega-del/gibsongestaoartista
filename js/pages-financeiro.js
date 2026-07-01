@@ -54,6 +54,9 @@ Pages.renderFinanceiro = async function() {
                     <button class="btn-secondary" onclick="Pages.renderBalancoMensal()">
                         <i class="fas fa-chart-bar"></i> Balanço
                     </button>
+                    <button class="btn-secondary" onclick="Pages.renderComissoesVendedores()">
+                        <i class="fas fa-user-tie"></i> Comissões
+                    </button>
                     <button class="btn-secondary" onclick="Utils.exportToExcel(parcelas, 'financeiro_geral')">
                         <i class="fas fa-file-excel"></i> Exportar
                     </button>
@@ -561,7 +564,360 @@ Pages.carregarRecebimentosAConfirmar = async function() {
     }
 };
 
-/* ── Comissões de Vendedores ─────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════════════
+   PÁGINA COMPLETA DE COMISSÕES DE VENDEDORES
+══════════════════════════════════════════════════════════════════════════ */
+Pages.renderComissoesVendedores = async function(filtroVendedor) {
+    window._cmFiltroVendedor = filtroVendedor || '';
+    document.getElementById('pageContent').innerHTML =
+        '<div class="loading-container"><div class="loading-spinner"></div></div>';
+
+    const escId = Auth.currentUser && Auth.currentUser.escritorio_id;
+
+    // ── Carregar dados ────────────────────────────────────────────────────
+    var qProp = sbClient.from('propostas').select('*').eq('status', 'Aceita');
+    if (escId) qProp = qProp.eq('escritorio_id', escId);
+
+    var qEvt  = sbClient.from('eventos').select('id,artista_id,proposta_id,data,local,cidade');
+    if (escId) qEvt = qEvt.eq('escritorio_id', escId);
+
+    var qArt  = sbClient.from('artistas').select('id,nome');
+    if (escId) qArt = qArt.eq('escritorio_id', escId);
+
+    var qDesp = sbClient.from('despesas').select('*').eq('categoria', 'Comissão');
+    if (escId) qDesp = qDesp.eq('escritorio_id', escId);
+
+    try {
+        var [rProp, rEvt, rArt, rDesp] = await Promise.all([qProp, qEvt, qArt, qDesp]);
+
+        var propostasAceitas = (rProp.data || []).filter(function(p) {
+            return parseFloat(p.vendedor_comissao_valor) > 0 && (p.vendedor_nome || p.vendedor_nome_fin);
+        });
+        var eventos  = rEvt.data  || [];
+        var artistas = rArt.data  || [];
+        var despesas = rDesp.data || [];
+
+        // ── Auto-sync ────────────────────────────────────────────────────
+        var syncPromises = [];
+        propostasAceitas.forEach(function(p) {
+            var evento = eventos.find(function(e) { return e.proposta_id === p.id; });
+            if (!evento) return;
+            var jaExiste = despesas.find(function(d) {
+                return d.evento_id === evento.id && d.categoria === 'Comissão';
+            });
+            if (!jaExiste) {
+                var nomeVend = p.vendedor_nome || p.vendedor_nome_fin || 'N/A';
+                syncPromises.push(
+                    sbClient.from('despesas').insert({
+                        escritorio_id:   escId,
+                        evento_id:       evento.id,
+                        descricao:       'Comissão Vendedor – ' + nomeVend,
+                        categoria:       'Comissão',
+                        valor:           parseFloat(p.vendedor_comissao_valor),
+                        data_vencimento: p.data_evento || null,
+                        status:          'Pendente',
+                        observacoes:     'Sincronizado automaticamente da proposta aceita.',
+                    }).then(function(r) { if (r.data && r.data[0]) despesas.push(r.data[0]); })
+                      .catch(function(){})
+                );
+            }
+        });
+        if (syncPromises.length > 0) {
+            await Promise.all(syncPromises);
+            var { data: dAtual } = await (escId
+                ? sbClient.from('despesas').select('*').eq('categoria','Comissão').eq('escritorio_id', escId)
+                : sbClient.from('despesas').select('*').eq('categoria','Comissão'));
+            despesas = dAtual || [];
+        }
+
+        // ── Montar itens ────────────────────────────────────────────────
+        var items = propostasAceitas.map(function(p) {
+            var evento  = eventos.find(function(e) { return e.proposta_id === p.id; });
+            var artista = evento ? artistas.find(function(a) { return a.id === evento.artista_id; }) : null;
+            var despesa = evento ? despesas.find(function(d) {
+                return d.evento_id === evento.id && d.categoria === 'Comissão';
+            }) : null;
+            return {
+                proposta:       p,
+                evento:         evento,
+                artista:        artista,
+                despesa:        despesa,
+                vendedor:       p.vendedor_nome || p.vendedor_nome_fin || 'N/A',
+                artistaNome:    artista ? artista.nome : '—',
+                valor:          parseFloat(p.vendedor_comissao_valor) || 0,
+                status:         despesa ? (despesa.status || 'Pendente') : 'Pendente',
+                dataPagamento:  despesa ? despesa.data_pagamento : null,
+                dataVencimento: despesa ? despesa.data_vencimento : (p.data_evento || null),
+                despesaId:      despesa ? despesa.id : null,
+                eventoId:       evento ? evento.id : null,
+                dataShow:       p.data_evento || (evento ? evento.data : null),
+                local:          evento ? (evento.local || evento.cidade || '') : '',
+            };
+        });
+
+        // ── Filtro ─────────────────────────────────────────────────────
+        var todosVendedores = [];
+        items.forEach(function(i) { if (todosVendedores.indexOf(i.vendedor) === -1) todosVendedores.push(i.vendedor); });
+        todosVendedores.sort();
+
+        var filtroAtual = window._cmFiltroVendedor || '';
+        var itemsFiltrados = filtroAtual ? items.filter(function(i) { return i.vendedor === filtroAtual; }) : items;
+
+        // ── Agrupar por vendedor ────────────────────────────────────────
+        var vendMap = {};
+        itemsFiltrados.forEach(function(item) {
+            if (!vendMap[item.vendedor]) {
+                vendMap[item.vendedor] = { nome: item.vendedor, items: [], pendente: 0, pago: 0, total: 0, artistas: {} };
+            }
+            var v = vendMap[item.vendedor];
+            v.items.push(item);
+            v.total += item.valor;
+            if (item.status === 'Pago') v.pago += item.valor;
+            else v.pendente += item.valor;
+            if (!v.artistas[item.artistaNome]) v.artistas[item.artistaNome] = { shows: 0, valor: 0 };
+            v.artistas[item.artistaNome].shows++;
+            v.artistas[item.artistaNome].valor += item.valor;
+        });
+
+        var lista = Object.values(vendMap).sort(function(a, b) { return b.total - a.total; });
+
+        // ── KPIs globais ───────────────────────────────────────────────
+        var gtTotal    = items.reduce(function(s,i){ return s + i.valor; }, 0);
+        var gtPago     = items.reduce(function(s,i){ return s + (i.status==='Pago'?i.valor:0); }, 0);
+        var gtPendente = gtTotal - gtPago;
+
+        // ── Ranking geral de artistas (todos os vendedores) ────────────
+        var rankGeral = {};
+        items.forEach(function(item) {
+            if (!rankGeral[item.artistaNome]) rankGeral[item.artistaNome] = { shows: 0, valor: 0, vendedores: new Set() };
+            rankGeral[item.artistaNome].shows++;
+            rankGeral[item.artistaNome].valor += item.valor;
+            rankGeral[item.artistaNome].vendedores.add(item.vendedor);
+        });
+        var rankArr = Object.entries(rankGeral).sort(function(a,b){ return b[1].shows - a[1].shows; }).slice(0, 8);
+        var maxRank = rankArr.length > 0 ? rankArr[0][1].shows : 1;
+
+        // ── HTML ────────────────────────────────────────────────────────
+        var filtroOpts = '<option value="">Todos os Vendedores</option>' +
+            todosVendedores.map(function(n) {
+                return '<option value="' + n + '"' + (filtroAtual === n ? ' selected' : '') + '>' + n + '</option>';
+            }).join('');
+
+        // Ranking geral HTML
+        var rankGeralHtml = rankArr.length > 0 ? `
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-trophy" style="color:#D4AF37"></i> Ranking Geral — Artistas mais Vendidos</h3>
+                </div>
+                <div class="card-body">
+                    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;">
+                        ${rankArr.map(function(entry, idx) {
+                            var nome = entry[0]; var d = entry[1];
+                            var pctBar = Math.round((d.shows / maxRank) * 100);
+                            var medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : (idx+1) + 'º';
+                            return '<div style="background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:10px;padding:12px 14px;">' +
+                                '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">' +
+                                    '<span style="font-size:18px;flex-shrink:0;">' + medal + '</span>' +
+                                    '<div style="flex:1;min-width:0;">' +
+                                        '<div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + nome + '</div>' +
+                                        '<div style="font-size:11px;color:var(--text-muted);">' + d.shows + ' show' + (d.shows>1?'s':'') + ' · ' + d.vendedores.size + ' vendedor' + (d.vendedores.size>1?'es':'') + '</div>' +
+                                    '</div>' +
+                                    '<strong style="color:var(--brand-primary);font-size:13px;flex-shrink:0;">' + Utils.formatCurrency(d.valor) + '</strong>' +
+                                '</div>' +
+                                '<div style="height:8px;background:var(--border-color);border-radius:4px;overflow:hidden;">' +
+                                    '<div style="height:100%;width:' + pctBar + '%;background:linear-gradient(90deg,#D4AF37,rgba(212,175,55,0.4));border-radius:4px;"></div>' +
+                                '</div>' +
+                            '</div>';
+                        }).join('')}
+                    </div>
+                </div>
+            </div>` : '';
+
+        // Cards por vendedor
+        var cardsHtml = lista.map(function(v) {
+            var pct = v.total > 0 ? Math.round(v.pago / v.total * 100) : 0;
+            var cor = v.pendente === 0 ? 'var(--success)' : 'var(--warning)';
+            var artsArr = Object.entries(v.artistas).sort(function(a,b){ return b[1].shows - a[1].shows; });
+            var maxShows = artsArr.length > 0 ? artsArr[0][1].shows : 1;
+
+            var rankingHtml = '<div style="margin-bottom:14px;padding:12px;background:var(--bg-primary);border-radius:10px;border:1px solid var(--border-color);">' +
+                '<div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:8px;">' +
+                '<i class="fas fa-chart-bar" style="margin-right:4px;color:var(--brand-primary)"></i>Artistas que mais vende</div>' +
+                artsArr.map(function(entry) {
+                    var nome = entry[0]; var d = entry[1];
+                    var pctBar = Math.round((d.shows / maxShows) * 100);
+                    return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">' +
+                        '<div style="width:100px;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;">' + nome + '</div>' +
+                        '<div style="flex:1;height:16px;background:var(--border-color);border-radius:8px;overflow:hidden;">' +
+                            '<div style="height:100%;width:' + pctBar + '%;background:linear-gradient(90deg,#D4AF37,rgba(212,175,55,0.35));border-radius:8px;"></div>' +
+                        '</div>' +
+                        '<div style="font-size:11px;color:var(--text-muted);flex-shrink:0;min-width:80px;text-align:right;">' +
+                            d.shows + 'x · ' + Utils.formatCurrency(d.valor) +
+                        '</div>' +
+                    '</div>';
+                }).join('') +
+            '</div>';
+
+            var linhas = v.items.map(function(item) {
+                var dtShow  = item.dataShow ? Utils.formatDate(item.dataShow) : '—';
+                var stBadge = item.status === 'Pago'
+                    ? '<span style="padding:2px 8px;border-radius:12px;background:rgba(34,197,94,.15);color:var(--success);font-size:11px;font-weight:600;">Pago</span>'
+                    : '<span style="padding:2px 8px;border-radius:12px;background:rgba(245,158,11,.15);color:var(--warning);font-size:11px;font-weight:600;">Pendente</span>';
+                var acoes;
+                if (item.status === 'Pago') {
+                    acoes = '<span style="color:var(--success);font-size:11px;"><i class="fas fa-check-circle"></i> ' + (item.dataPagamento ? Utils.formatDate(item.dataPagamento) : '') + '</span>';
+                } else if (item.despesaId) {
+                    acoes = '<div style="display:flex;gap:4px;flex-wrap:wrap;">' +
+                        '<button onclick="Pages._pagarComissao(\'' + item.despesaId + '\',\'renderComissoesVendedores\')" style="padding:3px 9px;font-size:11px;border-radius:6px;border:1px solid var(--success);background:transparent;color:var(--success);cursor:pointer;white-space:nowrap;"><i class="fas fa-check"></i> Pagar</button>' +
+                        '<button onclick="Pages._agendarComissao(\'' + item.despesaId + '\',\'renderComissoesVendedores\')" style="padding:3px 9px;font-size:11px;border-radius:6px;border:1px solid var(--brand-primary);background:transparent;color:var(--brand-primary);cursor:pointer;white-space:nowrap;"><i class="fas fa-calendar"></i> Agendar</button>' +
+                        '</div>';
+                } else {
+                    acoes = '<span style="font-size:11px;color:var(--text-muted);">Sincronizando...</span>';
+                }
+                return '<tr style="font-size:13px;border-bottom:1px solid var(--border-color);">' +
+                    '<td style="padding:8px 10px;white-space:nowrap;">' + dtShow + '</td>' +
+                    '<td style="padding:8px 10px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + item.artistaNome + (item.local ? ' <span style="font-size:11px;color:var(--text-muted);">· ' + item.local + '</span>' : '') + '</td>' +
+                    '<td style="padding:8px 10px;font-weight:700;color:var(--brand-primary);white-space:nowrap;">' + Utils.formatCurrency(item.valor) + '</td>' +
+                    '<td style="padding:8px 10px;">' + stBadge + '</td>' +
+                    '<td style="padding:8px 10px;">' + acoes + '</td>' +
+                    '</tr>';
+            }).join('');
+
+            return '<div style="background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:14px;padding:18px 20px;margin-bottom:14px;">' +
+                '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px;">' +
+                    '<div style="display:flex;align-items:center;gap:12px;">' +
+                        '<div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#D4AF37,rgba(212,175,55,.4));display:flex;align-items:center;justify-content:center;font-weight:800;color:#000;font-size:20px;flex-shrink:0;">' + v.nome.charAt(0).toUpperCase() + '</div>' +
+                        '<div><div style="font-weight:700;font-size:16px;">' + v.nome + '</div>' +
+                        '<div style="font-size:12px;color:var(--text-muted);">' + v.items.length + ' show(s) · ' + artsArr.length + ' artista(s)</div></div>' +
+                    '</div>' +
+                    '<div style="display:flex;gap:20px;flex-wrap:wrap;">' +
+                        '<div style="text-align:center;"><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;margin-bottom:2px;">A Pagar</div><div style="font-size:18px;font-weight:800;color:' + cor + ';">' + Utils.formatCurrency(v.pendente) + '</div></div>' +
+                        '<div style="text-align:center;"><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;margin-bottom:2px;">Pago</div><div style="font-size:18px;font-weight:800;color:var(--success);">' + Utils.formatCurrency(v.pago) + '</div></div>' +
+                        '<div style="text-align:center;"><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;margin-bottom:2px;">Total</div><div style="font-size:18px;font-weight:800;">' + Utils.formatCurrency(v.total) + '</div></div>' +
+                    '</div>' +
+                '</div>' +
+                '<div style="height:6px;background:var(--border-color);border-radius:3px;margin-bottom:14px;overflow:hidden;">' +
+                    '<div style="height:100%;width:' + pct + '%;background:var(--success);border-radius:3px;transition:width .6s;"></div>' +
+                '</div>' +
+                rankingHtml +
+                '<details style="cursor:pointer;">' +
+                '<summary style="font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:8px;list-style:none;display:flex;align-items:center;gap:6px;">' +
+                    '<i class="fas fa-chevron-right" style="font-size:10px;transition:transform .2s;"></i> Ver detalhes dos shows (' + v.items.length + ')' +
+                '</summary>' +
+                '<div style="overflow-x:auto;margin-top:10px;">' +
+                '<table style="width:100%;border-collapse:collapse;">' +
+                    '<thead><tr style="border-bottom:2px solid var(--border-color);">' +
+                        '<th style="padding:6px 10px;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;white-space:nowrap;">Data Show</th>' +
+                        '<th style="padding:6px 10px;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;">Artista / Local</th>' +
+                        '<th style="padding:6px 10px;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;white-space:nowrap;">Comissão</th>' +
+                        '<th style="padding:6px 10px;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;">Status</th>' +
+                        '<th style="padding:6px 10px;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;">Ação</th>' +
+                    '</tr></thead>' +
+                    '<tbody>' + linhas + '</tbody>' +
+                '</table></div>' +
+                '</details>' +
+            '</div>';
+        }).join('');
+
+        // Totais filtrados
+        var ftPendente = itemsFiltrados.reduce(function(s,i){ return s+(i.status!=='Pago'?i.valor:0); }, 0);
+        var ftPago     = itemsFiltrados.reduce(function(s,i){ return s+(i.status==='Pago'?i.valor:0); }, 0);
+        var ftTotal    = itemsFiltrados.reduce(function(s,i){ return s+i.valor; }, 0);
+
+        var html = `
+        <div class="financeiro-container">
+            <div class="page-header flex-between mb-3">
+                <div>
+                    <h2><i class="fas fa-user-tie" style="color:var(--brand-primary);margin-right:8px;"></i>Comissões de Vendedores</h2>
+                    <p class="text-muted">${items.length} proposta(s) aceita(s) com comissão</p>
+                </div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                    <button class="btn-secondary" onclick="Pages.renderFinanceiro()">
+                        <i class="fas fa-arrow-left"></i> Financeiro
+                    </button>
+                    <button class="btn-primary" onclick="Pages._registrarComissaoManual()">
+                        <i class="fas fa-plus"></i> Registrar Manual
+                    </button>
+                </div>
+            </div>
+
+            <!-- KPIs -->
+            <div class="grid grid-4 mb-3">
+                <div class="stat-card">
+                    <div class="stat-icon blue"><i class="fas fa-users"></i></div>
+                    <div class="stat-content">
+                        <h3>${todosVendedores.length}</h3>
+                        <p>Vendedores Ativos</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon red"><i class="fas fa-clock"></i></div>
+                    <div class="stat-content">
+                        <h3 style="color:var(--warning);">${Utils.formatCurrency(gtPendente)}</h3>
+                        <p>Total a Pagar</p>
+                        <small class="text-muted">${items.filter(function(i){return i.status!=='Pago';}).length} pendente(s)</small>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+                    <div class="stat-content">
+                        <h3 class="text-success">${Utils.formatCurrency(gtPago)}</h3>
+                        <p>Total Pago</p>
+                        <small class="text-muted">${items.filter(function(i){return i.status==='Pago';}).length} pago(s)</small>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:rgba(212,175,55,0.15);"><i class="fas fa-dollar-sign" style="color:var(--brand-primary);"></i></div>
+                    <div class="stat-content">
+                        <h3 style="color:var(--brand-primary);">${Utils.formatCurrency(gtTotal)}</h3>
+                        <p>Total Geral</p>
+                        <small class="text-muted">${items.length} comissão(ões)</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ranking geral -->
+            ${rankGeralHtml}
+
+            <!-- Filtro + Cards -->
+            <div class="card">
+                <div class="card-header flex-between">
+                    <h3 class="card-title"><i class="fas fa-filter"></i> Por Vendedor</h3>
+                    <select onchange="Pages.renderComissoesVendedores(this.value)"
+                        style="padding:7px 12px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-secondary);color:var(--text-primary);font-size:13px;cursor:pointer;">
+                        ${filtroOpts}
+                    </select>
+                </div>
+                <div class="card-body">
+                    ${lista.length > 0 ? cardsHtml + `
+                    <div style="display:flex;gap:16px;flex-wrap:wrap;padding:14px 0 2px;border-top:1px solid var(--border-color);margin-top:4px;">
+                        <div style="flex:1;min-width:110px;text-align:center;padding:10px 0;">
+                            <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">A Pagar</div>
+                            <div style="font-size:20px;font-weight:800;color:var(--warning);">${Utils.formatCurrency(ftPendente)}</div>
+                        </div>
+                        <div style="flex:1;min-width:110px;text-align:center;padding:10px 0;">
+                            <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Pago</div>
+                            <div style="font-size:20px;font-weight:800;color:var(--success);">${Utils.formatCurrency(ftPago)}</div>
+                        </div>
+                        <div style="flex:1;min-width:110px;text-align:center;padding:10px 0;">
+                            <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Total</div>
+                            <div style="font-size:20px;font-weight:800;color:var(--brand-primary);">${Utils.formatCurrency(ftTotal)}</div>
+                        </div>
+                    </div>` : '<p class="text-muted" style="padding:20px;text-align:center;">Nenhum resultado para o filtro selecionado.</p>'}
+                </div>
+            </div>
+        </div>`;
+
+        document.getElementById('pageContent').innerHTML = html;
+
+    } catch(e) {
+        console.error('Erro renderComissoesVendedores:', e);
+        document.getElementById('pageContent').innerHTML =
+            '<div style="padding:40px;text-align:center;color:var(--danger);">Erro ao carregar comissões: ' + (e.message || e) + '</div>';
+    }
+};
+
+/* ── Comissões de Vendedores (card inline no Financeiro) ─────────────────── */
 Pages.carregarComissoesVendedores = async function(filtroVendedor) {
     const el = document.getElementById('comissoes-vendedor-body');
     if (!el) return;
@@ -829,7 +1185,7 @@ Pages.carregarComissoesVendedores = async function(filtroVendedor) {
     }
 };
 
-Pages._pagarComissao = function(despesaId) {
+Pages._pagarComissao = function(despesaId, paginaCallback) {
     var hoje = new Date().toISOString().split('T')[0];
     var modal = document.createElement('div');
     modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.65);z-index:10000;display:flex;align-items:center;justify-content:center;';
@@ -857,7 +1213,9 @@ Pages._pagarComissao = function(despesaId) {
             if (res.error) throw res.error;
             Utils.hideLoading();
             Utils.showToast('Comissão marcada como paga!', 'success');
-            Pages.carregarComissoesVendedores();
+            // Recarrega a página correta
+            if (paginaCallback && typeof Pages[paginaCallback] === 'function') Pages[paginaCallback]();
+            else Pages.carregarComissoesVendedores();
         } catch(e) {
             Utils.hideLoading();
             Utils.showToast('Erro: ' + (e.message || e), 'error');
@@ -865,7 +1223,7 @@ Pages._pagarComissao = function(despesaId) {
     };
 };
 
-Pages._agendarComissao = function(despesaId) {
+Pages._agendarComissao = function(despesaId, paginaCallback) {
     var proxSemana = new Date();
     proxSemana.setDate(proxSemana.getDate() + 7);
     var defaultDate = proxSemana.toISOString().split('T')[0];
@@ -897,7 +1255,8 @@ Pages._agendarComissao = function(despesaId) {
             if (res.error) throw res.error;
             Utils.hideLoading();
             Utils.showToast('Pagamento programado para ' + Utils.formatDate(data), 'success');
-            Pages.carregarComissoesVendedores();
+            if (paginaCallback && typeof Pages[paginaCallback] === 'function') Pages[paginaCallback]();
+            else Pages.carregarComissoesVendedores();
         } catch(e) {
             Utils.hideLoading();
             Utils.showToast('Erro: ' + (e.message || e), 'error');
