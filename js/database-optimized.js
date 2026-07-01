@@ -842,20 +842,26 @@ const PropostasDB = {
     async atualizarStatus(id, status) {
         const result = await DB.patch('propostas', id, { status });
         if (status === 'Recusada' || status === 'Expirada') {
-            // Liberar reservas alternativas quando proposta for recusada/expirada
+            // Liberar reserva principal E alternativas quando proposta for recusada/expirada
             try {
                 const proposta = await this.buscarPorId(id);
                 if (proposta) {
                     const todosEventos = await EventosDB.listar(true);
-                    const reservasAlt = todosEventos.filter(e =>
-                        e.artista_id === proposta.artista_id && e.status === 'Reserva Alt.'
+                    const reservasParaDeletar = todosEventos.filter(e =>
+                        e.artista_id === proposta.artista_id &&
+                        (
+                            (e.status === 'Reserva' && e.data === proposta.data_evento) ||
+                            e.status === 'Reserva Alt.'
+                        )
                     );
-                    for (const ra of reservasAlt) {
-                        await DB.delete('eventos', ra.id);
+                    for (const ev of reservasParaDeletar) {
+                        await DB.delete('eventos', ev.id);
                     }
+                    DB.cache = {};
+                    console.log(`[atualizarStatus] ${reservasParaDeletar.length} reserva(s) liberada(s) para proposta ${id}`);
                 }
             } catch (e) {
-                console.warn('Erro ao liberar reservas Alt. na recusa:', e);
+                console.warn('Erro ao liberar reservas na recusa/expiração:', e);
             }
         } else {
             await this._sincronizarReserva(id);
@@ -1007,6 +1013,27 @@ const PropostasDB = {
     },
 
     async deletar(id) {
+        // Antes de deletar a proposta, remove todas as reservas relacionadas da agenda
+        try {
+            const proposta = await this.buscarPorId(id);
+            if (proposta && proposta.artista_id) {
+                const todosEventos = await EventosDB.listar(true);
+                const reservasParaDeletar = todosEventos.filter(e =>
+                    e.artista_id === proposta.artista_id &&
+                    (
+                        (e.status === 'Reserva' && e.data === proposta.data_evento) ||
+                        e.status === 'Reserva Alt.'
+                    )
+                );
+                for (const ev of reservasParaDeletar) {
+                    await DB.delete('eventos', ev.id);
+                }
+                DB.cache = {};
+                console.log(`[PropostasDB.deletar] ${reservasParaDeletar.length} reserva(s) removida(s) da agenda.`);
+            }
+        } catch (e) {
+            console.warn('[PropostasDB.deletar] Erro ao limpar reservas da agenda:', e);
+        }
         return await DB.delete('propostas', id);
     },
 
