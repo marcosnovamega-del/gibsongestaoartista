@@ -457,6 +457,41 @@ Modals.submitProposta = async function(propostaId) {
         condicoes_pagamento: JSON.stringify({ tipo: pagTipo, cronograma }),
     };
 
+    // ── Verificar conflito de data/artista antes de criar ─────────
+    if (!propostaId && data.artista_id && data.data_evento) {
+        const [todasPropostas, todosEventos] = await Promise.all([
+            PropostasDB.listar(true),
+            EventosDB.listar()
+        ]);
+        const statusBloqueados = ['Recusada', 'Cancelada', 'Expirada'];
+
+        const propostaConflito = todasPropostas.find(p =>
+            p.id !== propostaId &&
+            p.artista_id === data.artista_id &&
+            p.data_evento === data.data_evento &&
+            !statusBloqueados.includes(p.status)
+        );
+        const eventoConflito = todosEventos.find(e =>
+            e.artista_id === data.artista_id &&
+            e.data === data.data_evento
+        );
+
+        if (propostaConflito || eventoConflito) {
+            const origem = eventoConflito
+                ? `Evento já confirmado`
+                : `Proposta "${propostaConflito.status}" — Vendedor: ${propostaConflito.vendedor_nome || 'N/A'}`;
+            const dataFmt = Utils.formatDate(data.data_evento);
+            Utils.hideLoading();
+            const continuar = confirm(
+                `⚠️ CONFLITO DE AGENDA!\n\n` +
+                `Esta data (${dataFmt}) já está ocupada para este artista.\n` +
+                `Origem: ${origem}\n\n` +
+                `Deseja registrar mesmo assim?`
+            );
+            if (!continuar) return;
+        }
+    }
+
     Utils.showLoading();
     let result = propostaId ? await PropostasDB.atualizar(propostaId, data) : await PropostasDB.criar(data);
     Utils.hideLoading();
