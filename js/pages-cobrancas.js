@@ -223,7 +223,7 @@ Pages._cobRenderTabela = function (dados, filtro, busca) {
                  <i class="fab fa-whatsapp"></i>
                </button>` : '';
 
-        const pagarBtn = p._estado !== 'paga'
+        const pagarBtn = p._estado !== 'paga' && Auth.isAdmin()
             ? `<button class="btn-icon btn-success-icon" title="Marcar como recebido" onclick="Pages._cobMarcarPago('${p.id}')">
                  <i class="fas fa-check"></i>
                </button>` : '';
@@ -329,6 +329,10 @@ Pages._cobBuscar = function (termo) {
 
 // ── Marcar como recebido ────────────────────────────────────────────────────
 Pages._cobMarcarPago = async function (id) {
+    if (!Auth.isAdmin()) {
+        alert('Apenas usuários Admin Master podem confirmar recebimentos.');
+        return;
+    }
     if (!confirm('Confirmar recebimento desta parcela?')) return;
     try {
         await ParcelasDB.marcarPaga(id);
