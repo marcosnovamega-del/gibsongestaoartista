@@ -201,6 +201,14 @@ Pages.renderCalendario = async function(eventos, mes, ano) {
                 border-radius: 6px;
                 padding: 4px 6px;
             }
+            .cal-event-chip.reserva {
+                background: rgba(99,179,237,0.1);
+                border-color: rgba(99,179,237,0.35);
+            }
+            .cal-event-chip.reserva-alt {
+                background: rgba(160,130,230,0.1);
+                border-color: rgba(160,130,230,0.35);
+            }
             .cal-event-local {
                 font-size: 11px;
                 font-weight: 700;
@@ -210,6 +218,8 @@ Pages.renderCalendario = async function(eventos, mes, ano) {
                 text-overflow: ellipsis;
                 max-width: 100%;
             }
+            .cal-event-chip.reserva .cal-event-local { color: #63B3ED; }
+            .cal-event-chip.reserva-alt .cal-event-local { color: #A082E6; }
             .cal-event-sub {
                 font-size: 10px;
                 color: var(--text-muted);
@@ -219,6 +229,8 @@ Pages.renderCalendario = async function(eventos, mes, ano) {
                 margin-top: 2px;
             }
             .cal-event-sub i { font-size: 9px; color: var(--brand-primary, #D4AF37); }
+            .cal-event-chip.reserva .cal-event-sub i { color: #63B3ED; }
+            .cal-event-chip.reserva-alt .cal-event-sub i { color: #A082E6; }
         </style>
     `;
     
@@ -255,9 +267,15 @@ Pages.renderCalendario = async function(eventos, mes, ano) {
             eventosHTML = eventosNoDia.map(e => {
                 const artistaNome = artMap[e.artista_id] || '';
                 const cidade = [e.cidade, e.estado].filter(Boolean).join('/');
+                const isReservaAlt = e.status === 'Reserva Alt.';
+                const isReserva = e.status === 'Reserva';
+                const chipClass = isReservaAlt ? 'cal-event-chip reserva-alt' : (isReserva ? 'cal-event-chip reserva' : 'cal-event-chip');
+                const badge = isReservaAlt
+                    ? '<span style="font-size:9px;background:rgba(160,130,230,0.2);color:#A082E6;border-radius:3px;padding:1px 4px;font-weight:700;">📅 Alt.</span> '
+                    : (isReserva ? '<span style="font-size:9px;background:rgba(99,179,237,0.2);color:#63B3ED;border-radius:3px;padding:1px 4px;font-weight:700;">📌 Reserva</span> ' : '');
                 return `
-                <div class="cal-event-chip">
-                    <div class="cal-event-local">${e.local || '—'}</div>
+                <div class="${chipClass}">
+                    <div class="cal-event-local">${badge}${e.local || '—'}</div>
                     ${artistaNome ? `<div class="cal-event-sub"><i class="fas fa-microphone-alt"></i> ${artistaNome}</div>` : ''}
                     ${cidade ? `<div class="cal-event-sub"><i class="fas fa-map-marker-alt"></i> ${cidade}</div>` : ''}
                 </div>`;

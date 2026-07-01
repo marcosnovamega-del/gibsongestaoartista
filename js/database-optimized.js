@@ -376,8 +376,9 @@ _______________________________        _______________________________
             status: statusParaTentar
         });
 
-        // Fallback para status 'Confirmado' se o banco rejeitar 'Aguardando Assinatura' ou similar
-        if (!result) {
+        // Fallback para status 'Confirmado' se o banco rejeitar status desconhecido
+        // (exceto Reserva e Reserva Alt. que não devem virar Confirmado)
+        if (!result && statusParaTentar !== 'Reserva' && statusParaTentar !== 'Reserva Alt.') {
             console.warn("[EventosDB] Falha no insert inicial. Tentando com status 'Confirmado' padrão.");
             result = await DB.create('eventos', {
                 ...eventoData,
@@ -782,7 +783,7 @@ const PropostasDB = {
         });
 
         if (result) {
-            // Criar reserva automática na agenda
+            // Criar reserva automática na agenda (data principal)
             try {
                 const reservaData = {
                     artista_id: result.artista_id,
@@ -795,7 +796,7 @@ const PropostasDB = {
                     cache_bruto: result.cache_bruto || 0,
                     status: 'Reserva'
                 };
-                
+
                 const reservaResult = await EventosDB.criar(reservaData);
                 if (!reservaResult) {
                     console.error("Falha ao criar reserva na agenda. O Supabase rejeitou o insert.");
@@ -804,6 +805,29 @@ const PropostasDB = {
                 }
             } catch (e) {
                 console.warn('Falha ao criar reserva automática:', e);
+            }
+
+            // Criar reservas alternativas
+            try {
+                const alts = result.datas_alternativas
+                    ? (typeof result.datas_alternativas === 'string' ? JSON.parse(result.datas_alternativas) : result.datas_alternativas)
+                    : [];
+                for (const dataAlt of alts) {
+                    if (!dataAlt) continue;
+                    await EventosDB.criar({
+                        artista_id: result.artista_id,
+                        data: dataAlt,
+                        horario: result.horario || '00:00',
+                        local: result.local_evento || 'A definir',
+                        cidade: result.cidade_evento || 'A definir',
+                        estado: result.estado_evento || 'NA',
+                        tipo_evento: result.tipo_evento || 'Show',
+                        cache_bruto: 0,
+                        status: 'Reserva Alt.'
+                    });
+                }
+            } catch (e) {
+                console.warn('Falha ao criar reservas alternativas:', e);
             }
         }
         return result;
@@ -817,7 +841,23 @@ const PropostasDB = {
 
     async atualizarStatus(id, status) {
         const result = await DB.patch('propostas', id, { status });
-        if (status !== 'Recusada') {
+        if (status === 'Recusada' || status === 'Expirada') {
+            // Liberar reservas alternativas quando proposta for recusada/expirada
+            try {
+                const proposta = await this.buscarPorId(id);
+                if (proposta) {
+                    const todosEventos = await EventosDB.listar(true);
+                    const reservasAlt = todosEventos.filter(e =>
+                        e.artista_id === proposta.artista_id && e.status === 'Reserva Alt.'
+                    );
+                    for (const ra of reservasAlt) {
+                        await DB.delete('eventos', ra.id);
+                    }
+                }
+            } catch (e) {
+                console.warn('Erro ao liberar reservas Alt. na recusa:', e);
+            }
+        } else {
             await this._sincronizarReserva(id);
         }
         return result;
@@ -829,13 +869,13 @@ const PropostasDB = {
             if (!proposta || proposta.status === 'Recusada' || proposta.status === 'Aceita') return;
 
             const eventosArtista = await EventosDB.buscarPorArtista(proposta.artista_id);
-            const reservaExistente = eventosArtista.find(e => 
+
+            // Sincronizar reserva principal
+            const reservaExistente = eventosArtista.find(e =>
                 e.data === (proposta.data_evento || '') && e.status === 'Reserva'
             );
-
             if (!reservaExistente && proposta.data_evento) {
-                // Cria a reserva se não existir
-                const reservaData = {
+                await EventosDB.criar({
                     artista_id: proposta.artista_id,
                     data: proposta.data_evento,
                     horario: proposta.horario || '00:00',
@@ -845,8 +885,39 @@ const PropostasDB = {
                     tipo_evento: proposta.tipo_evento || 'Show',
                     cache_bruto: proposta.cache_bruto || 0,
                     status: 'Reserva'
-                };
-                await EventosDB.criar(reservaData);
+                });
+            }
+
+            // Sincronizar reservas alternativas
+            const alts = proposta.datas_alternativas
+                ? (typeof proposta.datas_alternativas === 'string' ? JSON.parse(proposta.datas_alternativas) : proposta.datas_alternativas)
+                : [];
+
+            // Remove reservas Alt. antigas que não estão mais na lista
+            const reservasAlt = eventosArtista.filter(e => e.status === 'Reserva Alt.');
+            for (const ra of reservasAlt) {
+                if (!alts.includes(ra.data)) {
+                    await DB.delete('eventos', ra.id);
+                }
+            }
+
+            // Cria as novas reservas Alt. que ainda não existem
+            for (const dataAlt of alts) {
+                if (!dataAlt) continue;
+                const jaExiste = eventosArtista.find(e => e.data === dataAlt && e.status === 'Reserva Alt.');
+                if (!jaExiste) {
+                    await EventosDB.criar({
+                        artista_id: proposta.artista_id,
+                        data: dataAlt,
+                        horario: proposta.horario || '00:00',
+                        local: proposta.local_evento || 'A definir',
+                        cidade: proposta.cidade_evento || 'A definir',
+                        estado: proposta.estado_evento || 'NA',
+                        tipo_evento: proposta.tipo_evento || 'Show',
+                        cache_bruto: 0,
+                        status: 'Reserva Alt.'
+                    });
+                }
             }
         } catch (e) {
             console.warn('Falha ao sincronizar reserva automática:', e);
@@ -907,16 +978,29 @@ const PropostasDB = {
 
         if (evento) {
             await this.atualizarStatus(propostaId, 'Aceita');
-            
+
+            // Liberar datas alternativas (deletar reservas Alt. do artista)
+            try {
+                const todosEventos = await EventosDB.listar(true);
+                const reservasAlt = todosEventos.filter(e =>
+                    e.artista_id === proposta.artista_id && e.status === 'Reserva Alt.'
+                );
+                for (const ra of reservasAlt) {
+                    await DB.delete('eventos', ra.id);
+                }
+                if (reservasAlt.length > 0) {
+                    console.log(`[converterParaEvento] ${reservasAlt.length} reserva(s) alternativa(s) liberada(s).`);
+                }
+            } catch (err) {
+                console.warn('Erro ao liberar reservas alternativas:', err);
+            }
+
             // Gerar contrato automaticamente
             try {
                 await EventosDB.gerarContratoEvento(evento.id, proposta.artista_id);
             } catch (err) {
                 console.error("Erro ao gerar contrato automático:", err);
             }
-
-
-
         }
 
         return evento;

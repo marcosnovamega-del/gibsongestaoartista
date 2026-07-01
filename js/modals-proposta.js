@@ -263,6 +263,34 @@ Modals.showPropostaModal = async function(propostaId = null) {
                                             <option value="${t}" ${proposta?.tipo_evento === t ? 'selected' : ''}>${t}</option>`).join('')}
                                     </select>
                                 </div>
+
+                                <!-- DATAS ALTERNATIVAS -->
+                                <div style="background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:10px;padding:16px;margin-top:4px;">
+                                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                                        <label style="font-size:13px;font-weight:700;color:var(--text-primary);margin:0;">
+                                            <i class="fas fa-calendar-plus" style="color:var(--brand-primary)"></i> Datas Alternativas
+                                            <span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:6px;">(opcional — reserva mais de uma data)</span>
+                                        </label>
+                                        <button type="button" onclick="Modals.adicionarDataAlternativa()" style="background:var(--brand-primary);color:#000;border:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;">
+                                            <i class="fas fa-plus"></i> Adicionar
+                                        </button>
+                                    </div>
+                                    <div id="datas-alternativas-list">
+                                        ${(() => {
+                                            const alts = proposta?.datas_alternativas
+                                                ? (typeof proposta.datas_alternativas === 'string' ? JSON.parse(proposta.datas_alternativas) : proposta.datas_alternativas)
+                                                : [];
+                                            if (!alts.length) return '<p style="font-size:12px;color:var(--text-muted);margin:0;">Nenhuma data alternativa adicionada.</p>';
+                                            return alts.map((d, i) => `
+                                                <div class="data-alt-item" style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                                                    <input type="date" class="data-alt-input" value="${d}" style="flex:1;padding:7px 10px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:13px;">
+                                                    <button type="button" onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--danger);font-size:16px;cursor:pointer;padding:4px;">
+                                                        <i class="fas fa-times-circle"></i>
+                                                    </button>
+                                                </div>`).join('');
+                                        })()}
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -470,6 +498,23 @@ Modals.toggleContratoTipo = function() {
     if (pf) pf.style.display = tipo === 'PF' ? 'block' : 'none';
 };
 
+Modals.adicionarDataAlternativa = function() {
+    const list = document.getElementById('datas-alternativas-list');
+    if (!list) return;
+    // Remove placeholder text if present
+    const placeholder = list.querySelector('p');
+    if (placeholder) placeholder.remove();
+    const div = document.createElement('div');
+    div.className = 'data-alt-item';
+    div.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:8px;';
+    div.innerHTML = `
+        <input type="date" class="data-alt-input" style="flex:1;padding:7px 10px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:13px;">
+        <button type="button" onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--danger);font-size:16px;cursor:pointer;padding:4px;">
+            <i class="fas fa-times-circle"></i>
+        </button>`;
+    list.appendChild(div);
+};
+
 Modals.calcPropostaLiquido = function() {
     // Mantido por compatibilidade — sem dedução de produtora
     Modals.atualizarCronograma();
@@ -561,6 +606,11 @@ Modals.submitProposta = async function(propostaId) {
         contrato_cidade:          get('contrato_cidade')          || null,
         contrato_estado:          (get('contrato_estado') || '').toUpperCase() || null,
         contrato_cep:             get('contrato_cep')             || null,
+        datas_alternativas: JSON.stringify(
+            Array.from(document.querySelectorAll('.data-alt-input'))
+                .map(el => el.value)
+                .filter(v => !!v)
+        ),
     };
 
     // ── Verificar conflito de data/artista antes de criar ─────────
