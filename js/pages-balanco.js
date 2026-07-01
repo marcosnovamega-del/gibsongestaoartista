@@ -44,7 +44,7 @@ Pages.renderBalancoMensal = async function(mesParam, anoParam) {
 
     // ---- Cálculos principais ----
     const cacheBrutoTotal   = eventosRicos.reduce((s, e) => s + (e.cache_bruto || 0), 0);
-    const comissaoTotal     = eventosRicos.reduce((s, e) => s + ((e.cache_bruto || 0) * (e.comissao || 0) / 100), 0);
+    const comissaoTotal     = eventosRicos.reduce((s, e) => s + (e.comissao || 0), 0);
     const cacheLiquidoTotal = cacheBrutoTotal - comissaoTotal;
     const pagoTotal         = eventosRicos.reduce((s, e) => s + e.pgPago, 0);
     const pendenteTotal     = eventosRicos.reduce((s, e) => s + e.pgPendente, 0);

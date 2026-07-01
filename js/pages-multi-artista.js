@@ -576,7 +576,7 @@ Pages._gerarRelatorioConsolidado = async function() {
             if (!art) continue;
 
             const cacheBruto = ev.cache_bruto || 0;
-            const comissao = (cacheBruto * (art.comissao_padrao || 0)) / 100;
+            const comissao = art.comissao_padrao || 0;
             const despesasEv = despesas.filter(d => d.evento_id === ev.id).reduce((acc, d) => acc + (d.valor || 0), 0);
 
             faturamentoBruto += cacheBruto;

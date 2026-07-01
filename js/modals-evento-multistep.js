@@ -324,10 +324,10 @@ Modals.renderEventoStep2 = function(evento) {
 // ETAPA 3: Receita
 Modals.renderEventoStep3 = async function(artistas, evento) {
     // Buscar comissão do artista selecionado
-    let comissaoPadrao = 10;
+    let comissaoPadrao = 0;
     if (eventoFormData.artista_id) {
         const artista = await ArtistasDB.buscarPorId(eventoFormData.artista_id);
-        if (artista) comissaoPadrao = artista.comissao_padrao || 10;
+        if (artista) comissaoPadrao = artista.comissao_padrao || 0;
     }
 
     if (!eventoFormData.comissao) {
@@ -346,8 +346,8 @@ Modals.renderEventoStep3 = async function(artistas, evento) {
                     <input type="number" name="cache_bruto" id="cacheBrutoMulti" value="${eventoFormData.cache_bruto || ''}" min="0" step="0.01" onchange="Modals.calcularValorLiquidoMulti()" required>
                 </div>
                 <div class="form-group">
-                    <label>Comissão (%) *</label>
-                    <input type="number" name="comissao" id="comissaoMulti" value="${eventoFormData.comissao || comissaoPadrao}" min="0" max="100" step="0.5" onchange="Modals.calcularValorLiquidoMulti()" required>
+                    <label>Comissão (R$) *</label>
+                    <input type="number" name="comissao" id="comissaoMulti" value="${eventoFormData.comissao || comissaoPadrao}" min="0" step="0.01" onchange="Modals.calcularValorLiquidoMulti()" required>
                 </div>
                 <div class="form-group">
                     <label>Valor Líquido (R$)</label>
@@ -427,7 +427,7 @@ Modals.renderEventoStep4 = async function() {
                     </div>
                     <div>
                         <strong>Comissão:</strong><br>
-                        <span style="font-size: 20px; color: var(--warning);">${eventoFormData.comissao}%</span>
+                        <span style="font-size: 20px; color: var(--warning);">${Utils.formatCurrency(parseFloat(eventoFormData.comissao) || 0)}</span>
                     </div>
                     <div>
                         <strong>Valor Líquido:</strong><br>
@@ -471,7 +471,7 @@ Modals.nextEventoStep = function() {
         if (currentStep === 3) {
             const cacheBruto = parseFloat(eventoFormData.cache_bruto) || 0;
             const comissao = parseFloat(eventoFormData.comissao) || 0;
-            eventoFormData.valor_liquido = cacheBruto - (cacheBruto * comissao / 100);
+            eventoFormData.valor_liquido = cacheBruto - comissao;
         }
     }
 
@@ -495,7 +495,7 @@ Modals.toggleContratanteFieldsMultiStep = function() {
 Modals.calcularValorLiquidoMulti = function() {
     const cacheBruto = parseFloat(document.getElementById('cacheBrutoMulti')?.value) || 0;
     const comissao = parseFloat(document.getElementById('comissaoMulti')?.value) || 0;
-    const valorLiquido = cacheBruto - (cacheBruto * comissao / 100);
+    const valorLiquido = cacheBruto - comissao;
     const elem = document.getElementById('valorLiquidoMulti');
     if (elem) {
         elem.value = valorLiquido.toFixed(2);

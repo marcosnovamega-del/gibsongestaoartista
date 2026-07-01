@@ -576,7 +576,7 @@ const Pages = {
                                     </span>
                                     <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color);">
                                         <p style="color: var(--text-secondary); font-size: 14px; margin: 0;">
-                                            Comissão: <strong style="color: var(--brand-primary);">${artista.comissao_padrao}%</strong>
+                                            Comissão: <strong style="color: var(--brand-primary);">${Utils.formatCurrency(artista.comissao_padrao || 0)}</strong>
                                         </p>
                                     </div>
                                 </div>
@@ -650,7 +650,7 @@ const Pages = {
                                 ${artista.status}
                             </span>
                             <p style="color: var(--text-secondary); margin-top: 12px; margin-bottom: 12px;">
-                                Comissão: <strong style="color: var(--brand-primary);">${artista.comissao_padrao}%</strong> | 
+                                Comissão: <strong style="color: var(--brand-primary);">${Utils.formatCurrency(artista.comissao_padrao || 0)}</strong> | 
                                 Cadastrado em: ${Utils.formatDate(artista.data_cadastro)}
                             </p>
                             <div style="display: flex; gap: 8px;">

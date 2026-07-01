@@ -128,7 +128,7 @@ Pages.sincronizarBorderosComEventos = async function() {
                 evento_id: evt.id,
                 receita_total: evt.cache_bruto || evt.valor_liquido || 0,
                 despesa_total: 0,
-                comissao_total: (evt.cache_bruto * (evt.comissao || 0) / 100) || 0,
+                comissao_total: evt.comissao || 0,
                 lucro_liquido: evt.valor_liquido || 0,
                 status: 'EM ABERTO',
                 observacoes: ''
@@ -161,22 +161,21 @@ Pages.abrirDetalhesBordero = async function(borderoId) {
     
     let despesasTotais = 0;
     
-    // Comissão nativa do evento (Agência/Escritório)
-    let comissaoPorcentagem = parseFloat(evento.comissao) || 0;
-    let comissaoEscritorio = (cacheBruto * comissaoPorcentagem) / 100;
+    // Comissão nativa do evento (Agência/Escritório) — valor fixo em R$
+    let comissaoEscritorio = parseFloat(evento.comissao) || 0;
     let comissoesTotais = comissaoEscritorio;
-    
+
     const isLocked = bordero.status === 'FINALIZADO' || bordero.status === 'APROVADO';
 
     // Separar Despesas Operacionais de Comissões (lançadas separadamente)
     const despesasOperacionais = [];
     const listaComissoes = [];
-    
+
     // Adicionar a comissão do escritório na lista visual
     if (comissaoEscritorio > 0) {
         listaComissoes.push({
             tipo: 'Comissão Escritório/Agência',
-            descricao: `${comissaoPorcentagem}% do Cachê`,
+            descricao: `Comissão fixa`,
             valor: comissaoEscritorio,
             isNativa: true // Flag para não renderizar botão de exclusão
         });
@@ -500,11 +499,10 @@ Pages.exportarBorderoPDF = async function(borderoId) {
         doc.setFontSize(10);
         doc.setTextColor(...colorGray);
         
-        // Comissão Nativa
-        let comissaoPorcentagem = parseFloat(evento.comissao) || 0;
-        let comissaoEscritorio = (parseFloat(evento.cache_bruto || evento.valor_liquido) * comissaoPorcentagem) / 100;
+        // Comissão Nativa — valor fixo em R$
+        let comissaoEscritorio = parseFloat(evento.comissao) || 0;
         if (comissaoEscritorio > 0) {
-            doc.text(`Comissão Escritório/Agência (${comissaoPorcentagem}%)`, 15, yPos);
+            doc.text(`Comissão Escritório/Agência`, 15, yPos);
             doc.text(`${Utils.formatCurrency(comissaoEscritorio)}`, 195, yPos, { align: 'right' });
             yPos += 6;
         }

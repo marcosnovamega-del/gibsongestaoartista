@@ -231,7 +231,7 @@ const ArtistasDB = {
             foto: artista.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(artista.nome)}&background=E10600&color=fff&size=200`,
             nome: artista.nome,
             status: artista.status || 'Ativo',
-            comissao_padrao: artista.comissao_padrao || 10,
+            comissao_padrao: artista.comissao_padrao || 0,
             modelo_contrato: artista.modelo_contrato || '',
             data_cadastro: artista.data_cadastro || new Date().toISOString(),
         };

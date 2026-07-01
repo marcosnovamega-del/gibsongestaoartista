@@ -257,8 +257,8 @@ Pages.renderConfiguracoes = async function() {
                         ${Auth.isAdmin() ? `
                             <form id="configFinanceiraForm" onsubmit="Pages.saveConfigFinanceira(event)">
                                 <div class="form-group">
-                                    <label>Comissão Padrão Global (%)</label>
-                                    <input type="number" name="comissao_padrao" value="${config?.comissao_padrao || 10}" min="0" max="100" step="0.5" required>
+                                    <label>Comissão Padrão Global (R$)</label>
+                                    <input type="number" name="comissao_padrao" value="${config?.comissao_padrao || 0}" min="0" step="0.01" required>
                                     <small style="color: var(--text-muted); display: block; margin-top: 4px;">
                                         Esta comissão será aplicada por padrão em novos artistas
                                     </small>
@@ -269,7 +269,7 @@ Pages.renderConfiguracoes = async function() {
                             </form>
                         ` : `
                             <div style="color: var(--text-secondary);">
-                                <p><strong>Comissão Padrão:</strong> ${config?.comissao_padrao || 10}%</p>
+                                <p><strong>Comissão Padrão:</strong> ${Utils.formatCurrency(config?.comissao_padrao || 0)}</p>
                             </div>
                         `}
                     </div>

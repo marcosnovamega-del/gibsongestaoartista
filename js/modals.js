@@ -47,8 +47,8 @@ const Modals = {
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>Comissão Padrão (%) *</label>
-                                <input type="number" name="comissao_padrao" value="${artista?.comissao_padrao || 10}" min="0" max="100" step="0.5" required>
+                                <label>Comissão Padrão (R$)</label>
+                                <input type="number" name="comissao_padrao" value="${artista?.comissao_padrao || 0}" min="0" step="0.01" placeholder="0.00">
                             </div>
                             <div class="grid grid-2">
                                 ${Storage.renderUploadInput('midia_kit_url', artista?.midia_kit_url || '', 'Mídia Kit (PDF)')}
@@ -405,8 +405,8 @@ const Modals = {
                                     <input type="number" name="cache_bruto" id="cacheBruto" value="${evento?.cache_bruto || ''}" min="0" step="0.01" onchange="Modals.calcularValorLiquido()" required>
                                 </div>
                                 <div class="form-group">
-                                    <label>Comissão (%) *</label>
-                                    <input type="number" name="comissao" id="comissao" value="${evento?.comissao || 10}" min="0" max="100" step="0.5" onchange="Modals.calcularValorLiquido()" required>
+                                    <label>Comissão (R$)</label>
+                                    <input type="number" name="comissao" id="comissao" value="${evento?.comissao || 0}" min="0" step="0.01" onchange="Modals.calcularValorLiquido()" placeholder="0.00">
                                 </div>
                                 <div class="form-group">
                                     <label>Valor Líquido (R$)</label>
@@ -461,7 +461,7 @@ const Modals = {
     calcularValorLiquido() {
         const cacheBruto = parseFloat(document.getElementById('cacheBruto').value) || 0;
         const comissao = parseFloat(document.getElementById('comissao').value) || 0;
-        const valorLiquido = cacheBruto - (cacheBruto * comissao / 100);
+        const valorLiquido = cacheBruto - comissao;   // comissao agora é R$, não %
         document.getElementById('valorLiquido').value = valorLiquido.toFixed(2);
     },
 

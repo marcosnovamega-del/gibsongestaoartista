@@ -188,7 +188,7 @@ const EventosDB = {
     },
 
     async criar(evento) {
-        const valorLiquido = evento.cache_bruto - (evento.cache_bruto * evento.comissao / 100);
+        const valorLiquido = evento.cache_bruto - (evento.comissao || 0);
         
         return await DB.create('eventos', {
             id: Utils.generateId(),
@@ -199,8 +199,8 @@ const EventosDB = {
     },
 
     async atualizar(id, evento) {
-        if (evento.cache_bruto && evento.comissao) {
-            evento.valor_liquido = evento.cache_bruto - (evento.cache_bruto * evento.comissao / 100);
+        if (evento.cache_bruto) {
+            evento.valor_liquido = evento.cache_bruto - (evento.comissao || 0);
         }
         return await DB.patch('eventos', id, evento);
     },
