@@ -1,0 +1,14 @@
+{
+  "name": "Gibson Agenda",
+  "short_name": "Agenda",
+  "description": "Agenda de shows — Gibson Manager",
+  "start_url": "/agenda-ceo.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F4F3F0",
+  "theme_color": "#F4F3F0",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

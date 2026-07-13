@@ -1,0 +1,229 @@
+/* ============================================================
+   GIBSON MANAGER PRO - BALANÇO MENSAL
+   ============================================================ */
+
+.balanco-page { padding-bottom: 40px; }
+
+.balanco-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+.balanco-titulo {
+    font-size: 22px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+}
+.balanco-titulo i { color: var(--brand-primary); }
+
+.balanco-select {
+    padding: 7px 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 13px;
+    cursor: pointer;
+}
+
+/* KPIs */
+.balanco-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+}
+@media (max-width: 1024px) { .balanco-kpis { grid-template-columns: repeat(2,1fr); } }
+@media (max-width: 600px)  { .balanco-kpis { grid-template-columns: 1fr; } }
+
+.balanco-kpi {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 18px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    transition: transform 0.2s;
+}
+.balanco-kpi:hover { transform: translateY(-2px); }
+
+.balanco-kpi-blue   { background: rgba(59,130,246,0.06);  border-color: rgba(59,130,246,0.2); }
+.balanco-kpi-purple { background: rgba(139,92,246,0.06);  border-color: rgba(139,92,246,0.2); }
+.balanco-kpi-red    { background: rgba(139,92,246,0.06);     border-color: rgba(139,92,246,0.2); }
+.balanco-kpi-green  { background: rgba(16,185,129,0.06);  border-color: rgba(16,185,129,0.2); }
+
+.bkpi-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+.balanco-kpi-blue   .bkpi-icon { background: rgba(59,130,246,0.15);  color: #3B82F6; }
+.balanco-kpi-purple .bkpi-icon { background: rgba(139,92,246,0.15);  color: #8B5CF6; }
+.balanco-kpi-red    .bkpi-icon { background: rgba(139,92,246,0.15);     color: var(--brand-primary); }
+.balanco-kpi-green  .bkpi-icon { background: rgba(16,185,129,0.15);  color: #10B981; }
+
+.bkpi-valor {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1.2;
+}
+.bkpi-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+    font-weight: 500;
+}
+
+/* Barra de progresso */
+.balanco-progress-bar {
+    height: 8px;
+    background: var(--bg-secondary);
+    border-radius: 4px;
+    overflow: hidden;
+}
+.balanco-progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 1s ease;
+}
+
+/* Grid 2 colunas */
+.balanco-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 16px;
+    align-items: start;
+    margin-top: 16px;
+}
+@media (max-width: 1100px) {
+    .balanco-grid-2 { grid-template-columns: 1fr; }
+}
+
+/* Tabela do balanço */
+.balanco-tabela {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+.balanco-tabela th {
+    padding: 8px 12px;
+    text-align: left;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+}
+.balanco-tabela td {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    color: var(--text-secondary);
+    vertical-align: middle;
+}
+.balanco-tabela tr:last-child td { border-bottom: none; }
+.balanco-tabela tbody tr:hover td { background: rgba(255,255,255,0.02); }
+
+.balanco-totais-row td {
+    background: rgba(139,92,246,0.05) !important;
+    border-top: 2px solid var(--border-color);
+    font-size: 12px;
+    color: var(--text-primary) !important;
+}
+
+/* Resumo final */
+.balanco-resumo-final .card-body { padding: 16px 20px; }
+.balanco-resumo-linha {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 0;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+.balanco-resumo-linha span { font-weight: 500; }
+.balanco-resumo-linha strong { color: var(--text-primary); }
+.balanco-saldo {
+    padding-top: 12px !important;
+}
+.balanco-saldo span { color: var(--text-primary) !important; font-weight: 700; }
+
+/* Print */
+@media print {
+    .sidebar, .top-bar, .page-header button, .balanco-select,
+    .btn-primary, .btn-secondary, .audit-filtros { display: none !important; }
+    .balanco-page { padding: 0; color: #000; background: #fff; }
+    .card { border: 1px solid #ddd !important; box-shadow: none !important; }
+    .balanco-kpi { border: 1px solid #ddd; background: #f9f9f9; }
+    .balanco-tabela th { background: #f0f0f0; color: #333; }
+    .balanco-tabela td { color: #333; }
+    body * { color: #000 !important; }
+    .bkpi-valor, .balanco-resumo-linha strong { color: #000 !important; }
+}
+
+/* ---- Configurador de pagamento (proposta) ---- */
+.pag-tipo-btn {
+    padding: 10px 16px;
+    border-radius: 8px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+.pag-tipo-btn:hover { border-color: var(--brand-primary); color: var(--text-primary); }
+.pag-tipo-ativo {
+    background: rgba(139,92,246,0.1) !important;
+    border-color: var(--brand-primary) !important;
+    color: var(--brand-primary) !important;
+}
+
+/* ---- Gestão Financeira ---- */
+.fin-grid-main {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 16px;
+    align-items: start;
+    margin-top: 4px;
+}
+@media (max-width: 1100px) { .fin-grid-main { grid-template-columns: 1fr; } }
+
+.dre-linha {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    font-size: 13px;
+    color: var(--text-secondary);
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.dre-receita  { color: #10B981; font-weight: 700; }
+.dre-desp-cat { padding: 7px 0; }
+.dre-total    { color: var(--text-primary); font-weight: 700; }
+.dre-saldo    strong { font-weight: 800; }
+
+/* Stat icon red */
+.stat-icon.red {
+    background: rgba(239,68,68,0.15);
+    color: #EF4444;
+}

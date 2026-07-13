@@ -1,0 +1,262 @@
+/* ========================================
+   KSHOW MANAGER - PORTAL DO ARTISTA
+   Design Mobile-First & Premium
+======================================== */
+
+:root {
+    --portal-bg: #0F172A;
+    --portal-card: #1E293B;
+    --portal-accent: #8B5CF6;
+    --portal-text: #F8FAFC;
+    --portal-muted: #94A3B8;
+}
+
+.portal-body {
+    background: var(--portal-bg);
+    color: var(--portal-text);
+    min-height: 100vh;
+    padding-bottom: 80px;
+    /* Espaço para a bottom nav */
+    width: 100vw;
+    overflow-x: hidden;
+}
+
+body.is-portal .sidebar,
+body.is-portal .top-bar {
+    display: none !important;
+}
+
+body.is-portal .main-content {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+}
+
+/* Header do Portal */
+.portal-header {
+    padding: 24px 20px;
+    background: linear-gradient(180deg, rgba(139, 92, 246, 0.15) 0%, transparent 100%);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.portal-welcome h1 {
+    font-size: 20px;
+    font-weight: 800;
+    margin: 0;
+}
+
+.portal-welcome p {
+    font-size: 13px;
+    color: var(--portal-muted);
+    margin: 4px 0 0;
+}
+
+.portal-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 2px solid var(--portal-accent);
+    object-fit: cover;
+}
+
+/* Grid de Atalhos / KPIs */
+.portal-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 0 20px;
+    margin-bottom: 24px;
+}
+
+.portal-stat-card {
+    background: var(--portal-card);
+    padding: 16px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.portal-stat-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: rgba(139, 92, 246, 0.1);
+    color: var(--portal-accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
+    font-size: 14px;
+}
+
+.portal-stat-value {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.portal-stat-label {
+    font-size: 12px;
+    color: var(--portal-muted);
+}
+
+/* Próximo Show (Destaque) */
+.portal-next-show {
+    padding: 0 20px;
+    margin-bottom: 24px;
+}
+
+.next-show-card {
+    background: linear-gradient(135deg, #8B5CF6 0%, #06B6D4 100%);
+    border-radius: 20px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+.next-show-card::after {
+    content: '\f001';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    position: absolute;
+    right: -20px;
+    bottom: -20px;
+    font-size: 100px;
+    opacity: 0.1;
+    transform: rotate(-15deg);
+}
+
+.next-show-label {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.8;
+}
+
+.next-show-title {
+    font-size: 22px;
+    font-weight: 800;
+    margin: 8px 0;
+}
+
+.next-show-info {
+    display: flex;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+}
+
+/* Lista de Agenda */
+.portal-section-title {
+    padding: 0 20px;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.portal-section-title h2 {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0;
+}
+
+.portal-section-title a {
+    font-size: 12px;
+    color: var(--portal-accent);
+    text-decoration: none;
+}
+
+.agenda-list {
+    padding: 0 20px;
+}
+
+.agenda-item {
+    background: var(--portal-card);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.agenda-date {
+    text-align: center;
+    min-width: 50px;
+    padding-right: 16px;
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.date-day {
+    font-size: 20px;
+    font-weight: 800;
+    display: block;
+}
+
+.date-month {
+    font-size: 10px;
+    text-transform: uppercase;
+    color: var(--portal-muted);
+}
+
+.agenda-info h3 {
+    font-size: 15px;
+    margin: 0;
+}
+
+.agenda-info p {
+    font-size: 12px;
+    color: var(--portal-muted);
+    margin: 4px 0 0;
+}
+
+/* Bottom Navigation */
+.portal-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(30, 41, 59, 0.95);
+    backdrop-filter: blur(10px);
+    display: flex;
+    justify-content: space-around;
+    padding: 12px 0 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    z-index: 1000;
+}
+
+.nav-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: var(--portal-muted);
+    text-decoration: none;
+    font-size: 10px;
+}
+
+.nav-btn.active {
+    color: var(--portal-accent);
+}
+
+.nav-btn i {
+    font-size: 20px;
+}
+
+/* Responsividade para Desktop (opcional se for PWA) */
+@media (min-width: 768px) {
+    .portal-container {
+        max-width: 500px;
+        margin: 0 auto;
+        border-left: 1px solid rgba(255, 255, 255, 0.05);
+        border-right: 1px solid rgba(255, 255, 255, 0.05);
+    }
+}

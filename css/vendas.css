@@ -1,0 +1,464 @@
+/* ============================================================
+   GIBSON MANAGER PRO - ESTILOS DE VENDAS COMPLETO
+   ============================================================ */
+
+/* ---- Grid 4 colunas ---- */
+.grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+@media (max-width: 1024px) { .grid-4 { grid-template-columns: repeat(2,1fr); } }
+@media (max-width: 600px)  { .grid-4 { grid-template-columns: 1fr; } }
+
+/* ============================================================
+   KANBAN BOARD
+   ============================================================ */
+
+.kanban-board {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    align-items: start;
+    padding-top: 8px;
+}
+@media (max-width: 1100px) { .kanban-board { grid-template-columns: repeat(2,1fr); } }
+@media (max-width: 640px)  { .kanban-board { grid-template-columns: 1fr; } }
+
+.kanban-col {
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.kanban-col-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    background: var(--bg-card);
+    font-size: 13px;
+    font-weight: 700;
+}
+.kanban-col-title {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--text-primary);
+}
+.kanban-col-title i { opacity: 0.7; }
+.kanban-count {
+    background: rgba(255,255,255,0.08);
+    color: var(--text-muted);
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 700;
+}
+
+.kanban-col-fechado {
+    background: rgba(16, 185, 129, 0.04);
+    border: 1px solid rgba(16, 185, 129, 0.15);
+}
+
+.kanban-cards {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 80px;
+}
+
+.kanban-empty {
+    text-align: center;
+    padding: 24px 12px;
+    color: var(--text-muted);
+    font-size: 12px;
+    opacity: 0.6;
+}
+
+/* Kanban Card */
+.kanban-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 12px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.2s ease;
+    animation: fadeIn 0.3s ease-out;
+}
+.kanban-card:hover {
+    border-color: var(--brand-primary);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+}
+
+/* Card Fechado — verde pulsante */
+.kanban-card-fechado {
+    background: linear-gradient(135deg, rgba(16,185,129,0.06), var(--bg-card));
+    border-color: rgba(16, 185, 129, 0.35) !important;
+}
+.kanban-card-fechado:hover {
+    border-color: #10B981 !important;
+    box-shadow: 0 6px 24px rgba(16, 185, 129, 0.2) !important;
+}
+.kanban-fechado-glow {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #10B981, transparent);
+    animation: kanbanGlow 2s ease-in-out infinite;
+}
+@keyframes kanbanGlow {
+    0%, 100% { opacity: 0.4; }
+    50%       { opacity: 1; }
+}
+
+.kanban-card-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+.kanban-foto {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--border-color);
+    flex-shrink: 0;
+}
+.kanban-card-info { flex: 1; min-width: 0; }
+.kanban-artista {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.kanban-cliente {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.kanban-card-body { margin-bottom: 10px; }
+.kanban-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+.kanban-meta i {
+    color: var(--brand-primary);
+    opacity: 0.6;
+    width: 12px;
+}
+
+/* Botões do Kanban */
+.kanban-card-actions {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+.kanban-btn {
+    padding: 5px 8px;
+    border-radius: 6px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    font-size: 11px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+.kanban-btn:hover { background: var(--bg-primary); color: var(--text-primary); border-color: var(--brand-primary); }
+.kanban-btn-whatsapp { color: #25D366 !important; }
+.kanban-btn-success  { background: rgba(16,185,129,0.1); color: #10B981 !important; border-color: rgba(16,185,129,0.3); }
+.kanban-btn-success:hover { background: rgba(16,185,129,0.2); }
+.kanban-btn-danger   { color: var(--danger) !important; }
+.kanban-btn-rota     { background: rgba(139,92,246,0.08); color: var(--brand-primary) !important; border-color: rgba(139,92,246,0.3); width: 100%; justify-content: center; }
+.kanban-btn-rota:hover { background: rgba(139,92,246,0.15); }
+
+
+/* ---- Pipeline de Propostas ---- */
+.proposta-pipeline {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.proposta-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    gap: 16px;
+    transition: all 0.2s ease;
+    animation: fadeIn 0.3s ease-out;
+}
+.proposta-card:hover {
+    box-shadow: 0 4px 20px rgba(139,92,246,0.08);
+    transform: translateX(3px);
+}
+.proposta-card-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex: 1;
+    min-width: 0;
+}
+.proposta-artista-foto {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--border-color);
+    flex-shrink: 0;
+}
+.proposta-card-artista {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 3px;
+}
+.proposta-card-cliente {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+.proposta-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+.proposta-card-meta span {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.proposta-card-meta i {
+    color: var(--brand-primary);
+    opacity: 0.7;
+}
+.proposta-card-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    flex-shrink: 0;
+}
+.proposta-card-actions {
+    display: flex;
+    gap: 6px;
+}
+
+/* ---- Materiais do Artista ---- */
+.artistas-materiais-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+}
+.artista-material-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 16px;
+    transition: border-color 0.2s;
+}
+.artista-material-card:hover {
+    border-color: var(--brand-primary);
+}
+.material-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+.material-row:last-child { border-bottom: none; }
+.material-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.material-label i { color: var(--brand-primary); }
+.material-actions { display: flex; gap: 4px; }
+
+/* ---- Shows Fechados (rota) ---- */
+.vendas-show-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--success);
+    border-radius: 12px;
+    gap: 16px;
+    transition: all 0.25s ease;
+}
+.vendas-show-card:hover {
+    border-color: var(--brand-primary);
+    border-left-color: var(--brand-primary);
+    transform: translateX(4px);
+    box-shadow: 0 6px 24px rgba(139,92,246,0.1);
+}
+.vendas-show-left   { display: flex; align-items: center; gap: 16px; flex: 1; min-width: 0; }
+.vendas-artista-foto { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 2px solid var(--success); flex-shrink: 0; }
+.vendas-show-nome   { font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
+.vendas-show-local  { font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+.vendas-show-local i { color: var(--brand-primary); }
+.vendas-show-meta   { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--text-muted); }
+.vendas-show-meta span { display: flex; align-items: center; gap: 5px; }
+.vendas-show-right  { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
+
+/* ---- Empty State ---- */
+.empty-state {
+    text-align: center;
+    padding: 50px 20px;
+    color: var(--text-muted);
+}
+.empty-state i {
+    font-size: 44px;
+    margin-bottom: 16px;
+    display: block;
+    opacity: 0.3;
+    color: var(--brand-primary);
+}
+
+/* ---- Modal de Proposta ---- */
+.proposta-modal { border: 1px solid rgba(139,92,246,0.2); }
+
+.proposta-steps {
+    display: flex;
+    align-items: center;
+    padding: 20px 24px 0;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+}
+.proposta-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 16px;
+    cursor: default;
+    opacity: 0.4;
+    transition: opacity 0.3s;
+}
+.proposta-step.active { opacity: 1; }
+.proposta-step.done   { opacity: 0.7; }
+.proposta-step.done .step-num { background: var(--success); }
+.step-num {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    transition: background 0.3s;
+}
+.proposta-step.active .step-num { background: var(--brand-primary); color: white; }
+.step-label { font-size: 12px; font-weight: 600; white-space: nowrap; }
+.proposta-step-line { flex: 1; height: 2px; background: var(--border-color); margin: 0 8px; margin-bottom: 16px; }
+
+/* Etapas */
+.proposta-etapa { display: none; }
+.proposta-etapa.active { display: block; }
+
+.etapa-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--brand-primary);
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Validação */
+.input-error {
+    border-color: var(--danger) !important;
+    box-shadow: 0 0 0 3px rgba(239,68,68,0.15) !important;
+}
+.field-error {
+    color: var(--danger);
+    font-size: 11px;
+    margin-top: 4px;
+    display: block;
+}
+
+/* Resumo proposta */
+.proposta-preview-box {
+    margin-top: 20px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    overflow: hidden;
+}
+.proposta-preview-header {
+    background: var(--bg-secondary);
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.proposta-preview-header i { color: var(--brand-primary); }
+.proposta-preview-content { padding: 12px 16px; }
+.resumo-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    font-size: 13px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.resumo-row:last-child { border-bottom: none; }
+.resumo-row span { color: var(--text-muted); }
+.resumo-row strong { color: var(--text-primary); text-align: right; max-width: 60%; }
+
+/* Footer proposta */
+.proposta-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-top: 1px solid var(--border-color);
+    padding: 16px 24px;
+}
+
+/* Badge Secondary */
+.badge-secondary { background: rgba(107,114,128,0.15); color: #9CA3AF; }
+
+@media (max-width: 768px) {
+    .proposta-card { flex-direction: column; align-items: flex-start; }
+    .proposta-card-right { align-items: flex-start; width: 100%; }
+    .vendas-show-card { flex-direction: column; align-items: flex-start; }
+    .vendas-show-right { align-items: flex-start; width: 100%; }
+    .proposta-steps { overflow-x: auto; }
+    .step-label { display: none; }
+}
