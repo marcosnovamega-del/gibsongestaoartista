@@ -165,12 +165,12 @@
     .cal-num{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:600 13.5px var(--fn);color:var(--tx);}
     .cal-day.other-month .cal-num{color:var(--tx5)}
     .cal-day.today .cal-num{background:var(--red);color:#fff;font-weight:800}
-    .cal-day.selected .cal-num{box-shadow:inset 0 0 0 2px var(--ink);color:var(--ink);font-weight:700}
-    .cal-day.today.selected .cal-num{background:var(--red);color:#fff;box-shadow:none}
+    .cal-day.selected .cal-num{box-shadow:0 0 0 2px var(--ink);font-weight:700}
+    .cal-day.today.selected .cal-num{background:var(--red);color:#fff;box-shadow:0 0 0 2px var(--ink)}
     .cal-day.conflict-day .cal-num{box-shadow:inset 0 0 0 1.5px var(--red);color:var(--red);font-weight:700}
-    .cal-day.ev-fechado:not(.today):not(.selected) .cal-num{background:#16a34a;color:#fff;border-radius:50%}
-    .cal-day.ev-negoc:not(.today):not(.selected) .cal-num{background:#d97706;color:#fff;border-radius:50%}
-    .cal-day.ev-reserva:not(.today):not(.selected) .cal-num{background:#2563eb;color:#fff;border-radius:50%}
+    .cal-day.ev-fechado:not(.today) .cal-num{background:#16a34a;color:#fff;border-radius:50%}
+    .cal-day.ev-negoc:not(.today) .cal-num{background:#d97706;color:#fff;border-radius:50%}
+    .cal-day.ev-reserva:not(.today) .cal-num{background:#2563eb;color:#fff;border-radius:50%}
     .cal-dots{display:flex;gap:3px;height:5px;align-items:center}
     .cal-dot{width:5px;height:5px;border-radius:50%}
 
@@ -884,34 +884,50 @@ const A={
   },
 
   tapCalDay(ds){
-    const prev=this._lastTapDay;
     this._lastTapDay=ds;
     const[y,m,d]=ds.split('-').map(Number);
-    this._selDay=new Date(y,m-1,d);
-    this._wkStart=this._weekStart(this._selDay);
+    const dt=new Date(y,m-1,d);
+    this._selDay=dt;
+    this._wkStart=this._weekStart(dt);
     if(m-1!==this._calM){this._calM=m-1;this._calY=y;}
     this._renderGrid();
     this._renderMonthPanel();
-    if(prev===ds){
-      const dt=new Date(y,m-1,d);
+    const evs=this._evsFiltro().filter(e=>e.data===ds);
+    if(evs.length===1){
+      // 1 clique já abre o card do evento
+      this.openEv(evs[0].id);
+    }else if(evs.length>1){
+      // Mais de um evento no dia: lista para escolher
       const dn=DS_LONG[dt.getDay()];
       const mn=MESES_PT[dt.getMonth()].toLowerCase().slice(0,3);
-      const evs=this._evsFiltro().filter(e=>e.data===ds);
+      let lh='<div style="text-align:left;display:flex;flex-direction:column;gap:8px">';
+      evs.forEach(ev=>{
+        const cor=this._cmap[ev.artista_id]||'#B0A99C';
+        const hora=ev.horario?ev.horario.slice(0,5):'--';
+        const nome=(ev.local&&ev.local!=='A definir')?ev.local:(ev.cidade||ev.local||'Evento');
+        lh+='<div onclick="Swal.close();A.openEv(\''+ev.id+'\')" style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#fff;border:1px solid #E0DDD7;border-radius:12px;cursor:pointer;font:600 14px Inter,sans-serif;color:#37352F"><span style="font:700 12px Inter,sans-serif;color:#6B655C">'+hora+'</span><i style="width:8px;height:8px;border-radius:50%;background:'+cor+'"></i><span>'+nome+'</span></div>';
+      });
+      lh+='</div>';
       Swal.fire({
         title:dn+', '+d+' '+mn,
-        html:'<div style="color:#6B655C;font:500 13px Inter,sans-serif">'+(evs.length===0?'Sem eventos':evs.length+' evento'+(evs.length>1?'s':''))+'</div>',
+        html:lh,
+        showConfirmButton:false,
+        showCloseButton:true,
+        background:'#F4F3F0',color:'#37352F',
+      });
+    }else{
+      // Dia sem eventos: oferece nova reserva
+      const dn=DS_LONG[dt.getDay()];
+      const mn=MESES_PT[dt.getMonth()].toLowerCase().slice(0,3);
+      Swal.fire({
+        title:dn+', '+d+' '+mn,
+        html:'<div style="color:#6B655C;font:500 13px Inter,sans-serif">Sem eventos</div>',
         showCancelButton:true,
         confirmButtonText:'&#43; Nova reserva',
-        cancelButtonText:'Ver agenda do dia',
+        cancelButtonText:'Fechar',
         background:'#F4F3F0',color:'#37352F',confirmButtonColor:'#191B22',
         reverseButtons:true,
-      }).then(res=>{
-        if(res.isConfirmed){
-          this.novaReserva(ds);
-        }else if(res.dismiss===Swal.DismissReason.cancel){
-          this._selDay=dt;this._wkStart=this._weekStart(dt);this.setSeg('dia');
-        }
-      });
+      }).then(res=>{if(res.isConfirmed)this.novaReserva(ds);});
     }
   },
 
