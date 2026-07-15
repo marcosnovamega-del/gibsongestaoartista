@@ -184,6 +184,7 @@
     .dp-time{font:600 11px var(--mono);color:var(--tx);width:38px;flex-shrink:0}
     .dp-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
     .dp-name{flex:1;font:600 12.5px var(--fn);color:var(--tx)}
+    .dp-city{display:block;font:500 10.5px var(--fn);color:var(--tx3);margin-top:1px}
     .dp-badge{font:700 9px var(--fn);padding:2px 6px;border-radius:5px;white-space:nowrap;letter-spacing:.3px}
     .dp-empty{font:500 13px var(--fn);color:var(--tx3);text-align:center;padding:10px 0}
 
@@ -961,7 +962,10 @@ const A={
         h+='<div style="font:700 10px var(--fn);color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;padding:5px 0 2px">'+DS_LONG[d.getDay()]+', '+d.getDate()+'</div>';
         lastDay=ev.data;
       }
-      h+='<div class="dp-row" onclick="A.openEv(\''+ev.id+'\')">'+'<div class="dp-time">'+hora+'</div><i class="dp-dot" style="background:'+cor+'"></i><div class="dp-name">'+(ev.local&&ev.local!=='A definir'?ev.local:ev.cidade||ev.local||'Evento')+'</div>'+badge+'</div>';
+      let nomeEv,cidHtml='';
+      if(ev.local&&ev.local!=='A definir'){nomeEv=ev.local;if(ev.cidade)cidHtml='<span class="dp-city">'+ev.cidade+(ev.estado?' - '+ev.estado:'')+'</span>';}
+      else{nomeEv=ev.cidade?(ev.cidade+(ev.estado?' - '+ev.estado:'')):(ev.local||'Evento');}
+      h+='<div class="dp-row" onclick="A.openEv(\''+ev.id+'\')">'+'<div class="dp-time">'+hora+'</div><i class="dp-dot" style="background:'+cor+'"></i><div class="dp-name">'+nomeEv+cidHtml+'</div>'+badge+'</div>';
     });
     panel.innerHTML=h;
   },
@@ -980,7 +984,10 @@ const A={
       const st=ev.status||'';
       const isPend=ST_PEND.includes(st);
       const badge=isPend?'<span class="dp-badge" style="color:'+cor+';background:'+cor+'22">'+(st==='Reserva Alt.'?'ALT.':'PEND.')+'</span>':'';
-      h+='<div class="dp-row" onclick="A.openEv(\''+ev.id+'\')"><div class="dp-time">'+hora+'</div><i class="dp-dot" style="background:'+cor+'"></i><div class="dp-name">'+(ev.local&&ev.local!=='A definir'?ev.local:ev.cidade||ev.local||'Evento')+'</div>'+badge+'</div>';
+      let nomeEv,cidHtml='';
+      if(ev.local&&ev.local!=='A definir'){nomeEv=ev.local;if(ev.cidade)cidHtml='<span class="dp-city">'+ev.cidade+(ev.estado?' - '+ev.estado:'')+'</span>';}
+      else{nomeEv=ev.cidade?(ev.cidade+(ev.estado?' - '+ev.estado:'')):(ev.local||'Evento');}
+      h+='<div class="dp-row" onclick="A.openEv(\''+ev.id+'\')"><div class="dp-time">'+hora+'</div><i class="dp-dot" style="background:'+cor+'"></i><div class="dp-name">'+nomeEv+cidHtml+'</div>'+badge+'</div>';
     });}
     document.getElementById('day-panel').innerHTML=h;
   },
@@ -1136,16 +1143,4 @@ document.getElementById('login-form').addEventListener('submit',async function(e
   try{
     const ok=await Auth.login(user,pwd);
     if(ok&&ok.success){await A.afterLogin();}
-    else{err.textContent=(ok&&ok.error)?ok.error:'Usuário ou senha incorretos.';btn.disabled=false;btn.textContent='ENTRAR →';}
-  }catch(ex){err.textContent='Erro ao conectar.';btn.disabled=false;btn.textContent='ENTRAR →';}
-});
-
-let _ptY=0;
-const _sc=document.getElementById('main-scroll');
-_sc.addEventListener('touchstart',e=>{_ptY=e.touches[0].clientY;},{passive:true});
-_sc.addEventListener('touchend',e=>{if(e.changedTouches[0].clientY-_ptY>80&&_sc.scrollTop<5){A._evs=[];A.afterLogin();}},{passive:true});
-
-document.addEventListener('DOMContentLoaded',()=>A.init());
-</script>
-</body>
-</html>
+    else{err.textContent=(ok&&ok.error)?ok.error:'Usuário ou senha incorr
