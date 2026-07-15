@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kshow-v80';
+const CACHE_NAME = 'kshow-v81';
 
 // Recursos essenciais cacheados na instalação
 const ASSETS = [

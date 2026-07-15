@@ -1143,4 +1143,16 @@ document.getElementById('login-form').addEventListener('submit',async function(e
   try{
     const ok=await Auth.login(user,pwd);
     if(ok&&ok.success){await A.afterLogin();}
-    else{err.textContent=(ok&&ok.error)?ok.error:'Usuário ou senha incorr
+    else{err.textContent=(ok&&ok.error)?ok.error:'Usuário ou senha incorretos.';btn.disabled=false;btn.textContent='ENTRAR →';}
+  }catch(ex){err.textContent='Erro ao conectar.';btn.disabled=false;btn.textContent='ENTRAR →';}
+});
+
+let _ptY=0;
+const _sc=document.getElementById('main-scroll');
+_sc.addEventListener('touchstart',e=>{_ptY=e.touches[0].clientY;},{passive:true});
+_sc.addEventListener('touchend',e=>{if(e.changedTouches[0].clientY-_ptY>80&&_sc.scrollTop<5){A._evs=[];A.afterLogin();}},{passive:true});
+
+document.addEventListener('DOMContentLoaded',()=>A.init());
+</script>
+</body>
+</html>
