@@ -627,6 +627,7 @@ const A={
     return this._filtro==='todos'?base:base.filter(e=>String(e.artista_id)===String(this._filtro));
   },
   _evsDia(date){const k=this._key(date);return this._evsFiltro().filter(e=>e.data===k);},
+  _isBloq(e){return !!e&&((e.tipo_evento||'')==='Bloqueio'||(e.status||'')==='Bloqueado'||(e.local||'')==='Folga');},
   _pendentes(){return this._evs.filter(e=>ST_PEND.includes(e.status||''));},
 
   _hasConflict(date){
@@ -779,7 +780,7 @@ const A={
         const art=this._arts.find(a=>String(a.id)===String(ev.artista_id));
         const hora=ev.horario?ev.horario.slice(0,5):'--';
         const st=ev.status||'';
-        const local=st==='Bloqueado'?'\u{1F512} Folga':((ev.local&&ev.local!=='A definir')?ev.local:(ev.cidade||ev.local||'Evento'));
+        const local=this._isBloq(ev)?'\u{1F512} Folga':((ev.local&&ev.local!=='A definir')?ev.local:(ev.cidade||ev.local||'Evento'));
         const isPend=ST_PEND.includes(st);
         const isAlt=st==='Reserva Alt.';
         const isConf=conflictEvIds.has(String(ev.id));
@@ -788,7 +789,7 @@ const A={
         let badge='';
         if(isPend&&!isAlt)badge='<span class="ev-badge" style="color:'+cor+';background:'+cor+'1a">PENDENTE</span>';
         if(isAlt)badge='<span class="ev-badge" style="color:'+cor+';background:'+cor+'1a">ALT.</span>';
-        if(st==='Bloqueado')badge='<span class="ev-badge" style="color:#6B7280;background:#6B72801f">FOLGA</span>';
+        if(this._isBloq(ev))badge='<span class="ev-badge" style="color:#6B7280;background:#6B72801f">FOLGA</span>';
         const cbadge=isConf?'<div class="conflict-badge">!</div>':'';
         body+='<div class="ev-row" onclick="A.openEv(\''+ev.id+'\')"><div class="ev-time"><div class="ev-time-start">'+hora+'</div></div><div class="'+cls+'" style="border-left-color:'+brd+'">'+cbadge+'<div class="ev-row-top"><span class="ev-title">'+local+'</span>'+badge+'</div>'+(art?'<div class="ev-art"><i class="ev-art-dot" style="background:'+cor+'"></i>'+art.nome+'</div>':'')+'</div></div>';
       });
@@ -824,7 +825,7 @@ const A={
         const art=this._arts.find(a=>String(a.id)===String(ev.artista_id));
         const hora=ev.horario?ev.horario.slice(0,5):'--';
         const st=ev.status||'';
-        const local=st==='Bloqueado'?'\u{1F512} Folga':((ev.local&&ev.local!=='A definir')?ev.local:(ev.cidade||ev.local||'Evento'));
+        const local=this._isBloq(ev)?'\u{1F512} Folga':((ev.local&&ev.local!=='A definir')?ev.local:(ev.cidade||ev.local||'Evento'));
         const isPend=ST_PEND.includes(st);
         const isAlt=st==='Reserva Alt.';
         const isConf=conflictEvIds.has(String(ev.id));
@@ -833,7 +834,7 @@ const A={
         let badge='';
         if(isPend&&!isAlt)badge='<span class="ev-badge" style="color:'+cor+';background:'+cor+'1a">PENDENTE</span>';
         if(isAlt)badge='<span class="ev-badge" style="color:'+cor+';background:'+cor+'1a">ALT.</span>';
-        if(st==='Bloqueado')badge='<span class="ev-badge" style="color:#6B7280;background:#6B72801f">FOLGA</span>';
+        if(this._isBloq(ev))badge='<span class="ev-badge" style="color:#6B7280;background:#6B72801f">FOLGA</span>';
         const cbadge=isConf?'<div class="conflict-badge">!</div>':'';
         h+='<div class="ev-row" onclick="A.openEv(\''+ev.id+'\')"><div class="ev-time"><div class="ev-time-start">'+hora+'</div></div><div class="'+cls+'" style="border-left-color:'+brd+'">'+cbadge+'<div class="ev-row-top"><span class="ev-title">'+local+'</span>'+badge+'</div>'+(art?'<div class="ev-art"><i class="ev-art-dot" style="background:'+cor+'"></i>'+art.nome+'</div>':'')+'</div></div>';
       });
@@ -847,13 +848,13 @@ const A={
     const art=this._arts.find(a=>String(a.id)===String(ev.artista_id));
     // Excluir só permitido em reservas/opções — não em eventos confirmados ou com contrato
     const ST_PROTEGIDOS=['Confirmado','Aceita','Aguardando Assinatura','Contrato Assinado','Fechado'];
-    const podeExcluir=!ST_PROTEGIDOS.includes(ev.status||'');
+    const podeExcluir=this._isBloq(ev)||!ST_PROTEGIDOS.includes(ev.status||'');
     Swal.fire({
-      title:ev.status==='Bloqueado'?'\u{1F512} Folga':((ev.local&&ev.local!=='A definir')?ev.local:(ev.cidade||ev.local||'Evento')),
-      html:'<div style="text-align:left;font-family:-apple-system,Inter,sans-serif;font-size:14px;line-height:1.9;color:#37352F">'+(art?'<b>Artista:</b> '+art.nome+'<br>':'')+(ev.data?'<b>Data:</b> '+new Date(ev.data+'T12:00:00').toLocaleDateString('pt-BR')+'<br>':'')+(ev.horario?'<b>Horário:</b> '+ev.horario.slice(0,5)+'<br>':'')+(ev.cidade?'<b>Cidade:</b> '+ev.cidade+(ev.estado?' - '+ev.estado:'')+'<br>':'')+(ev.status?'<b>Status:</b> '+ev.status+'<br>':'')+(ev.cache_bruto?'<b>Cache:</b> R$ '+Number(ev.cache_bruto).toLocaleString('pt-BR')+'<br>':'')+(ev.nome_contratante?'<b>Contato:</b> '+ev.nome_contratante+'<br>':'')+(ev.telefone?'<b>Telefone:</b> '+ev.telefone+'<br>':'')+(ev.observacoes?'<b>Obs:</b> '+ev.observacoes+'<br>':'')+'</div>',
+      title:this._isBloq(ev)?'\u{1F512} Folga':((ev.local&&ev.local!=='A definir')?ev.local:(ev.cidade||ev.local||'Evento')),
+      html:'<div style="text-align:left;font-family:-apple-system,Inter,sans-serif;font-size:14px;line-height:1.9;color:#37352F">'+(art?'<b>Artista:</b> '+art.nome+'<br>':'')+(ev.data?'<b>Data:</b> '+new Date(ev.data+'T12:00:00').toLocaleDateString('pt-BR')+'<br>':'')+(ev.horario?'<b>Horário:</b> '+ev.horario.slice(0,5)+'<br>':'')+(ev.cidade?'<b>Cidade:</b> '+ev.cidade+(ev.estado?' - '+ev.estado:'')+'<br>':'')+(ev.status?'<b>Status:</b> '+(this._isBloq(ev)?'Bloqueado (folga)':ev.status)+'<br>':'')+(ev.cache_bruto?'<b>Cache:</b> R$ '+Number(ev.cache_bruto).toLocaleString('pt-BR')+'<br>':'')+(ev.nome_contratante?'<b>Contato:</b> '+ev.nome_contratante+'<br>':'')+(ev.telefone?'<b>Telefone:</b> '+ev.telefone+'<br>':'')+(ev.observacoes?'<b>Obs:</b> '+ev.observacoes+'<br>':'')+'</div>',
       background:'#F4F3F0',color:'#37352F',
       showConfirmButton:true,confirmButtonText:'Fechar',confirmButtonColor:'#191B22',
-      showDenyButton:podeExcluir,denyButtonText:ev.status==='Bloqueado'?'Desbloquear':'🗑 Excluir',denyButtonColor:'#E5202A',
+      showDenyButton:podeExcluir,denyButtonText:this._isBloq(ev)?'Desbloquear':'🗑 Excluir',denyButtonColor:'#E5202A',
     }).then(r=>{if(r.isDenied)this._excluirEv(id);});
   },
 
@@ -926,13 +927,13 @@ const A={
         const arts=[...new Map(dayEvs.map(e=>[e.artista_id,e])).values()].slice(0,3);
         const dots=arts.map(e=>'<i class="cal-dot" style="background:'+(this._cmap[e.artista_id]||'#B0A99C')+'"></i>').join('');
         if(!c.o&&dayEvs.length>0){
-          const sts=dayEvs.map(e=>e.status||'');
+          const sts=dayEvs.filter(e=>!this._isBloq(e)).map(e=>e.status||'');
           const ST_FECH=['Fechado','Contrato Assinado','Confirmado'];
           const ST_NEG=['Aceita','Aguardando Assinatura'];
           if(sts.some(s=>ST_FECH.includes(s)))cls+=' ev-fechado';
           else if(sts.some(s=>ST_NEG.includes(s)))cls+=' ev-negoc';
           else if(sts.some(s=>s==='Reserva'))cls+=' ev-reserva';
-          else if(sts.some(s=>s==='Bloqueado'))cls+=' ev-bloqueado';
+          else if(dayEvs.some(e=>this._isBloq(e)))cls+=' ev-bloqueado';
         }
         h+='<div class="'+cls+'" onclick="A.tapCalDay(\''+k+'\')"><span class="cal-num">'+c.d+'</span><div class="cal-dots">'+dots+'</div></div>';
       }
@@ -1013,7 +1014,7 @@ const A={
       const hora=ev.horario?ev.horario.slice(0,5):'--';
       const st=ev.status||'';
       const isPend=ST_PEND.includes(st);
-      const badge=st==='Bloqueado'?'<span class="dp-badge" style="color:#6B7280;background:#6B72801f">FOLGA</span>':(isPend?'<span class="dp-badge" style="color:'+cor+';background:'+cor+'22">'+(st==='Reserva Alt.'?'ALT.':'PEND.')+'</span>':'');
+      const badge=this._isBloq(ev)?'<span class="dp-badge" style="color:#6B7280;background:#6B72801f">FOLGA</span>':(isPend?'<span class="dp-badge" style="color:'+cor+';background:'+cor+'22">'+(st==='Reserva Alt.'?'ALT.':'PEND.')+'</span>':'');
       if(ev.data!==lastDay){
         if(lastDay!=='')h+='<div style="height:1px;background:var(--brd);margin:3px 0"></div>';
         const d=new Date(ev.data+'T12:00:00');
@@ -1021,7 +1022,7 @@ const A={
         lastDay=ev.data;
       }
       let nomeEv,cidHtml='';
-      if(st==='Bloqueado'){nomeEv='\u{1F512} Folga';cidHtml=ev.observacoes?'<span class="dp-city">'+ev.observacoes+'</span>':'';}
+      if(this._isBloq(ev)){nomeEv='\u{1F512} Folga';cidHtml=ev.observacoes?'<span class="dp-city">'+ev.observacoes+'</span>':'';}
       else if(ev.local&&ev.local!=='A definir'){nomeEv=ev.local;if(ev.cidade)cidHtml='<span class="dp-city">'+ev.cidade+(ev.estado?' - '+ev.estado:'')+'</span>';}
       else{nomeEv=ev.cidade?(ev.cidade+(ev.estado?' - '+ev.estado:'')):(ev.local||'Evento');}
       h+='<div class="dp-row" onclick="A.openEv(\''+ev.id+'\')">'+'<div class="dp-time">'+hora+'</div><i class="dp-dot" style="background:'+cor+'"></i><div class="dp-name">'+nomeEv+cidHtml+'</div>'+badge+'</div>';
@@ -1042,9 +1043,9 @@ const A={
       const hora=ev.horario?ev.horario.slice(0,5):'--';
       const st=ev.status||'';
       const isPend=ST_PEND.includes(st);
-      const badge=st==='Bloqueado'?'<span class="dp-badge" style="color:#6B7280;background:#6B72801f">FOLGA</span>':(isPend?'<span class="dp-badge" style="color:'+cor+';background:'+cor+'22">'+(st==='Reserva Alt.'?'ALT.':'PEND.')+'</span>':'');
+      const badge=this._isBloq(ev)?'<span class="dp-badge" style="color:#6B7280;background:#6B72801f">FOLGA</span>':(isPend?'<span class="dp-badge" style="color:'+cor+';background:'+cor+'22">'+(st==='Reserva Alt.'?'ALT.':'PEND.')+'</span>':'');
       let nomeEv,cidHtml='';
-      if(st==='Bloqueado'){nomeEv='\u{1F512} Folga';cidHtml=ev.observacoes?'<span class="dp-city">'+ev.observacoes+'</span>':'';}
+      if(this._isBloq(ev)){nomeEv='\u{1F512} Folga';cidHtml=ev.observacoes?'<span class="dp-city">'+ev.observacoes+'</span>':'';}
       else if(ev.local&&ev.local!=='A definir'){nomeEv=ev.local;if(ev.cidade)cidHtml='<span class="dp-city">'+ev.cidade+(ev.estado?' - '+ev.estado:'')+'</span>';}
       else{nomeEv=ev.cidade?(ev.cidade+(ev.estado?' - '+ev.estado:'')):(ev.local||'Evento');}
       h+='<div class="dp-row" onclick="A.openEv(\''+ev.id+'\')"><div class="dp-time">'+hora+'</div><i class="dp-dot" style="background:'+cor+'"></i><div class="dp-name">'+nomeEv+cidHtml+'</div>'+badge+'</div>';
@@ -1084,7 +1085,7 @@ const A={
 
   async confirmar(id){
     const evc=this._evs.find(e=>String(e.id)===String(id));
-    if(evc&&this._evs.some(e=>String(e.artista_id)===String(evc.artista_id)&&e.data===evc.data&&(e.status||'')==='Bloqueado')){
+    if(evc&&this._evs.some(e=>String(e.artista_id)===String(evc.artista_id)&&e.data===evc.data&&this._isBloq(e))){
       Swal.fire({title:'\u{1F512} Data bloqueada',html:'<div style="font:500 13px sans-serif;color:#6B655C">O artista está de folga nesta data. Desbloqueie a folga antes de confirmar esta reserva.</div>',icon:'warning',background:'#F4F3F0',color:'#37352F',confirmButtonColor:'#191B22'});
       return;
     }
@@ -1172,7 +1173,7 @@ const A={
         for(let d=new Date(d0);d<=d1;d.setDate(d.getDate()+1))dias.push(A._key(d));
         if(dias.length>31){Swal.showValidationMessage('Máximo de 31 dias por bloqueio');return false;}
         const ST_IGNORAR=['Cancelado','Cancelado pelo Artista','Cancelado pelo Contratante','Recusado','Bloqueado'];
-        const conflitos=dias.filter(ds=>A._evs.some(e=>String(e.artista_id)===String(artista_id)&&e.data===ds&&!ST_IGNORAR.includes(e.status||'')));
+        const conflitos=dias.filter(ds=>A._evs.some(e=>String(e.artista_id)===String(artista_id)&&e.data===ds&&!ST_IGNORAR.includes(e.status||'')&&!A._isBloq(e)));
         if(conflitos.length){
           const fmt=conflitos.map(ds=>{const p=ds.split('-');return p[2]+'/'+p[1];}).join(', ');
           Swal.showValidationMessage('Há eventos ou reservas nestas datas: '+fmt+'. Resolva-os antes de bloquear.');return false;
@@ -1183,7 +1184,7 @@ const A={
     if(!fv)return;
     try{
       for(const ds of fv.dias){
-        const ok=await EventosDB.criar({artista_id:fv.artista_id,data:ds,horario:'00:00:00',local:'Folga',cidade:'',estado:'-',nome_contratante:'',observacoes:fv.motivo||'Folga do artista',status:'Bloqueado'});
+        const ok=await EventosDB.criar({artista_id:fv.artista_id,data:ds,horario:'00:00:00',local:'Folga',cidade:'',estado:'-',nome_contratante:'',observacoes:fv.motivo||'Folga do artista',status:'Confirmado',tipo_evento:'Bloqueio'});
         if(!ok)throw new Error('Não foi possível salvar o bloqueio de '+ds+'. Verifique a conexão.');
       }
       if(typeof DB!=='undefined'&&DB.clearAllCache)DB.clearAllCache();
@@ -1230,7 +1231,7 @@ const A={
         const telefoneRaw=document.getElementById('r-tel').value.trim();
         const observacoes=document.getElementById('r-obs').value.trim();
         if(!artista_id||!data){Swal.showValidationMessage('Artista e data são obrigatórios');return false;}
-        const bloqueada=A._evs.some(e=>String(e.artista_id)===String(artista_id)&&e.data===data&&(e.status||'')==='Bloqueado');
+        const bloqueada=A._evs.some(e=>String(e.artista_id)===String(artista_id)&&e.data===data&&A._isBloq(e));
         if(bloqueada){Swal.showValidationMessage('\u{1F512} Data bloqueada — folga do artista. Para reservar, primeiro desbloqueie (abra a folga no calendário e toque em Desbloquear).');return false;}
         // Validar telefone (opcional, mas se preenchido deve ter 10 ou 11 dígitos)
         const telDigitos=telefoneRaw.replace(/\D/g,'');
