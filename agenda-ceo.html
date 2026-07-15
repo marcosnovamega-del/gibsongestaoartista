@@ -171,6 +171,7 @@
     .cal-day.ev-fechado:not(.today) .cal-num{background:#16a34a;color:#fff;border-radius:50%}
     .cal-day.ev-negoc:not(.today) .cal-num{background:#d97706;color:#fff;border-radius:50%}
     .cal-day.ev-reserva:not(.today) .cal-num{background:#2563eb;color:#fff;border-radius:50%}
+    .cal-day.ev-bloqueado:not(.today) .cal-num{background:#9CA3AF;color:#fff;border-radius:50%}
     .cal-dots{display:flex;gap:3px;height:5px;align-items:center}
     .cal-dot{width:5px;height:5px;border-radius:50%}
 
@@ -539,7 +540,7 @@
       <div class="ico-cal"></div>
       <span class="tab-label">Agenda</span>
     </button>
-    <button class="tab-plus" onclick="A.novaReserva()">+</button>
+    <button class="tab-plus" onclick="A.novaAcao()">+</button>
     <button class="pend-wrap" id="tab-pend" onclick="A.setTab('pend')">
       <div id="pend-count">0</div>
       <div class="ico-pend" id="ico-pend"></div>
@@ -777,8 +778,8 @@ const A={
         const cor=this._cmap[ev.artista_id]||'#B0A99C';
         const art=this._arts.find(a=>String(a.id)===String(ev.artista_id));
         const hora=ev.horario?ev.horario.slice(0,5):'--';
-        const local=(ev.local&&ev.local!=='A definir')?ev.local:(ev.cidade||ev.local||'Evento');
         const st=ev.status||'';
+        const local=st==='Bloqueado'?'\u{1F512} Folga':((ev.local&&ev.local!=='A definir')?ev.local:(ev.cidade||ev.local||'Evento'));
         const isPend=ST_PEND.includes(st);
         const isAlt=st==='Reserva Alt.';
         const isConf=conflictEvIds.has(String(ev.id));
@@ -787,6 +788,7 @@ const A={
         let badge='';
         if(isPend&&!isAlt)badge='<span class="ev-badge" style="color:'+cor+';background:'+cor+'1a">PENDENTE</span>';
         if(isAlt)badge='<span class="ev-badge" style="color:'+cor+';background:'+cor+'1a">ALT.</span>';
+        if(st==='Bloqueado')badge='<span class="ev-badge" style="color:#6B7280;background:#6B72801f">FOLGA</span>';
         const cbadge=isConf?'<div class="conflict-badge">!</div>':'';
         body+='<div class="ev-row" onclick="A.openEv(\''+ev.id+'\')"><div class="ev-time"><div class="ev-time-start">'+hora+'</div></div><div class="'+cls+'" style="border-left-color:'+brd+'">'+cbadge+'<div class="ev-row-top"><span class="ev-title">'+local+'</span>'+badge+'</div>'+(art?'<div class="ev-art"><i class="ev-art-dot" style="background:'+cor+'"></i>'+art.nome+'</div>':'')+'</div></div>';
       });
@@ -821,8 +823,8 @@ const A={
         const cor=this._cmap[ev.artista_id]||'#B0A99C';
         const art=this._arts.find(a=>String(a.id)===String(ev.artista_id));
         const hora=ev.horario?ev.horario.slice(0,5):'--';
-        const local=(ev.local&&ev.local!=='A definir')?ev.local:(ev.cidade||ev.local||'Evento');
         const st=ev.status||'';
+        const local=st==='Bloqueado'?'\u{1F512} Folga':((ev.local&&ev.local!=='A definir')?ev.local:(ev.cidade||ev.local||'Evento'));
         const isPend=ST_PEND.includes(st);
         const isAlt=st==='Reserva Alt.';
         const isConf=conflictEvIds.has(String(ev.id));
@@ -831,6 +833,7 @@ const A={
         let badge='';
         if(isPend&&!isAlt)badge='<span class="ev-badge" style="color:'+cor+';background:'+cor+'1a">PENDENTE</span>';
         if(isAlt)badge='<span class="ev-badge" style="color:'+cor+';background:'+cor+'1a">ALT.</span>';
+        if(st==='Bloqueado')badge='<span class="ev-badge" style="color:#6B7280;background:#6B72801f">FOLGA</span>';
         const cbadge=isConf?'<div class="conflict-badge">!</div>':'';
         h+='<div class="ev-row" onclick="A.openEv(\''+ev.id+'\')"><div class="ev-time"><div class="ev-time-start">'+hora+'</div></div><div class="'+cls+'" style="border-left-color:'+brd+'">'+cbadge+'<div class="ev-row-top"><span class="ev-title">'+local+'</span>'+badge+'</div>'+(art?'<div class="ev-art"><i class="ev-art-dot" style="background:'+cor+'"></i>'+art.nome+'</div>':'')+'</div></div>';
       });
@@ -846,11 +849,11 @@ const A={
     const ST_PROTEGIDOS=['Confirmado','Aceita','Aguardando Assinatura','Contrato Assinado','Fechado'];
     const podeExcluir=!ST_PROTEGIDOS.includes(ev.status||'');
     Swal.fire({
-      title:(ev.local&&ev.local!=='A definir')?ev.local:(ev.cidade||ev.local||'Evento'),
+      title:ev.status==='Bloqueado'?'\u{1F512} Folga':((ev.local&&ev.local!=='A definir')?ev.local:(ev.cidade||ev.local||'Evento')),
       html:'<div style="text-align:left;font-family:-apple-system,Inter,sans-serif;font-size:14px;line-height:1.9;color:#37352F">'+(art?'<b>Artista:</b> '+art.nome+'<br>':'')+(ev.data?'<b>Data:</b> '+new Date(ev.data+'T12:00:00').toLocaleDateString('pt-BR')+'<br>':'')+(ev.horario?'<b>Horário:</b> '+ev.horario.slice(0,5)+'<br>':'')+(ev.cidade?'<b>Cidade:</b> '+ev.cidade+(ev.estado?' - '+ev.estado:'')+'<br>':'')+(ev.status?'<b>Status:</b> '+ev.status+'<br>':'')+(ev.cache_bruto?'<b>Cache:</b> R$ '+Number(ev.cache_bruto).toLocaleString('pt-BR')+'<br>':'')+(ev.nome_contratante?'<b>Contato:</b> '+ev.nome_contratante+'<br>':'')+(ev.telefone?'<b>Telefone:</b> '+ev.telefone+'<br>':'')+(ev.observacoes?'<b>Obs:</b> '+ev.observacoes+'<br>':'')+'</div>',
       background:'#F4F3F0',color:'#37352F',
       showConfirmButton:true,confirmButtonText:'Fechar',confirmButtonColor:'#191B22',
-      showDenyButton:podeExcluir,denyButtonText:'🗑 Excluir',denyButtonColor:'#E5202A',
+      showDenyButton:podeExcluir,denyButtonText:ev.status==='Bloqueado'?'Desbloquear':'🗑 Excluir',denyButtonColor:'#E5202A',
     }).then(r=>{if(r.isDenied)this._excluirEv(id);});
   },
 
@@ -929,6 +932,7 @@ const A={
           if(sts.some(s=>ST_FECH.includes(s)))cls+=' ev-fechado';
           else if(sts.some(s=>ST_NEG.includes(s)))cls+=' ev-negoc';
           else if(sts.some(s=>s==='Reserva'))cls+=' ev-reserva';
+          else if(sts.some(s=>s==='Bloqueado'))cls+=' ev-bloqueado';
         }
         h+='<div class="'+cls+'" onclick="A.tapCalDay(\''+k+'\')"><span class="cal-num">'+c.d+'</span><div class="cal-dots">'+dots+'</div></div>';
       }
@@ -976,12 +980,13 @@ const A={
       Swal.fire({
         title:dn+', '+d+' '+mn,
         html:'<div style="color:#6B655C;font:500 13px Inter,sans-serif">Sem eventos</div>',
-        showCancelButton:true,
+        showCancelButton:true,showDenyButton:true,
         confirmButtonText:'&#43; Nova reserva',
+        denyButtonText:'&#128274; Bloquear',denyButtonColor:'#6B7280',
         cancelButtonText:'Fechar',
         background:'#F4F3F0',color:'#37352F',confirmButtonColor:'#191B22',
         reverseButtons:true,
-      }).then(res=>{if(res.isConfirmed)this.novaReserva(ds);});
+      }).then(res=>{if(res.isConfirmed)this.novaReserva(ds);else if(res.isDenied)this.novaBloqueio(ds);});
     }
   },
 
@@ -1008,7 +1013,7 @@ const A={
       const hora=ev.horario?ev.horario.slice(0,5):'--';
       const st=ev.status||'';
       const isPend=ST_PEND.includes(st);
-      const badge=isPend?'<span class="dp-badge" style="color:'+cor+';background:'+cor+'22">'+(st==='Reserva Alt.'?'ALT.':'PEND.')+'</span>':'';
+      const badge=st==='Bloqueado'?'<span class="dp-badge" style="color:#6B7280;background:#6B72801f">FOLGA</span>':(isPend?'<span class="dp-badge" style="color:'+cor+';background:'+cor+'22">'+(st==='Reserva Alt.'?'ALT.':'PEND.')+'</span>':'');
       if(ev.data!==lastDay){
         if(lastDay!=='')h+='<div style="height:1px;background:var(--brd);margin:3px 0"></div>';
         const d=new Date(ev.data+'T12:00:00');
@@ -1016,7 +1021,8 @@ const A={
         lastDay=ev.data;
       }
       let nomeEv,cidHtml='';
-      if(ev.local&&ev.local!=='A definir'){nomeEv=ev.local;if(ev.cidade)cidHtml='<span class="dp-city">'+ev.cidade+(ev.estado?' - '+ev.estado:'')+'</span>';}
+      if(st==='Bloqueado'){nomeEv='\u{1F512} Folga';cidHtml=ev.observacoes?'<span class="dp-city">'+ev.observacoes+'</span>':'';}
+      else if(ev.local&&ev.local!=='A definir'){nomeEv=ev.local;if(ev.cidade)cidHtml='<span class="dp-city">'+ev.cidade+(ev.estado?' - '+ev.estado:'')+'</span>';}
       else{nomeEv=ev.cidade?(ev.cidade+(ev.estado?' - '+ev.estado:'')):(ev.local||'Evento');}
       h+='<div class="dp-row" onclick="A.openEv(\''+ev.id+'\')">'+'<div class="dp-time">'+hora+'</div><i class="dp-dot" style="background:'+cor+'"></i><div class="dp-name">'+nomeEv+cidHtml+'</div>'+badge+'</div>';
     });
@@ -1036,9 +1042,10 @@ const A={
       const hora=ev.horario?ev.horario.slice(0,5):'--';
       const st=ev.status||'';
       const isPend=ST_PEND.includes(st);
-      const badge=isPend?'<span class="dp-badge" style="color:'+cor+';background:'+cor+'22">'+(st==='Reserva Alt.'?'ALT.':'PEND.')+'</span>':'';
+      const badge=st==='Bloqueado'?'<span class="dp-badge" style="color:#6B7280;background:#6B72801f">FOLGA</span>':(isPend?'<span class="dp-badge" style="color:'+cor+';background:'+cor+'22">'+(st==='Reserva Alt.'?'ALT.':'PEND.')+'</span>':'');
       let nomeEv,cidHtml='';
-      if(ev.local&&ev.local!=='A definir'){nomeEv=ev.local;if(ev.cidade)cidHtml='<span class="dp-city">'+ev.cidade+(ev.estado?' - '+ev.estado:'')+'</span>';}
+      if(st==='Bloqueado'){nomeEv='\u{1F512} Folga';cidHtml=ev.observacoes?'<span class="dp-city">'+ev.observacoes+'</span>':'';}
+      else if(ev.local&&ev.local!=='A definir'){nomeEv=ev.local;if(ev.cidade)cidHtml='<span class="dp-city">'+ev.cidade+(ev.estado?' - '+ev.estado:'')+'</span>';}
       else{nomeEv=ev.cidade?(ev.cidade+(ev.estado?' - '+ev.estado:'')):(ev.local||'Evento');}
       h+='<div class="dp-row" onclick="A.openEv(\''+ev.id+'\')"><div class="dp-time">'+hora+'</div><i class="dp-dot" style="background:'+cor+'"></i><div class="dp-name">'+nomeEv+cidHtml+'</div>'+badge+'</div>';
     });}
@@ -1076,6 +1083,11 @@ const A={
   },
 
   async confirmar(id){
+    const evc=this._evs.find(e=>String(e.id)===String(id));
+    if(evc&&this._evs.some(e=>String(e.artista_id)===String(evc.artista_id)&&e.data===evc.data&&(e.status||'')==='Bloqueado')){
+      Swal.fire({title:'\u{1F512} Data bloqueada',html:'<div style="font:500 13px sans-serif;color:#6B655C">O artista está de folga nesta data. Desbloqueie a folga antes de confirmar esta reserva.</div>',icon:'warning',background:'#F4F3F0',color:'#37352F',confirmButtonColor:'#191B22'});
+      return;
+    }
     const r=await Swal.fire({title:'Confirmar reserva?',text:'O evento será confirmado e uma proposta criada no CRM para preenchimento.',icon:'question',showCancelButton:true,confirmButtonText:'Confirmar',cancelButtonText:'Cancelar',background:'#F4F3F0',color:'#37352F',confirmButtonColor:'#191B22'});
     if(!r.isConfirmed)return;
     try{
@@ -1115,6 +1127,75 @@ const A={
     catch(e){Swal.fire('Erro','Não foi possível atualizar.','error');}
   },
 
+  novaAcao(dataPre){
+    Swal.fire({
+      title:'O que deseja fazer?',
+      showCancelButton:true,showDenyButton:true,
+      confirmButtonText:'&#43; Nova reserva',
+      denyButtonText:'\u{1F512} Bloquear data (folga)',
+      cancelButtonText:'Fechar',
+      background:'#F4F3F0',color:'#37352F',confirmButtonColor:'#191B22',denyButtonColor:'#6B7280',
+    }).then(r=>{
+      if(r.isConfirmed)this.novaReserva(dataPre);
+      else if(r.isDenied)this.novaBloqueio(dataPre);
+    });
+  },
+
+  async novaBloqueio(dataPre){
+    if(this._arts.length===0){Swal.fire('Sem artistas','Nenhum artista cadastrado.','info');return;}
+    const dataDefault=dataPre||(this._selDay?this._key(this._selDay):this._key(this._today));
+    const artOpts=this._arts.map(a=>'<option value="'+a.id+'">'+a.nome+'</option>').join('');
+    const inp='width:100%;padding:12px;border:1.5px solid #E4E1DB;border-radius:10px;font:500 14px Inter,sans-serif;color:#37352F;background:#fff;outline:none;-webkit-appearance:none';
+    const lbl='font:600 11px Inter,sans-serif;letter-spacing:.5px;text-transform:uppercase;color:#9B9488;display:block;margin-bottom:5px';
+    const grp='margin-bottom:12px';
+    const formHtml='<div style="text-align:left;font-family:Inter,sans-serif">'+
+      '<div style="'+grp+'"><label style="'+lbl+'">Artista</label><select id="b-art" style="'+inp+'">'+artOpts+'</select></div>'+
+      '<div style="display:flex;gap:8px">'+
+        '<div style="'+grp+';flex:1"><label style="'+lbl+'">De</label><input type="date" id="b-ini" value="'+dataDefault+'" style="'+inp+'"></div>'+
+        '<div style="'+grp+';flex:1"><label style="'+lbl+'">Até</label><input type="date" id="b-fim" value="'+dataDefault+'" style="'+inp+'"></div>'+
+      '</div>'+
+      '<div style="'+grp+'"><label style="'+lbl+'">Motivo (opcional)</label><input type="text" id="b-motivo" placeholder="Ex: descanso, compromisso pessoal" style="'+inp+'"></div>'+
+    '</div>';
+    const{value:fv}=await Swal.fire({
+      title:'\u{1F512} Bloquear data',html:formHtml,
+      showCancelButton:true,confirmButtonText:'Bloquear',cancelButtonText:'Cancelar',
+      background:'#F4F3F0',color:'#37352F',confirmButtonColor:'#191B22',
+      preConfirm:()=>{
+        const artista_id=document.getElementById('b-art').value;
+        const ini=document.getElementById('b-ini').value;
+        const fim=document.getElementById('b-fim').value||ini;
+        const motivo=document.getElementById('b-motivo').value.trim();
+        if(!artista_id||!ini){Swal.showValidationMessage('Artista e data são obrigatórios');return false;}
+        if(fim<ini){Swal.showValidationMessage('A data final é anterior à inicial');return false;}
+        const dias=[];
+        const d0=new Date(ini+'T12:00:00'),d1=new Date(fim+'T12:00:00');
+        for(let d=new Date(d0);d<=d1;d.setDate(d.getDate()+1))dias.push(A._key(d));
+        if(dias.length>31){Swal.showValidationMessage('Máximo de 31 dias por bloqueio');return false;}
+        const ST_IGNORAR=['Cancelado','Cancelado pelo Artista','Cancelado pelo Contratante','Recusado','Bloqueado'];
+        const conflitos=dias.filter(ds=>A._evs.some(e=>String(e.artista_id)===String(artista_id)&&e.data===ds&&!ST_IGNORAR.includes(e.status||'')));
+        if(conflitos.length){
+          const fmt=conflitos.map(ds=>{const p=ds.split('-');return p[2]+'/'+p[1];}).join(', ');
+          Swal.showValidationMessage('Há eventos ou reservas nestas datas: '+fmt+'. Resolva-os antes de bloquear.');return false;
+        }
+        return{artista_id,dias,motivo};
+      }
+    });
+    if(!fv)return;
+    try{
+      for(const ds of fv.dias){
+        const ok=await EventosDB.criar({artista_id:fv.artista_id,data:ds,horario:'00:00:00',local:'Folga',cidade:'',estado:'-',nome_contratante:'',observacoes:fv.motivo||'Folga do artista',status:'Bloqueado'});
+        if(!ok)throw new Error('Não foi possível salvar o bloqueio de '+ds+'. Verifique a conexão.');
+      }
+      if(typeof DB!=='undefined'&&DB.clearAllCache)DB.clearAllCache();
+      const evs=await EventosDB.listar(true);
+      this._evs=(await Auth.filterByPermissions(evs,'eventos'))||[];
+      this._updatePendBadge();this._buildChips();
+      if(this._seg==='mes'){this._renderGrid();this._renderMonthPanel();}
+      else{this._renderStrip();this._renderDiaContent();}
+      Swal.fire({title:'\u{1F512} Data bloqueada!',html:'<div style="font:500 13px sans-serif;color:#6B655C">'+fv.dias.length+' dia'+(fv.dias.length>1?'s':'')+' de folga marcado'+(fv.dias.length>1?'s':'')+'. Reservas nessas datas ficam travadas.</div>',icon:'success',timer:3500,showConfirmButton:false,background:'#F4F3F0',color:'#37352F'});
+    }catch(e){Swal.fire('Erro ao bloquear',e.message,'error');}
+  },
+
   async novaReserva(dataPre){
     if(this._arts.length===0){Swal.fire('Sem artistas','Nenhum artista cadastrado.','info');return;}
     const dataDefault=dataPre||(this._selDay?this._key(this._selDay):this._key(this._today));
@@ -1149,6 +1230,8 @@ const A={
         const telefoneRaw=document.getElementById('r-tel').value.trim();
         const observacoes=document.getElementById('r-obs').value.trim();
         if(!artista_id||!data){Swal.showValidationMessage('Artista e data são obrigatórios');return false;}
+        const bloqueada=A._evs.some(e=>String(e.artista_id)===String(artista_id)&&e.data===data&&(e.status||'')==='Bloqueado');
+        if(bloqueada){Swal.showValidationMessage('\u{1F512} Data bloqueada — folga do artista. Para reservar, primeiro desbloqueie (abra a folga no calendário e toque em Desbloquear).');return false;}
         // Validar telefone (opcional, mas se preenchido deve ter 10 ou 11 dígitos)
         const telDigitos=telefoneRaw.replace(/\D/g,'');
         if(telDigitos.length>0&&(telDigitos.length<10||telDigitos.length>11)){
