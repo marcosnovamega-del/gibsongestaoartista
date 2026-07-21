@@ -26,17 +26,17 @@ Pages.renderFinanceiro = async function() {
     // Filtrar por termo de busca
     if (Pages.currentSearchTerm) {
         // Precisamos buscar dados dos eventos para filtrar por nome do artista/local
-        const searchResults = [];
-        for (const p of parcelas) {
-            const ev = await EventosDB.buscarPorId(p.evento_id);
-            const art = ev ? await ArtistasDB.buscarPorId(ev.artista_id) : null;
-            const match = 
-                ev?.local.toLowerCase().includes(Pages.currentSearchTerm) ||
-                art?.nome.toLowerCase().includes(Pages.currentSearchTerm) ||
-                p.status.toLowerCase().includes(Pages.currentSearchTerm);
-            
-            if (match) searchResults.push(p);
-        }
+        const [evAll, artAll] = await Promise.all([EventosDB.listar(), ArtistasDB.listar()]);
+        const evMap  = new Map(evAll.map(e => [e.id, e]));
+        const artMap = new Map(artAll.map(a => [a.id, a]));
+        const termo = Pages.currentSearchTerm;
+        const searchResults = parcelas.filter(p => {
+            const ev  = evMap.get(p.evento_id) || null;
+            const art = ev ? (artMap.get(ev.artista_id) || null) : null;
+            return (ev?.local || '').toLowerCase().includes(termo) ||
+                   (art?.nome || '').toLowerCase().includes(termo) ||
+                   (p.status || '').toLowerCase().includes(termo);
+        });
         return this.renderFinanceiroSearch(searchResults);
     }
 
@@ -1874,17 +1874,19 @@ Pages.renderParcelasTable = async function(parcelas) {
         return '<p class="text-muted">Nenhuma parcela cadastrada.</p>';
     }
 
-    // Buscar dados dos eventos
-    const parcelasComDados = [];
-    for (const parcela of parcelas) {
-        const evento = await EventosDB.buscarPorId(parcela.evento_id);
-        const artista = evento ? await ArtistasDB.buscarPorId(evento.artista_id) : null;
-        parcelasComDados.push({
-            ...parcela,
-            evento,
-            artista
-        });
-    }
+    // Buscar todos os eventos e artistas de uma vez (evita 1 consulta por parcela — N+1)
+    const [eventosAll, artistasAll] = await Promise.all([
+        EventosDB.listar(),
+        ArtistasDB.listar(),
+    ]);
+    const eventosPorId  = new Map(eventosAll.map(e => [e.id, e]));
+    const artistasPorId = new Map(artistasAll.map(a => [a.id, a]));
+
+    const parcelasComDados = parcelas.map(parcela => {
+        const evento  = eventosPorId.get(parcela.evento_id) || null;
+        const artista = evento ? (artistasPorId.get(evento.artista_id) || null) : null;
+        return { ...parcela, evento, artista };
+    });
 
     // Ordenar por data de vencimento
     parcelasComDados.sort((a, b) => new Date(a.data_vencimento) - new Date(b.data_vencimento));
@@ -1968,20 +1970,17 @@ Pages.renderFluxoCaixaChart = async function(mes, ano) {
 
     const ctx = canvas.getContext('2d');
     
-    // Dados dos últimos 6 meses
-    const meses = [];
-    const lucros = [];
-
+    // Dados dos últimos 6 meses — calculados em paralelo (era sequencial)
+    const periodos = [];
     for (let i = 5; i >= 0; i--) {
         const m = mes - i;
         const a = m < 0 ? ano - 1 : ano;
         const mesAtual = m < 0 ? 12 + m : m;
-        
-        meses.push(Utils.getMonthName(mesAtual).substring(0, 3));
-        
-        const totais = await Utils.calcularTotaisMes(mesAtual, a);
-        lucros.push(totais.lucro);
+        periodos.push({ mesAtual, a });
     }
+    const meses = periodos.map(p => Utils.getMonthName(p.mesAtual).substring(0, 3));
+    const totaisArr = await Promise.all(periodos.map(p => Utils.calcularTotaisMes(p.mesAtual, p.a)));
+    const lucros = totaisArr.map(t => t.lucro);
 
     new Chart(ctx, {
         type: 'bar',
