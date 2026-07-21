@@ -49,28 +49,21 @@ Pages.renderVendas = async function() {
         propostasRicas.push({ ...p, artista, eventoGerado, contratoAssinado });
     }
 
-    // ── Auto-expirar propostas vencidas ──────────────────────────────────────
+    // ── Expiração VISUAL de propostas vencidas ────────────────────────────────
+    // O banco não aceita o status "Expirada"; então marcamos apenas em memória,
+    // calculando pela data de validade, sem gravar (evita erro de constraint).
     const hojeExp = new Date(); hojeExp.setHours(0, 0, 0, 0);
     const statusExpirar = ['Rascunho', 'Enviada'];
-    const expirarPromises = [];
-    for (const p of propostasRicas) {
-        if (statusExpirar.includes(p.status) && p.validade) {
-            const venc = new Date(p.validade + 'T12:00:00');
-            if (venc < hojeExp) {
-                expirarPromises.push(
-                    PropostasDB.atualizarStatus(p.id, 'Expirada').then(() => { p.status = 'Expirada'; })
-                );
-            }
-        }
-    }
-    if (expirarPromises.length > 0) await Promise.all(expirarPromises);
+    const _expirada = (p) => statusExpirar.includes(p.status) && p.validade
+        && (new Date(p.validade + 'T12:00:00') < hojeExp);
+    propostasRicas.forEach(p => { p._expirada = _expirada(p); });
 
     // Separar por coluna do Kanban
-    const col1 = propostasRicas.filter(p => p.status === 'Rascunho');
-    const col2 = propostasRicas.filter(p => p.status === 'Enviada');
+    const col1 = propostasRicas.filter(p => p.status === 'Rascunho' && !p._expirada);
+    const col2 = propostasRicas.filter(p => p.status === 'Enviada' && !p._expirada);
     const col3 = propostasRicas.filter(p => p.status === 'Aceita' && !p.contratoAssinado);
     const col4 = propostasRicas.filter(p => p.status === 'Aceita' && !!p.contratoAssinado);
-    const col5 = propostasRicas.filter(p => p.status === 'Expirada');
+    const col5 = propostasRicas.filter(p => p._expirada);
 
     // Shows assinados para rota (todos contratos assinados)
     const contratosAssinados = [];
