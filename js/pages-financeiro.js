@@ -430,18 +430,20 @@ Pages.carregarRecebimentosAConfirmar = async function() {
                     const confirmada = !!(parc && parc.status === 'Pago');
                     const uid = `rec_${evento.id}_${numero}`;
                     const _sortD = dataVenc || '';
+                    const emEdicao = !!(parc && Pages._recEdit && Pages._recEdit.has(parc.id));
+                    const editavel = !confirmada || emEdicao;
 
                     return { _sortD, html: `
-                    <tr class="${confirmada ? 'parc-confirmada' : ''}">
+                    <tr class="${confirmada && !emEdicao ? 'parc-confirmada' : ''}">
                         <td class="locked">${Utils.formatCurrency(valor)}</td>
                         <td class="locked">${dataVenc ? Utils.formatDate(dataVenc) : '—'}</td>
-                        <td><input type="date" class="rec-input" id="${uid}_dtreceb" value="${parc?.data_recebimento || ''}" ${confirmada ? 'disabled' : ''}></td>
-                        <td>${confirmada
+                        <td><input type="date" class="rec-input" id="${uid}_dtreceb" value="${parc?.data_recebimento || ''}" ${editavel ? '' : 'disabled'}></td>
+                        <td>${!editavel
                             ? `<span style="font-weight:700;color:var(--success);font-size:13px;">${Utils.formatCurrency(parc?.valor_recebido || valor)}</span>`
                             : `<input type="number" step="0.01" class="rec-input" id="${uid}_vlrreceb" value="${parc?.valor_recebido || ''}" placeholder="${Utils.formatCurrency(valor)}">`
                         }</td>
                         <td>
-                            <select class="rec-input" id="${uid}_forma" ${confirmada ? 'disabled' : ''}>
+                            <select class="rec-input" id="${uid}_forma" ${editavel ? '' : 'disabled'}>
                                 <option value="">—</option>
                                 <option value="PIX" ${parc?.forma_pagamento==='PIX'?'selected':''}>PIX</option>
                                 <option value="TED" ${parc?.forma_pagamento==='TED'?'selected':''}>TED</option>
@@ -452,14 +454,18 @@ Pages.carregarRecebimentosAConfirmar = async function() {
                                 <option value="Cartão" ${parc?.forma_pagamento==='Cartão'?'selected':''}>Cartão</option>
                             </select>
                         </td>
-                        <td><input type="text" class="rec-input" id="${uid}_origem" value="${parc?.origem || ''}" placeholder="Ex: Guiche Web" ${confirmada ? 'disabled' : ''}></td>
-                        <td><input type="text" class="rec-input" id="${uid}_inst" value="${parc?.instituicao || ''}" placeholder="Ex: Banco Itaú" ${confirmada ? 'disabled' : ''}></td>
-                        <td style="text-align:center;">
-                            ${confirmada
-                                ? `<span style="color:var(--success);font-weight:700;font-size:12px;"><i class="fas fa-check-circle"></i> Lançado</span>`
-                                : `<button class="btn-confirmar-parc" onclick="Pages.confirmarLancamentoParcela('${evento.id}',${numero},'${descricao}',${valor},'${dataVenc||''}','${uid}','${parc?.id||''}')">
+                        <td><input type="text" class="rec-input" id="${uid}_origem" value="${parc?.origem || ''}" placeholder="Ex: Guiche Web" ${editavel ? '' : 'disabled'}></td>
+                        <td><input type="text" class="rec-input" id="${uid}_inst" value="${parc?.instituicao || ''}" placeholder="Ex: Banco Itaú" ${editavel ? '' : 'disabled'}></td>
+                        <td style="text-align:center;white-space:nowrap;">
+                            ${!confirmada
+                                ? `<button class="btn-confirmar-parc" onclick="Pages.confirmarLancamentoParcela('${evento.id}',${numero},'${descricao}',${valor},'${dataVenc||''}','${uid}','${parc?.id||''}')">
                                     <i class="fas fa-check"></i> Confirmar
                                    </button>`
+                                : emEdicao
+                                    ? `<button class="btn-confirmar-parc" onclick="Pages.confirmarLancamentoParcela('${evento.id}',${numero},'${descricao}',${valor},'${dataVenc||''}','${uid}','${parc?.id||''}')"><i class="fas fa-save"></i> Salvar</button>
+                                       <button onclick="Pages.cancelarEdicaoRecebimento('${parc?.id||''}')" title="Cancelar" style="background:none;border:none;color:var(--danger);cursor:pointer;margin-left:6px;font-size:13px;"><i class="fas fa-times"></i></button>`
+                                    : `<span style="color:var(--success);font-weight:700;font-size:12px;"><i class="fas fa-check-circle"></i> Lançado</span>
+                                       <button onclick="Pages.editarRecebimento('${parc?.id||''}')" title="Editar lançamento" style="background:none;border:none;color:#D4AF37;cursor:pointer;margin-left:8px;font-size:12px;"><i class="fas fa-pen"></i></button>`
                             }
                         </td>
                     </tr>` };
@@ -469,11 +475,29 @@ Pages.carregarRecebimentosAConfirmar = async function() {
                 const linhasAvulsas = parcelasEv
                     .filter(p => !numerosCrono.has(p.numero_parcela))
                     .map(parc => {
-                        const pago = parc.status === 'Pago';
                         const uid = `recav_${parc.id}`;
                         const _sortD = parc.data_recebimento || parc.data_vencimento || '';
+                        const emEdicao = !!(Pages._recEdit && Pages._recEdit.has(parc.id));
+                        const formaOpts = ['','PIX','TED','DOC','Boleto','Cheque','Dinheiro','Cartão']
+                            .map(f => `<option value="${f}" ${parc.forma_pagamento===f?'selected':''}>${f||'—'}</option>`).join('');
+                        if (emEdicao) {
+                            return { _sortD, html: `
+                            <tr>
+                                <td class="locked" style="color:#D4AF37;">Avulso</td>
+                                <td class="locked">—</td>
+                                <td><input type="date" class="rec-input" id="${uid}_dtreceb" value="${parc.data_recebimento || ''}"></td>
+                                <td><input type="number" step="0.01" class="rec-input" id="${uid}_vlrreceb" value="${parc.valor_recebido || parc.valor || ''}"></td>
+                                <td><select class="rec-input" id="${uid}_forma">${formaOpts}</select></td>
+                                <td><input type="text" class="rec-input" id="${uid}_origem" value="${parc.origem || ''}" placeholder="Ex: Guiche Web"></td>
+                                <td><input type="text" class="rec-input" id="${uid}_inst" value="${parc.instituicao || ''}" placeholder="Ex: Banco Itaú"></td>
+                                <td style="text-align:center;white-space:nowrap;">
+                                    <button class="btn-confirmar-parc" onclick="Pages.confirmarLancamentoParcela('${evento.id}',${parc.numero_parcela},'Pagamento avulso',${parc.valor||0},'','${uid}','${parc.id}')"><i class="fas fa-save"></i> Salvar</button>
+                                    <button onclick="Pages.cancelarEdicaoRecebimento('${parc.id}')" title="Cancelar" style="background:none;border:none;color:var(--danger);cursor:pointer;margin-left:6px;font-size:13px;"><i class="fas fa-times"></i></button>
+                                </td>
+                            </tr>` };
+                        }
                         return { _sortD, html: `
-                        <tr class="${pago ? 'parc-confirmada' : ''}">
+                        <tr class="parc-confirmada">
                             <td class="locked" style="color:#D4AF37;">Avulso</td>
                             <td class="locked">—</td>
                             <td><input type="date" class="rec-input" value="${parc.data_recebimento || ''}" disabled></td>
@@ -483,7 +507,8 @@ Pages.carregarRecebimentosAConfirmar = async function() {
                             <td class="locked">${parc.instituicao || '—'}</td>
                             <td style="text-align:center;white-space:nowrap;">
                                 <span style="color:var(--success);font-weight:700;font-size:12px;"><i class="fas fa-check-circle"></i> Lançado</span>
-                                <button onclick="Pages.excluirPagamentoAvulso('${parc.id}')" title="Excluir pagamento avulso" style="background:none;border:none;color:var(--danger);cursor:pointer;margin-left:8px;font-size:12px;"><i class="fas fa-trash"></i></button>
+                                <button onclick="Pages.editarRecebimento('${parc.id}')" title="Editar pagamento" style="background:none;border:none;color:#D4AF37;cursor:pointer;margin-left:8px;font-size:12px;"><i class="fas fa-pen"></i></button>
+                                <button onclick="Pages.excluirPagamentoAvulso('${parc.id}')" title="Excluir pagamento avulso" style="background:none;border:none;color:var(--danger);cursor:pointer;margin-left:6px;font-size:12px;"><i class="fas fa-trash"></i></button>
                             </td>
                         </tr>` };
                     });
@@ -1484,6 +1509,7 @@ Pages.confirmarLancamentoParcela = async function(eventoId, numero, descricao, v
         }
 
         DB.cache = {}; // limpar cache
+        if (Pages._recEdit && parcelaIdExistente) Pages._recEdit.delete(parcelaIdExistente);
         Utils.hideLoading();
         Utils.showToast(`✅ "${descricao}" confirmada no Financeiro!`, 'success');
         Pages.carregarRecebimentosAConfirmar();
@@ -1590,6 +1616,28 @@ Pages.excluirPagamentoAvulso = async function(parcelaId) {
         Utils.hideLoading();
         Utils.showToast('Erro ao excluir: ' + (e.message || e), 'error');
     }
+};
+
+// ── Editar lançamento (reabre a linha já "Lançada" para correção) ────────────
+Pages._recEdit = Pages._recEdit || new Set();
+
+Pages._reRenderRecBlocos = function() {
+    const container = document.getElementById('rec-blocos-container');
+    if (!container || !window._buildRecBlocos) return;
+    const sel = document.getElementById('rec-city-select');
+    const cidade = sel && sel.value ? sel.value : null;
+    container.innerHTML = window._buildRecBlocos(cidade);
+};
+
+Pages.editarRecebimento = function(parcelaId) {
+    if (!parcelaId) return;
+    Pages._recEdit.add(parcelaId);
+    Pages._reRenderRecBlocos();
+};
+
+Pages.cancelarEdicaoRecebimento = function(parcelaId) {
+    Pages._recEdit.delete(parcelaId);
+    Pages._reRenderRecBlocos();
 };
 
 Pages._filtrarRecebimentos = function(cidade, btnEl) {
