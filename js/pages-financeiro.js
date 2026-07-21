@@ -429,8 +429,9 @@ Pages.carregarRecebimentosAConfirmar = async function() {
                     const parc      = parcelasEv.find(p => p.numero_parcela === numero);
                     const confirmada = !!(parc && parc.status === 'Pago');
                     const uid = `rec_${evento.id}_${numero}`;
+                    const _sortD = dataVenc || '';
 
-                    return `
+                    return { _sortD, html: `
                     <tr class="${confirmada ? 'parc-confirmada' : ''}">
                         <td class="locked">${Utils.formatCurrency(valor)}</td>
                         <td class="locked">${dataVenc ? Utils.formatDate(dataVenc) : '—'}</td>
@@ -461,17 +462,17 @@ Pages.carregarRecebimentosAConfirmar = async function() {
                                    </button>`
                             }
                         </td>
-                    </tr>`;
-                }).join('');
+                    </tr>` };
+                });
 
                 // Pagamentos avulsos (fora do cronograma)
                 const linhasAvulsas = parcelasEv
                     .filter(p => !numerosCrono.has(p.numero_parcela))
-                    .sort((a,b) => (a.numero_parcela||0) - (b.numero_parcela||0))
                     .map(parc => {
                         const pago = parc.status === 'Pago';
                         const uid = `recav_${parc.id}`;
-                        return `
+                        const _sortD = parc.data_recebimento || parc.data_vencimento || '';
+                        return { _sortD, html: `
                         <tr class="${pago ? 'parc-confirmada' : ''}">
                             <td class="locked" style="color:#D4AF37;">Avulso</td>
                             <td class="locked">—</td>
@@ -484,8 +485,14 @@ Pages.carregarRecebimentosAConfirmar = async function() {
                                 <span style="color:var(--success);font-weight:700;font-size:12px;"><i class="fas fa-check-circle"></i> Lançado</span>
                                 <button onclick="Pages.excluirPagamentoAvulso('${parc.id}')" title="Excluir pagamento avulso" style="background:none;border:none;color:var(--danger);cursor:pointer;margin-left:8px;font-size:12px;"><i class="fas fa-trash"></i></button>
                             </td>
-                        </tr>`;
-                    }).join('');
+                        </tr>` };
+                    });
+
+                // Junta parcelas + avulsos e ordena por data (sequência cronológica)
+                const linhasOrdenadas = [...linhas, ...linhasAvulsas]
+                    .sort((a, b) => (a._sortD || '9999-12-31').localeCompare(b._sortD || '9999-12-31'))
+                    .map(x => x.html)
+                    .join('');
 
                 return `
                 <div class="rec-table-wrap" data-cidade="${cidade}">
@@ -528,7 +535,7 @@ Pages.carregarRecebimentosAConfirmar = async function() {
                                 <th>Ação</th>
                             </tr>
                         </thead>
-                        <tbody id="rec_tbody_${evento.id}">${linhas}${linhasAvulsas}</tbody>
+                        <tbody id="rec_tbody_${evento.id}">${linhasOrdenadas}</tbody>
                         <tfoot>
                             <tr>
                                 <td colspan="8" style="padding:7px 10px;background:var(--bg-card);border-bottom:1px solid var(--border-color);">
@@ -1691,7 +1698,7 @@ Pages._exportarRecebimentosPDF = function() {
 
         // ── Tabela de parcelas ──────────────────────────────────────
         const numerosCronoPdf = new Set(cronograma.map((item, idx) => item.numero || (idx + 1)));
-        const tableRows = cronograma.map((item, idx) => {
+        const linhasPdf = cronograma.map((item, idx) => {
             const numero = item.numero || (idx + 1);
             const valor  = item.valor !== undefined ? item.valor : parseFloat((cacheBruto * (item.pct || 100) / 100).toFixed(2));
             let dataVenc = item.data_vencimento;
@@ -1702,7 +1709,7 @@ Pages._exportarRecebimentosPDF = function() {
             }
             const parc = parcelasEv.find(p => p.numero_parcela === numero);
             const statusTxt = parc ? 'Lançado' : 'Pendente';
-            return [
+            return { _sortD: dataVenc || '', row: [
                 Utils.formatCurrency(valor),
                 dataVenc ? new Date(dataVenc + 'T12:00:00').toLocaleDateString('pt-BR') : '—',
                 parc?.data_recebimento ? new Date(parc.data_recebimento + 'T12:00:00').toLocaleDateString('pt-BR') : '—',
@@ -1711,14 +1718,13 @@ Pages._exportarRecebimentosPDF = function() {
                 parc?.origem           || '—',
                 parc?.instituicao      || '—',
                 statusTxt
-            ];
+            ] };
         });
 
         parcelasEv
             .filter(p => !numerosCronoPdf.has(p.numero_parcela))
-            .sort((a,b) => (a.numero_parcela||0) - (b.numero_parcela||0))
             .forEach(p => {
-                tableRows.push([
+                linhasPdf.push({ _sortD: p.data_recebimento || p.data_vencimento || '', row: [
                     'Avulso',
                     '—',
                     p.data_recebimento ? new Date(p.data_recebimento + 'T12:00:00').toLocaleDateString('pt-BR') : '—',
@@ -1727,8 +1733,12 @@ Pages._exportarRecebimentosPDF = function() {
                     p.origem || '—',
                     p.instituicao || '—',
                     'Lançado'
-                ]);
+                ] });
             });
+
+        const tableRows = linhasPdf
+            .sort((a, b) => (a._sortD || '9999-12-31').localeCompare(b._sortD || '9999-12-31'))
+            .map(x => x.row);
 
         const totalAReceber = cronograma.reduce((s, item) => {
             return s + (item.valor !== undefined ? item.valor : parseFloat((cacheBruto * (item.pct || 100) / 100).toFixed(2)));
