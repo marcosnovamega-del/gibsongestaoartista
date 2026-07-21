@@ -1537,14 +1537,15 @@ Pages.confirmarPagamentoAvulso = async function(eventoId, uid) {
         const maxNum = todas.reduce((m, p) => Math.max(m, p.numero_parcela || 0), 0);
         const numero = Math.max(900, maxNum + 1);
 
+        const hojeStr = new Date().toLocaleDateString('fr-CA');
         await ParcelasDB.criar({
             evento_id:        eventoId,
             numero_parcela:   numero,
             valor:            vlr,
-            data_vencimento:  null,
+            data_vencimento:  dtReceb || hojeStr,
             descricao:        'Pagamento avulso',
             valor_recebido:   vlr,
-            data_recebimento: dtReceb || null,
+            data_recebimento: dtReceb || hojeStr,
             forma_pagamento:  forma   || null,
             origem:           origem  || null,
             instituicao:      inst    || null,
