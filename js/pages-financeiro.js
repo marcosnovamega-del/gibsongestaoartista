@@ -2207,10 +2207,12 @@ Pages.deletarMembroEquipe = async function(id, artistaId) {
 };
 
 Pages.renderAlertas = async function() {
-    const todasParcelas  = await ParcelasDB.listar();
-    const eventos        = await EventosDB.listar();
-    const contratos      = await ContratosDB.listar();
-    const despesas       = await DespesasDB.listar();
+    const [todasParcelas, eventos, contratos, despesas] = await Promise.all([
+        ParcelasDB.listar(),
+        EventosDB.listar(),
+        ContratosDB.listar(),
+        DespesasDB.listar(),
+    ]);
 
     const hoje    = new Date(); hoje.setHours(0,0,0,0);
     const em7d    = new Date(hoje); em7d.setDate(hoje.getDate() + 7);
@@ -2339,9 +2341,10 @@ Pages.renderAlertas = async function() {
 
 Pages.renderParcelasAtrasadasAlerta = async function(parcelas) {
     let html = '<div class="alert-list">';
-    
+    const _evAll = await EventosDB.listar();
+    const _evMap = new Map(_evAll.map(e => [e.id, e]));
     for (const parcela of parcelas) {
-        const evento = await EventosDB.buscarPorId(parcela.evento_id);
+        const evento = _evMap.get(parcela.evento_id) || null;
         const diasAtrasados = Utils.daysBetween(parcela.data_vencimento, new Date());
         
         html += `
@@ -2366,9 +2369,10 @@ Pages.renderParcelasAtrasadasAlerta = async function(parcelas) {
 
 Pages.renderParcelasAVencerAlerta = async function(parcelas, eventos) {
     let html = '<div class="alert-list">';
+    const _evAll = eventos && eventos.length ? eventos : await EventosDB.listar();
+    const _evMap = new Map(_evAll.map(e => [e.id, e]));
     for (const parcela of parcelas) {
-        const evento = eventos?.find(e => e.id === parcela.evento_id)
-            || await EventosDB.buscarPorId(parcela.evento_id);
+        const evento = _evMap.get(parcela.evento_id) || null;
         const hoje = new Date(); hoje.setHours(0,0,0,0);
         const venc = new Date(parcela.data_vencimento + 'T00:00:00');
         const diff  = Math.ceil((venc - hoje) / 86400000);
@@ -2394,9 +2398,10 @@ Pages.renderParcelasAVencerAlerta = async function(parcelas, eventos) {
 
 Pages.renderEventosProximosAlerta = async function(eventos) {
     let html = '<div class="alert-list">';
-    
+    const _artAll = await ArtistasDB.listar();
+    const _artMap = new Map(_artAll.map(a => [a.id, a]));
     for (const evento of eventos) {
-        const artista = await ArtistasDB.buscarPorId(evento.artista_id);
+        const artista = _artMap.get(evento.artista_id) || null;
         const diasFaltando = Utils.daysBetween(new Date(), evento.data);
         
         html += `
@@ -2420,10 +2425,12 @@ Pages.renderEventosProximosAlerta = async function(eventos) {
 
 Pages.renderContratosPendentesAlerta = async function(contratos) {
     let html = '<div class="alert-list">';
-    
+    const [_evAll, _artAll] = await Promise.all([EventosDB.listar(), ArtistasDB.listar()]);
+    const _evMap  = new Map(_evAll.map(e => [e.id, e]));
+    const _artMap = new Map(_artAll.map(a => [a.id, a]));
     for (const contrato of contratos) {
-        const evento = await EventosDB.buscarPorId(contrato.evento_id);
-        const artista = evento ? await ArtistasDB.buscarPorId(evento.artista_id) : null;
+        const evento = _evMap.get(contrato.evento_id) || null;
+        const artista = evento ? (_artMap.get(evento.artista_id) || null) : null;
         
         html += `
             <div style="padding: 12px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">

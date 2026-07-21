@@ -1047,18 +1047,18 @@ const Pages = {
             );
         }
         
-        // Buscar eventos e artistas em paralelo
-        const contratosComDados = await Promise.all(
-            contratos.map(async (contrato) => {
-                const evento = await EventosDB.buscarPorId(contrato.evento_id);
-                const artista = evento ? await ArtistasDB.buscarPorId(evento.artista_id) : null;
-                return {
-                    ...contrato,
-                    evento,
-                    artista
-                };
-            })
-        );
+        // Buscar todos os eventos e artistas de uma vez (2 consultas em vez de ~90)
+        const [eventosAll, artistasAll] = await Promise.all([
+            EventosDB.listar(),
+            ArtistasDB.listar(),
+        ]);
+        const eventosPorId  = new Map(eventosAll.map(e => [e.id, e]));
+        const artistasPorId = new Map(artistasAll.map(a => [a.id, a]));
+        const contratosComDados = contratos.map((contrato) => {
+            const evento  = eventosPorId.get(contrato.evento_id) || null;
+            const artista = evento ? (artistasPorId.get(evento.artista_id) || null) : null;
+            return { ...contrato, evento, artista };
+        });
 
         const html = `
             <div class="contratos-container fade-in">
