@@ -411,6 +411,7 @@ Pages.carregarRecebimentosAConfirmar = async function() {
                 const faltam = totalAReceber - totalRecebido;
                 const cidade = evento.cidade || evento.estado || '—';
 
+                const numerosCrono = new Set(cronograma.map((item, idx) => item.numero || (idx + 1)));
                 const linhas = cronograma.map((item, idx) => {
                     const numero   = item.numero || (idx + 1);
                     const valor    = item.valor !== undefined ? item.valor : parseFloat((cacheBruto * (item.pct || 100) / 100).toFixed(2));
@@ -459,6 +460,29 @@ Pages.carregarRecebimentosAConfirmar = async function() {
                     </tr>`;
                 }).join('');
 
+                // Pagamentos avulsos (fora do cronograma)
+                const linhasAvulsas = parcelasEv
+                    .filter(p => !numerosCrono.has(p.numero_parcela))
+                    .sort((a,b) => (a.numero_parcela||0) - (b.numero_parcela||0))
+                    .map(parc => {
+                        const pago = parc.status === 'Pago';
+                        const uid = `recav_${parc.id}`;
+                        return `
+                        <tr class="${pago ? 'parc-confirmada' : ''}">
+                            <td class="locked" style="color:#D4AF37;">Avulso</td>
+                            <td class="locked">—</td>
+                            <td><input type="date" class="rec-input" value="${parc.data_recebimento || ''}" disabled></td>
+                            <td><span style="font-weight:700;color:var(--success);font-size:13px;">${Utils.formatCurrency(parc.valor_recebido || parc.valor || 0)}</span></td>
+                            <td class="locked">${parc.forma_pagamento || '—'}</td>
+                            <td class="locked">${parc.origem || '—'}</td>
+                            <td class="locked">${parc.instituicao || '—'}</td>
+                            <td style="text-align:center;white-space:nowrap;">
+                                <span style="color:var(--success);font-weight:700;font-size:12px;"><i class="fas fa-check-circle"></i> Lançado</span>
+                                <button onclick="Pages.excluirPagamentoAvulso('${parc.id}')" title="Excluir pagamento avulso" style="background:none;border:none;color:var(--danger);cursor:pointer;margin-left:8px;font-size:12px;"><i class="fas fa-trash"></i></button>
+                            </td>
+                        </tr>`;
+                    }).join('');
+
                 return `
                 <div class="rec-table-wrap" data-cidade="${cidade}">
                     <div class="rec-show-header">
@@ -500,8 +524,16 @@ Pages.carregarRecebimentosAConfirmar = async function() {
                                 <th>Ação</th>
                             </tr>
                         </thead>
-                        <tbody>${linhas}</tbody>
+                        <tbody id="rec_tbody_${evento.id}">${linhas}${linhasAvulsas}</tbody>
                         <tfoot>
+                            <tr>
+                                <td colspan="8" style="padding:7px 10px;background:var(--bg-card);border-bottom:1px solid var(--border-color);">
+                                    <button onclick="Pages.adicionarPagamentoAvulso('${evento.id}')" title="Lançar valor recebido fora do cronograma"
+                                        style="background:none;border:1.5px dashed #D4AF37;color:#D4AF37;border-radius:8px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
+                                        <i class="fas fa-plus"></i> Adicionar pagamento
+                                    </button>
+                                </td>
+                            </tr>
                             <tr>
                                 <td colspan="3" class="rec-total-label">TOTAL A RECEBER</td>
                                 <td class="rec-total-val" colspan="4">${Utils.formatCurrency(totalAReceber)}</td>
@@ -1451,6 +1483,103 @@ Pages.confirmarLancamentoParcela = async function(eventoId, numero, descricao, v
     }
 };
 
+// ── Pagamento avulso (valor fora do cronograma) ──────────────────────────────
+Pages.adicionarPagamentoAvulso = function(eventoId) {
+    const tbody = document.getElementById('rec_tbody_' + eventoId);
+    if (!tbody) return;
+    const uid = 'avnew_' + eventoId;
+    if (document.getElementById(uid)) { document.getElementById(uid + '_vlrreceb')?.focus(); return; }
+    const hoje = new Date().toLocaleDateString('fr-CA');
+    const tr = document.createElement('tr');
+    tr.id = uid;
+    tr.innerHTML = `
+        <td class="locked" style="color:#D4AF37;">Avulso</td>
+        <td class="locked">—</td>
+        <td><input type="date" class="rec-input" id="${uid}_dtreceb" value="${hoje}"></td>
+        <td><input type="number" step="0.01" min="0" class="rec-input" id="${uid}_vlrreceb" placeholder="R$ 0,00"></td>
+        <td>
+            <select class="rec-input" id="${uid}_forma">
+                <option value="">—</option>
+                <option value="PIX">PIX</option>
+                <option value="TED">TED</option>
+                <option value="DOC">DOC</option>
+                <option value="Boleto">Boleto</option>
+                <option value="Cheque">Cheque</option>
+                <option value="Dinheiro">Dinheiro</option>
+                <option value="Cartão">Cartão</option>
+            </select>
+        </td>
+        <td><input type="text" class="rec-input" id="${uid}_origem" placeholder="Ex: Guiche Web"></td>
+        <td><input type="text" class="rec-input" id="${uid}_inst" placeholder="Ex: Banco Itaú"></td>
+        <td style="text-align:center;white-space:nowrap;">
+            <button class="btn-confirmar-parc" onclick="Pages.confirmarPagamentoAvulso('${eventoId}','${uid}')"><i class="fas fa-check"></i> Confirmar</button>
+            <button onclick="document.getElementById('${uid}').remove()" title="Cancelar" style="background:none;border:none;color:var(--danger);cursor:pointer;margin-left:6px;font-size:13px;"><i class="fas fa-times"></i></button>
+        </td>`;
+    tbody.appendChild(tr);
+    document.getElementById(uid + '_vlrreceb')?.focus();
+};
+
+Pages.confirmarPagamentoAvulso = async function(eventoId, uid) {
+    const vlr = parseFloat(document.getElementById(uid + '_vlrreceb')?.value);
+    if (!vlr || vlr <= 0) { Utils.showToast('Informe o valor recebido.', 'error'); return; }
+    const dtReceb = document.getElementById(uid + '_dtreceb')?.value || null;
+    const forma   = document.getElementById(uid + '_forma')?.value   || null;
+    const origem  = document.getElementById(uid + '_origem')?.value  || null;
+    const inst    = document.getElementById(uid + '_inst')?.value    || null;
+
+    const ok = await Utils.confirm(`Lançar pagamento avulso de ${Utils.formatCurrency(vlr)}?`);
+    if (!ok) return;
+
+    Utils.showLoading();
+    try {
+        // Avulsos usam numero_parcela a partir de 900 para não colidir com o cronograma
+        const todas = (window._recebimentosData?.todasParcelas || []).filter(p => p.evento_id === eventoId);
+        const maxNum = todas.reduce((m, p) => Math.max(m, p.numero_parcela || 0), 0);
+        const numero = Math.max(900, maxNum + 1);
+
+        await ParcelasDB.criar({
+            evento_id:        eventoId,
+            numero_parcela:   numero,
+            valor:            vlr,
+            data_vencimento:  null,
+            descricao:        'Pagamento avulso',
+            valor_recebido:   vlr,
+            data_recebimento: dtReceb || null,
+            forma_pagamento:  forma   || null,
+            origem:           origem  || null,
+            instituicao:      inst    || null,
+            status:           'Pago',
+            data_pagamento:   dtReceb || new Date().toLocaleDateString('fr-CA'),
+        });
+
+        DB.cache = {};
+        Utils.hideLoading();
+        Utils.showToast('✅ Pagamento avulso lançado!', 'success');
+        Pages.carregarRecebimentosAConfirmar();
+    } catch(e) {
+        Utils.hideLoading();
+        console.error('Erro ao lançar pagamento avulso:', e);
+        Utils.showToast('Erro ao lançar: ' + (e.message || e), 'error');
+    }
+};
+
+Pages.excluirPagamentoAvulso = async function(parcelaId) {
+    const ok = await Utils.confirm('Excluir este pagamento avulso? O valor sairá do total recebido.');
+    if (!ok) return;
+    Utils.showLoading();
+    try {
+        const { error } = await sbClient.from('parcelas').delete().eq('id', parcelaId);
+        if (error) throw error;
+        DB.cache = {};
+        Utils.hideLoading();
+        Utils.showToast('Pagamento avulso excluído.', 'success');
+        Pages.carregarRecebimentosAConfirmar();
+    } catch(e) {
+        Utils.hideLoading();
+        Utils.showToast('Erro ao excluir: ' + (e.message || e), 'error');
+    }
+};
+
 Pages._filtrarRecebimentos = function(cidade, btnEl) {
     // Atualizar chip ativo
     document.querySelectorAll('.rec-city-chip').forEach(b => b.classList.remove('active'));
@@ -1556,6 +1685,7 @@ Pages._exportarRecebimentosPDF = function() {
         startY += 18;
 
         // ── Tabela de parcelas ──────────────────────────────────────
+        const numerosCronoPdf = new Set(cronograma.map((item, idx) => item.numero || (idx + 1)));
         const tableRows = cronograma.map((item, idx) => {
             const numero = item.numero || (idx + 1);
             const valor  = item.valor !== undefined ? item.valor : parseFloat((cacheBruto * (item.pct || 100) / 100).toFixed(2));
@@ -1578,6 +1708,22 @@ Pages._exportarRecebimentosPDF = function() {
                 statusTxt
             ];
         });
+
+        parcelasEv
+            .filter(p => !numerosCronoPdf.has(p.numero_parcela))
+            .sort((a,b) => (a.numero_parcela||0) - (b.numero_parcela||0))
+            .forEach(p => {
+                tableRows.push([
+                    'Avulso',
+                    '—',
+                    p.data_recebimento ? new Date(p.data_recebimento + 'T12:00:00').toLocaleDateString('pt-BR') : '—',
+                    Utils.formatCurrency(p.valor_recebido || p.valor || 0),
+                    p.forma_pagamento || '—',
+                    p.origem || '—',
+                    p.instituicao || '—',
+                    'Lançado'
+                ]);
+            });
 
         const totalAReceber = cronograma.reduce((s, item) => {
             return s + (item.valor !== undefined ? item.valor : parseFloat((cacheBruto * (item.pct || 100) / 100).toFixed(2)));
