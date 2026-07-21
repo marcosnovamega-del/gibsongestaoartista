@@ -351,12 +351,16 @@ Pages.carregarRecebimentosAConfirmar = async function() {
     </style>`;
 
     try {
-        const [contratos, eventos, artistas] = await Promise.all([
+        const [contratos, eventos, artistas, propostas, todasParcelas] = await Promise.all([
             ContratosDB.listar(),
             EventosDB.listar(),
             ArtistasDB.listar(),
+            PropostasDB.listar(),
+            ParcelasDB.listar(),
         ]);
-        let todasParcelas = await ParcelasDB.listar();
+
+        // Mapa de propostas por id — evita 1 consulta por contrato (N+1)
+        const propostasPorId = new Map(propostas.map(p => [p.id, p]));
 
         const contratosAssinados = contratos.filter(c => c.status === 'Assinado');
 
@@ -365,7 +369,7 @@ Pages.carregarRecebimentosAConfirmar = async function() {
         for (const contrato of contratosAssinados) {
             const evento = eventos.find(e => e.id === contrato.evento_id);
             if (!evento || !evento.proposta_id) continue;
-            const proposta = await PropostasDB.buscarPorId(evento.proposta_id);
+            const proposta = propostasPorId.get(evento.proposta_id);
             if (!proposta?.condicoes_pagamento) continue;
             let cronograma = [];
             try {
