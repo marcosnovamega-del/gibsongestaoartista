@@ -38,6 +38,12 @@ PropostaTemplate.gerarAutonomo = function(proposta, dados) {
     var equipeNum  = dados.equipe || 20;
     var equipeText = equipeNum + ' pessoas (' + equipeNum + ' acompanhantes)';
 
+    // A/C — responsável pelo contrato
+    var responsavel = (proposta.responsavel || '').trim();
+    var acHtml = responsavel
+        ? '<p style="margin:0 0 10px;font-size:13.5px;line-height:1.4;color:#1a1a1d;"><strong style="color:#e8261c;">A/C:</strong> <strong>' + responsavel + '</strong></p>'
+        : '';
+
     // Parágrafo de abertura
     var paragrafo = 'Conforme solicitado, segue abaixo proposta para a realização de <strong>1 (um) show</strong> com o(a) artista <strong style="color:#e8261c;">' + artistaNome + '</strong>, na cidade de <strong>' + cidadeEstado + '</strong>.';
 
@@ -274,6 +280,7 @@ body { background:#e7e6e3; -webkit-font-smoothing:antialiased; font-family:Archi
     <!-- BODY pág 1 -->
     <div style="flex:1;padding:26px 50px 20px;display:flex;flex-direction:column;">
 
+      ${acHtml}
       <p style="margin:0 0 18px;font-size:13.5px;line-height:1.55;color:#3a3a3e;">${paragrafo}</p>
       <!-- grade info show -->
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px;">
@@ -458,6 +465,10 @@ PropostaTemplate.gerarPrefeitura = function(proposta, dados) {
     var cidadeEstado = cidade + (estado ? ', ' + estado : '');
     var cidadeStub   = cidade + (estado ? ' · ' + estado : '');
     var destinatario = (proposta.razao_social || '').toUpperCase();
+    var responsavel  = (proposta.responsavel || '').trim();
+    var acHtml = responsavel
+        ? '<p style="margin:0 0 10px;font-size:13px;line-height:1.4;color:#1a1a1d;"><strong style="color:#e8261c;">A/C:</strong> <strong>' + responsavel + '</strong></p>'
+        : '';
 
     var nomeLen  = artistaNome.length;
     var nomeSize = nomeLen <= 4 ? 96 : nomeLen <= 8 ? 72 : nomeLen <= 12 ? 54 : nomeLen <= 16 ? 40 : 32;
@@ -672,6 +683,7 @@ body { background:#e7e6e3; -webkit-font-smoothing:antialiased; font-family:Archi
         <div style="width:120px;height:4px;background:#e8261c;margin-top:8px;"></div>
       </div>
 
+      ${acHtml}
       <p style="margin:0 0 18px;font-size:13px;line-height:1.55;color:#3a3a3e;">
         Conforme solicitado pela ${destinatario}, segue abaixo orçamento para a realização de <strong>1 (um) show</strong> com o(a) artista <strong style="color:#e8261c;">${artistaNome}</strong>, na cidade de <strong>${cidadeEstado}</strong>.
       </p>
