@@ -69,17 +69,16 @@ PropostaTemplate.gerarAutonomo = function(proposta, dados) {
             }
             return { label: '', desc: l.trim() };
         });
-        obgGrid = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 26px;">';
-        for (var i = 0; i < obgItens.length; i += 2) {
-            var a = obgItens[i];
-            var b = obgItens[i+1] || null;
-            obgGrid += '<div style="display:flex;gap:10px;font-size:12.5px;line-height:1.45;color:#3a3a3e;">'
-                + (a.label ? '<strong style="color:#e8261c;">' + PropostaTemplate._capitalizar(a.label) + '</strong>' : '') + '</div>';
-            obgGrid += b ? '<div style="display:flex;gap:10px;font-size:12.5px;line-height:1.45;color:#3a3a3e;">'
-                + (b.label ? '<strong style="color:#e8261c;">' + PropostaTemplate._capitalizar(b.label) + '</strong>' : '') + '</div>' : '<div></div>';
-            obgGrid += '<div style="font-size:12px;line-height:1.45;color:#6c6a64;margin-top:-6px;">' + a.desc + '</div>';
-            obgGrid += b ? '<div style="font-size:12px;line-height:1.45;color:#6c6a64;margin-top:-6px;">' + b.desc + '</div>' : '<div></div>';
-        }
+        obgGrid = '<div style="display:flex;flex-direction:column;gap:12px;">';
+        obgItens.forEach(function(it) {
+            obgGrid += '<div style="break-inside:avoid;">'
+                + (it.label ? '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'
+                    + '<span style="width:7px;height:7px;background:#e8261c;transform:rotate(45deg);flex:none;"></span>'
+                    + '<strong style="color:#e8261c;font-size:12.5px;letter-spacing:.3px;text-transform:uppercase;">' + PropostaTemplate._capitalizar(it.label) + '</strong>'
+                    + '</div>' : '')
+                + '<div style="font-size:12px;line-height:1.5;color:#6c6a64;padding-left:' + (it.label ? '15px' : '0') + ';">' + PropostaTemplate._linhasDesc(it.desc) + '</div>'
+                + '</div>';
+        });
         obgGrid += '</div>';
     } else {
         obgGrid = '<p style="font-size:12px;color:#6c6a64;">A combinar conforme contrato.</p>';
@@ -434,6 +433,21 @@ PropostaTemplate._capitalizar = function(str) {
     }).join(' ');
 };
 
+// Quebra a descrição em linhas: cada frase terminada em ponto vira uma linha
+PropostaTemplate._linhasDesc = function(desc) {
+    if (!desc) return '';
+    var frases = String(desc).split(/\.\s+/).map(function(f) {
+        f = f.trim();
+        if (!f) return '';
+        if (!/[.!?]$/.test(f)) f += '.';
+        return f;
+    }).filter(Boolean);
+    if (!frases.length) return desc;
+    return frases.map(function(f) {
+        return '<div style="margin-bottom:2px;">' + f + '</div>';
+    }).join('');
+};
+
 // ============================================================
 // TEMPLATE PREFEITURA
 // ============================================================
@@ -493,14 +507,16 @@ PropostaTemplate.gerarPrefeitura = function(proposta, dados) {
                 ? { label: l.substring(0, sep).trim(), desc: l.substring(sep+1).trim() }
                 : { label: '', desc: l.trim() };
         });
-        obgGrid = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 26px;">';
-        for (var i = 0; i < obgItens.length; i += 2) {
-            var a = obgItens[i], b = obgItens[i+1] || null;
-            obgGrid += '<div style="font-size:12px;color:#3a3a3e;">' + (a.label ? '<strong style="color:#e8261c;">' + PropostaTemplate._capitalizar(a.label) + '</strong>' : '') + '</div>';
-            obgGrid += b ? '<div style="font-size:12px;color:#3a3a3e;">' + (b.label ? '<strong style="color:#e8261c;">' + PropostaTemplate._capitalizar(b.label) + '</strong>' : '') + '</div>' : '<div></div>';
-            obgGrid += '<div style="font-size:11.5px;line-height:1.4;color:#6c6a64;margin-top:-5px;">' + a.desc + '</div>';
-            obgGrid += b ? '<div style="font-size:11.5px;line-height:1.4;color:#6c6a64;margin-top:-5px;">' + b.desc + '</div>' : '<div></div>';
-        }
+        obgGrid = '<div style="display:flex;flex-direction:column;gap:12px;">';
+        obgItens.forEach(function(it) {
+            obgGrid += '<div style="break-inside:avoid;">'
+                + (it.label ? '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'
+                    + '<span style="width:7px;height:7px;background:#e8261c;transform:rotate(45deg);flex:none;"></span>'
+                    + '<strong style="color:#e8261c;font-size:12px;letter-spacing:.3px;text-transform:uppercase;">' + PropostaTemplate._capitalizar(it.label) + '</strong>'
+                    + '</div>' : '')
+                + '<div style="font-size:11.5px;line-height:1.45;color:#6c6a64;padding-left:' + (it.label ? '15px' : '0') + ';">' + PropostaTemplate._linhasDesc(it.desc) + '</div>'
+                + '</div>';
+        });
         obgGrid += '</div>';
     } else {
         obgGrid = '<p style="font-size:12px;color:#6c6a64;">A combinar conforme contrato.</p>';
